@@ -1,0 +1,4 @@
+# Runtime dependencies for the voice module (versions checked on PyPI 2026-10-09).
+requests==2.34.2
+# 1.2.3 fixes a Windows bug: a .env saved with a UTF-8 BOM silently lost its first variable.
+python-dotenv==1.2.3

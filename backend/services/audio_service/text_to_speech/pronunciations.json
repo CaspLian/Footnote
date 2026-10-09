@@ -1,0 +1,4 @@
+{
+  "_comment": "Exact word -> how to spell it for the voice. Case-sensitive, whole words only. Keys starting with _ are ignored.",
+  "ClaimPulse": "Claim Pulse"
+}

@@ -1,0 +1,42 @@
+[
+  {
+    "request_id": "mock-plain",
+    "description": "Short plain answer",
+    "text": "The museum opens at 9 AM on weekdays and 10 AM on weekends. Entry is free for children under 12."
+  },
+  {
+    "request_id": "mock-markdown",
+    "description": "Heading, bold, bullets, a link, a bare URL and citations",
+    "text": "## Getting started\n\nHere is what you **need** to do:\n\n- Create an account on the [official website](https://www.example.com/signup)\n- Verify your email address [1]\n- Set a strong password\n\nYou can read more at https://docs.example.com/guide.[2]"
+  },
+  {
+    "request_id": "mock-numbers",
+    "description": "Money, an ISO date, a range and approximations",
+    "text": "The total is $1,250.50, due on 2026-11-15. Delivery takes 3–5 business days and costs ~$12. Orders over $100 ship free; orders <$20 may incur a 10% fee."
+  },
+  {
+    "request_id": "mock-meaning",
+    "description": "Negations, uncertainty and yes/no marks that must survive cleanup",
+    "text": "The results are **not** final and may change.\n\n✅ Online booking\n❌ Same-day cancellation\n\nThe venue reportedly closes early on holidays, but this has not been confirmed."
+  },
+  {
+    "request_id": "mock-code",
+    "description": "A code block that should not be read aloud",
+    "text": "To install the tool, run:\n\n```bash\npip install example-tool\n```\n\nThen restart your terminal."
+  },
+  {
+    "request_id": "mock-table",
+    "description": "A Markdown table and an abbreviation",
+    "text": "| Plan | Price |\n|------|-------|\n| Basic | $5 per month |\n| Pro | $15 per month |\n\nBoth plans include email support, e.g. replies within one day."
+  },
+  {
+    "request_id": "mock-bill-summary",
+    "description": "Realistic ClaimPulse answer: hospital bill summary (from the team)",
+    "text": "Hello, and welcome to ClaimPulse AI, your personal medical billing assistant.\n\nI've finished analyzing your hospital bill from Metro Health Hospital, dated September 15, 2026.\n\nYour total hospital charge is $4,850.75. After reviewing your insurance statement, I've identified two potential billing discrepancies.\n\nFirst, your MRI procedure, listed under CPT code 70551, was billed at $3,200. However, our available pricing benchmark suggests a typical charge of approximately $1,400.\n\nSecond, your insurance provider appears to have covered only 60% of your emergency room visit. This may require further review of your insurance policy.\n\nPlease remember that these findings do not necessarily mean your hospital made a billing error.\n\nWould you like me to explain these charges in greater detail, help you prepare a dispute letter, or connect you with a billing representative?"
+  },
+  {
+    "request_id": "mock-empty",
+    "description": "Only formatting, nothing speakable (expected result: EMPTY_TEXT)",
+    "text": "  \n\n---\n\n**  **\n"
+  }
+]
