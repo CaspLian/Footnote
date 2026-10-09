@@ -48,6 +48,23 @@ def test_backend_env_is_used_when_no_env_file_is_nearby(clean_env, tmp_path):
     assert config.api_key == "from-backend" and config.is_configured
 
 
+def test_backend_api_env_is_used_when_there_is_no_env(clean_env, tmp_path):
+    backend = tmp_path / "backend"
+    backend.mkdir()
+    (backend / "api.env").write_text("ELEVENLABS_API_KEY=from-api-env\n", encoding="utf-8")
+    clean_env.setattr(config_module, "BACKEND_DIR", backend)
+    assert TTSConfig.from_env().api_key == "from-api-env"
+
+
+def test_backend_env_wins_over_api_env(clean_env, tmp_path):
+    backend = tmp_path / "backend"
+    backend.mkdir()
+    (backend / ".env").write_text("ELEVENLABS_API_KEY=from-env\n", encoding="utf-8")
+    (backend / "api.env").write_text("ELEVENLABS_API_KEY=from-api-env\n", encoding="utf-8")
+    clean_env.setattr(config_module, "BACKEND_DIR", backend)
+    assert TTSConfig.from_env().api_key == "from-env"
+
+
 def test_service_folder_is_where_this_package_lives():
     assert SERVICE_DIR == Path(config_module.__file__).resolve().parent.parent
 

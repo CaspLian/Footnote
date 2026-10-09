@@ -53,7 +53,7 @@ class FakeSession:
 def generate(*outcomes, config=CONFIG, clock=None):
     session = FakeSession(*outcomes)
     provider = ElevenLabsProvider(config, session, **({"clock": clock} if clock else {}))
-    return provider.generate("Hello there."), session
+    return provider.generate("Hello there.", config.voice_id or "voice-1"), session
 
 
 def generate_error(*outcomes, config=CONFIG) -> TTSError:

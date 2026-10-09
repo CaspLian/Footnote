@@ -50,6 +50,9 @@ class TTSRequest:
     language: str = "en"
     """Language of the text. Only English is used for now."""
 
+    voice: str | None = None
+    """The user's voice choice: a key from voices.json, e.g. "bunty". None means the default voice."""
+
 
 @dataclass(frozen=True)
 class TTSResult:
@@ -62,6 +65,7 @@ class TTSResult:
     audio: bytes | None = None
     mime_type: str | None = None  # e.g. "audio/mpeg"; use it as the HTTP Content-Type
     audio_id: str | None = None  # same text + same voice settings -> same ID; see get_audio()
+    voice: str | None = None  # key of the voice used, e.g. "matilda"
 
     # What was actually spoken, after cleanup. Useful for captions and debugging.
     spoken_text: str = ""

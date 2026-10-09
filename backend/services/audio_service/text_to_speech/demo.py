@@ -5,6 +5,9 @@
     python -m text_to_speech.demo --mock mock-numbers
     python -m text_to_speech.demo --text "Hello from ClaimPulse"
     python -m text_to_speech.demo --all --open       # speak every mock answer and open the first file
+    python -m text_to_speech.demo --list-voices      # free: the voices users can choose (voices.json)
+    python -m text_to_speech.demo --voice bunty      # speak in one of those voices
+    python -m text_to_speech.demo --voice all        # the same answer in every voice, to compare
 
 Each answer is requested twice to show the cache: the second request should
 say cached=True and send 0 characters.
@@ -24,6 +27,7 @@ from .config import SERVICE_DIR, TTSConfig
 from .contract import TTSRequest
 from .service import TTSService
 from .text_prep import prepare_for_speech
+from .voices import load_catalog
 
 MOCK_FILE = Path(__file__).with_name("mock_data") / "gemini_responses.json"
 OUTPUT_DIR = SERVICE_DIR / "demo_output"  # inside audio_service, git-ignored there
@@ -37,11 +41,32 @@ def main(argv: list[str] | None = None) -> int:
     choice.add_argument("--all", action="store_true", help="every mock answer")
     parser.add_argument("--dry-run", action="store_true", help="only show the cleaned text; no API call, no cost")
     parser.add_argument("--open", action="store_true", help="open the first saved audio file in your default player")
+    parser.add_argument("--voice", help='a voice key from voices.json, or "all" for every voice')
+    parser.add_argument("--list-voices", action="store_true", help="show the voices users can choose; no cost")
     args = parser.parse_args(argv)
 
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(errors="replace")  # some Windows consoles cannot print emoji
     logging.basicConfig(level=logging.INFO, format="  log: %(message)s")
+
+    try:
+        catalog = load_catalog()
+    except ValueError as exc:
+        print(f"voices.json problem: {exc}")
+        return 1
+    if args.list_voices:
+        for voice in catalog.voices:
+            default = "  (default)" if voice.key == catalog.default_key else ""
+            print(f"  {voice.key:<10} {voice.name}: {voice.description} ({voice.accent}, {voice.gender}){default}")
+        return 0
+    if args.voice == "all":
+        voices = catalog.keys()
+    elif args.voice:
+        if catalog.get(args.voice) is None:
+            parser.error(f"unknown voice {args.voice!r}; choose from: {', '.join(catalog.keys())}, or all")
+        voices = [args.voice.strip().lower()]
+    else:
+        voices = [None]  # the default voice
 
     mocks = json.loads(MOCK_FILE.read_text(encoding="utf-8-sig"))  # -sig: tolerate a BOM from Windows editors
     if args.text is not None:
@@ -62,7 +87,7 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.dry_run:
         return _dry_run(answers, config)
-    return _speak(answers, config, open_first=args.open)
+    return _speak(answers, config, open_first=args.open, voices=voices)
 
 
 def _dry_run(answers: list[dict], config: TTSConfig) -> int:
@@ -93,15 +118,14 @@ def _dry_run(answers: list[dict], config: TTSConfig) -> int:
     return 0
 
 
-def _speak(answers: list[dict], config: TTSConfig, *, open_first: bool) -> int:
+def _speak(answers: list[dict], config: TTSConfig, *, open_first: bool, voices: list[str | None]) -> int:
     print("Settings:")
     print(f"  ELEVENLABS_API_KEY  {'set' if config.api_key else 'MISSING'}")
-    print(f"  ELEVENLABS_VOICE_ID {config.voice_id or 'MISSING'}")
+    print(f"  voice(s): {', '.join(voice or 'default' for voice in voices)}")
     print(f"  model={config.model_id}  format={config.output_format}  speed={config.speed or 'voice default'}")
     print(f"  cache={config.cache_dir or 'memory only'}  timeout={config.timeout_seconds:g}s  retries={config.max_retries}")
     if not config.is_configured:
-        print("\nAdd ELEVENLABS_API_KEY and ELEVENLABS_VOICE_ID to backend/.env (see audio_service/.env.example).")
-        print("Tip: `python -m text_to_speech.check_setup` lists the voices your key can use (free).")
+        print("\nAdd ELEVENLABS_API_KEY to backend/.env (see audio_service/.env.example).")
         return 1
 
     service = TTSService(config)
@@ -109,10 +133,10 @@ def _speak(answers: list[dict], config: TTSConfig, *, open_first: bool) -> int:
     saved_files: list[Path] = []
     failures = 0
 
-    for answer in answers:
-        print(f"\n== {answer['request_id']}: {answer['description']}")
+    for answer, voice in ((answer, voice) for answer in answers for voice in voices):
+        print(f"\n== {answer['request_id']}: {answer['description']}" + (f"  [voice: {voice}]" if voice else ""))
         for attempt_label in ("first request", "same text again"):
-            result = service.synthesize(TTSRequest(request_id=answer["request_id"], text=answer["text"]))
+            result = service.synthesize(TTSRequest(request_id=answer["request_id"], text=answer["text"], voice=voice))
             if not result.ok:
                 print(f"  {attempt_label}: FAILED {result.error_code} (retryable={result.retryable})")
                 print(f"    {result.error_message}")
@@ -127,7 +151,8 @@ def _speak(answers: list[dict], config: TTSConfig, *, open_first: bool) -> int:
             )
             if not result.cached:
                 print(f"    ElevenLabs request id: {result.provider_request_id}")
-            path = OUTPUT_DIR / f"{result.request_id}.{config.file_extension}"
+            suffix = f"-{voice}" if voice else ""  # no suffix for the default voice, as before
+            path = OUTPUT_DIR / f"{result.request_id}{suffix}.{config.file_extension}"
             path.write_bytes(result.audio)
             if path not in saved_files:
                 saved_files.append(path)

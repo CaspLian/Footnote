@@ -2,6 +2,7 @@
 
     TTSRequest
       -> validate          (wrong input fails fast, no cost)
+      -> pick the voice    (the user's choice from voices.json, or the default)
       -> prepare text      (text_prep.py: Markdown, links, symbols...)
       -> check limits      (empty / too long fail here, no cost)
       -> cache             (same text + same voice settings = reuse, no cost)
@@ -31,6 +32,7 @@ from .contract import ErrorCode, TTSRequest, TTSResult
 from .elevenlabs_provider import ElevenLabsProvider, ProviderAudio
 from .errors import TTSError
 from .text_prep import prepare_for_speech
+from .voices import VoiceCatalog, load_catalog
 
 logger = logging.getLogger("text_to_speech")
 
@@ -43,7 +45,7 @@ MAX_BACKOFF_SECONDS = 5.0
 class SpeechProvider(Protocol):
     """Anything that turns text into audio. ElevenLabsProvider in production, a fake in tests."""
 
-    def generate(self, text: str) -> ProviderAudio: ...
+    def generate(self, text: str, voice_id: str) -> ProviderAudio: ...
 
 
 @dataclass(frozen=True)
@@ -61,10 +63,12 @@ class TTSService:
         provider: SpeechProvider | None = None,
         cache: AudioCache | None = None,
         *,
+        voices: VoiceCatalog | None = None,
         pronunciations: dict[str, str] | None = None,
         sleep=time.sleep,
     ) -> None:
         self.config = config
+        self.voices = voices if voices is not None else load_catalog()  # raises ValueError if voices.json is broken
         self._provider = provider if provider is not None else ElevenLabsProvider(config)
         self._cache = cache if cache is not None else AudioCache(config.cache_dir, config.file_extension)
         self._pronunciations = pronunciations
@@ -82,15 +86,17 @@ class TTSService:
         source = "none"
         try:
             _validate(request)
+            voice_key, voice_id = self._resolve_voice(request.voice)
             spoken = self._prepare(request)
-            key = self._cache_key(spoken, request.language)
-            audio, source, generation = self._get_or_generate(key, spoken)
+            key = self._cache_key(spoken, request.language, voice_id)
+            audio, source, generation = self._get_or_generate(key, spoken, voice_id)
             result = TTSResult(
                 request_id=request_id,
                 ok=True,
                 audio=audio,
                 mime_type=self.config.mime_type,
                 audio_id=key,
+                voice=voice_key,
                 spoken_text=spoken,
                 cached=generation is None,
                 characters_sent=len(spoken) * generation.attempts if generation else 0,
@@ -138,6 +144,20 @@ class TTSService:
 
     # --- Steps --------------------------------------------------------------------
 
+    def _resolve_voice(self, choice: str | None) -> tuple[str, str]:
+        """(voice key, ElevenLabs voice ID) for the user's choice. No choice = the default voice,
+        whose ID ELEVENLABS_VOICE_ID may replace."""
+        if choice is None or not choice.strip():
+            default = self.voices.default
+            return default.key, self.config.voice_id or default.voice_id
+        voice = self.voices.get(choice)
+        if voice is None:
+            raise TTSError(
+                ErrorCode.INVALID_REQUEST,
+                f"Unknown voice {choice!r}. Choose one of: {', '.join(self.voices.keys())}.",
+            )
+        return voice.key, voice.voice_id
+
     def _prepare(self, request: TTSRequest) -> str:
         use_speech_text = request.speech_text is not None and request.speech_text.strip() != ""
         source_text = request.speech_text if use_speech_text else request.text
@@ -156,17 +176,18 @@ class TTSService:
             )
         return spoken
 
-    def _cache_key(self, spoken: str, language: str) -> str:
-        """Same spoken text + same audio settings -> same key. Any setting change -> new key."""
+    def _cache_key(self, spoken: str, language: str, voice_id: str) -> str:
+        """Same spoken text + same voice + same audio settings -> same key. Any change -> new key."""
         identity = {
             "text": spoken,
             "language": language.strip().lower(),
+            "voice_id": voice_id,
             "settings": self.config.audio_settings(),
         }
         encoded = json.dumps(identity, sort_keys=True, ensure_ascii=False).encode("utf-8")
         return hashlib.sha256(encoded).hexdigest()[:32]
 
-    def _get_or_generate(self, key: str, spoken: str) -> tuple[bytes, str, _Generation | None]:
+    def _get_or_generate(self, key: str, spoken: str, voice_id: str) -> tuple[bytes, str, _Generation | None]:
         """Return (audio, source, generation). generation is None when no new audio was made."""
         with self._lock:
             audio = self._cache.get(key)
@@ -178,7 +199,7 @@ class TTSService:
                 if not self.config.is_configured:
                     raise TTSError(
                         ErrorCode.NOT_CONFIGURED,
-                        "ELEVENLABS_API_KEY and ELEVENLABS_VOICE_ID must be set (see .env.example).",
+                        "ELEVENLABS_API_KEY must be set (see .env.example).",
                     )
                 future = Future()
                 self._in_flight[key] = future
@@ -199,7 +220,7 @@ class TTSService:
             return generation.audio, "shared", None
 
         try:
-            generation = self._generate_with_retries(spoken)
+            generation = self._generate_with_retries(spoken, voice_id)
             self._cache.put(key, generation.audio)  # before leaving in-flight, so later callers hit the cache
             future.set_result(generation)
             return generation.audio, "provider", generation
@@ -210,12 +231,12 @@ class TTSService:
             with self._lock:
                 self._in_flight.pop(key, None)
 
-    def _generate_with_retries(self, spoken: str) -> _Generation:
+    def _generate_with_retries(self, spoken: str, voice_id: str) -> _Generation:
         attempt = 0
         while True:
             attempt += 1
             try:
-                audio = self._provider.generate(spoken)
+                audio = self._provider.generate(spoken, voice_id)
             except TTSError as exc:
                 exc.attempts = attempt
                 if not exc.retryable or attempt > self.config.max_retries:
@@ -292,6 +313,15 @@ def get_stats() -> dict:
         return {"error": str(exc)}
 
 
+def list_voices() -> dict:
+    """The voices users can choose, for the app's voice picker:
+    {"default": "matilda", "voices": [{"key", "name", "description", "accent", "gender"}, ...]}.
+
+    It comes from the same catalog synthesize() uses, so the list and the voices that work always
+    match. Restart the server after editing voices.json. Raises ValueError if voices.json is broken."""
+    return get_service().voices.public()
+
+
 # --- Helpers ----------------------------------------------------------------------
 
 
@@ -312,6 +342,8 @@ def _validate(request: object) -> None:
         raise invalid(f"speech_text must be a string or None, got {type(request.speech_text).__name__}.")
     if not isinstance(request.language, str) or not request.language.strip().lower().startswith("en"):
         raise invalid(f"Only English is supported for now (language={request.language!r}).")
+    if request.voice is not None and not isinstance(request.voice, str):
+        raise invalid(f"voice must be a key from voices.json or None, got {type(request.voice).__name__}.")
 
 
 def _request_id_of(request: object) -> str:

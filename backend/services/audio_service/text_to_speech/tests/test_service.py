@@ -22,13 +22,15 @@ class FakeProvider:
 
     def __init__(self, failures=(), gate: threading.Event | None = None):
         self.calls: list[str] = []
+        self.voice_ids: list[str] = []
         self._failures = list(failures)
         self._gate = gate
         self._lock = threading.Lock()
 
-    def generate(self, text: str) -> ProviderAudio:
+    def generate(self, text: str, voice_id: str) -> ProviderAudio:
         with self._lock:
             self.calls.append(text)
+            self.voice_ids.append(voice_id)
             failure = self._failures.pop(0) if self._failures else None
         if self._gate is not None:
             assert self._gate.wait(timeout=5), "test gate was never opened"
@@ -226,6 +228,75 @@ def test_get_audio_returns_known_audio_and_rejects_bad_ids():
     assert service.get_audio("0" * 32) is None
     for bad_id in ["", "../../secret", "../" + result.audio_id, result.audio_id.upper(), None]:
         assert service.get_audio(bad_id) is None
+
+
+# --- Voices -----------------------------------------------------------------------------
+
+MATILDA_ID, GEORGE_ID, BUNTY_ID = "XrExE9yKIg1WjnnlVkGX", "JBFqnCBsd6RMkjVDRZzb", "nwj0s2LU9bDWRKND5yzA"
+
+
+def test_the_users_voice_choice_is_used():
+    provider = FakeProvider()
+    service, _ = make_service(provider)
+    result = service.synthesize(req(voice="bunty"))
+    assert result.ok and result.voice == "bunty"
+    assert provider.voice_ids == [BUNTY_ID]
+
+
+def test_no_choice_uses_the_default_voice_from_voices_json():
+    provider = FakeProvider()
+    service, _ = make_service(provider, config=TTSConfig(api_key="k", cache_dir=None))
+    assert service.synthesize(req()).voice == "matilda"
+    assert provider.voice_ids == [MATILDA_ID]
+
+
+def test_elevenlabs_voice_id_setting_replaces_only_the_default_voice():
+    provider = FakeProvider()
+    service, _ = make_service(provider)  # CONFIG.voice_id is "voice-1"
+    service.synthesize(req())
+    service.synthesize(req(voice="george"))
+    assert provider.voice_ids == ["voice-1", GEORGE_ID]
+
+
+def test_voice_choice_ignores_case_and_spaces():
+    service, _ = make_service()
+    assert service.synthesize(req(voice=" Bunty ")).voice == "bunty"
+
+
+def test_unknown_voice_fails_fast_and_lists_the_choices():
+    provider = FakeProvider()
+    service, _ = make_service(provider)
+    result = service.synthesize(req(voice="shakespeare"))
+    assert result.error_code == ErrorCode.INVALID_REQUEST
+    assert "matilda, sarah, george, charlie, bunty" in result.error_message
+    assert provider.calls == []
+
+
+def test_voice_must_be_a_string():
+    service, _ = make_service()
+    assert service.synthesize(req(voice=5)).error_code == ErrorCode.INVALID_REQUEST
+
+
+def test_the_same_text_in_two_voices_is_two_audios_each_cached():
+    provider = FakeProvider()
+    service, _ = make_service(provider)
+    bunty = service.synthesize(req(voice="bunty"))
+    george = service.synthesize(req(voice="george"))
+    bunty_again = service.synthesize(req(voice="bunty"))
+    assert bunty.audio_id != george.audio_id
+    assert len(provider.calls) == 2
+    assert bunty_again.cached and bunty_again.audio_id == bunty.audio_id
+
+
+def test_a_broken_voice_catalog_is_reported_not_raised(monkeypatch, tmp_path):
+    def broken_catalog():
+        raise ValueError("voices.json is not valid JSON")
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(service_module, "_default_service", None)
+    monkeypatch.setattr(service_module, "load_catalog", broken_catalog)
+    result = synthesize(req())
+    assert result.error_code == ErrorCode.NOT_CONFIGURED and "voices.json" in result.error_message
 
 
 # --- Retries ----------------------------------------------------------------------------

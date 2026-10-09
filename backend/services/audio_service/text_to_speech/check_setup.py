@@ -5,7 +5,7 @@
 1. Is ELEVENLABS_API_KEY set and accepted?        GET /v1/user    (key permission "User: Read")
 2. Plan, credits used, account creation date     (these decide which voices you can use)
 3. Which voices can this key see?                GET /v2/voices  (key permission "Voices: Read")
-4. Is ELEVENLABS_VOICE_ID one of them?
+4. Can each voice users choose (voices.json) be used on this account?
 
 No text-to-speech request is made, so this costs nothing.
 """
@@ -18,6 +18,7 @@ from datetime import datetime, timezone
 import requests
 
 from .config import TTSConfig
+from .voices import VoiceCatalog, load_catalog
 
 # ElevenLabs: Default voices "are only available for accounts that were created before
 # March 2026" and "will expire on December 31, 2026" (help centre, checked 2026-10-09).
@@ -26,7 +27,7 @@ MAX_VOICE_PAGES = 5
 TIMEOUT = (5, 15)
 
 
-def run(config: TTSConfig, session: requests.Session, out=print) -> int:
+def run(config: TTSConfig, session: requests.Session, out=print, catalog: VoiceCatalog | None = None) -> int:
     """Returns 0 when the setup looks usable, 1 when something must be fixed."""
     if not config.api_key:
         out("ELEVENLABS_API_KEY is missing. Add it to backend/.env (see audio_service/.env.example).")
@@ -34,11 +35,13 @@ def run(config: TTSConfig, session: requests.Session, out=print) -> int:
 
     headers = {"xi-api-key": config.api_key}
     problems = 0
+    tier = None
 
     out("1. Account (GET /v1/user)")
     status, user = _get(session, f"{config.base_url}/v1/user", headers)
     if status == 200:
         problems += _report_account(user, out)
+        tier = str((user.get("subscription") or {}).get("tier") or "").lower() or None
     elif _is_missing_permission(user):
         out("   The key works but cannot read account details. Optional: give the key 'User: Read'.")
     elif status in (401, 403):
@@ -63,15 +66,16 @@ def run(config: TTSConfig, session: requests.Session, out=print) -> int:
         out("   create one with Voice Design in the dashboard, or use a paid plan for Voice Library voices.")
         problems += 1
 
-    out("\n3. ELEVENLABS_VOICE_ID")
-    if not config.voice_id:
-        out("   Not set. Copy a voice_id from the list above into backend/.env as ELEVENLABS_VOICE_ID=...")
-        problems += 1
-    elif not any(v.get("voice_id") == config.voice_id for v in voices):
-        out(f"   {config.voice_id} is not in the list above, so requests will probably fail with PROVIDER_REJECTED.")
-        problems += 1
-    else:
-        out(f"   {config.voice_id} found.")
+    out("\n3. Voices users can choose (text_to_speech/voices.json)")
+    try:
+        catalog = catalog if catalog is not None else load_catalog()
+    except ValueError as exc:
+        out(f"   {exc}")
+        return 1
+    problems += _report_catalog(catalog, {v.get("voice_id") for v in voices}, tier, out)
+    if config.voice_id:
+        where = "in your account" if any(v.get("voice_id") == config.voice_id for v in voices) else "not in your account"
+        out(f"   ELEVENLABS_VOICE_ID={config.voice_id} replaces the default voice ({catalog.default_key}); {where}.")
 
     out(f"\nModel {config.model_id}, format {config.output_format}.")
     if problems:
@@ -109,6 +113,22 @@ def _report_account(user: dict, out) -> int:
         out("   - No commercial licence; credit 'elevenlabs.io' if you publish the audio.")
         out("   - Free accounts can be blocked on shared Wi-Fi ('unusual activity'). Test from the venue early.")
     return 0
+
+
+def _report_catalog(catalog: VoiceCatalog, account_voice_ids: set, tier: str | None, out) -> int:
+    """One line per voice. Voices not in the account come from the Voice Library: paid plans only."""
+    problems = 0
+    for voice in catalog.voices:
+        if voice.voice_id in account_voice_ids:
+            where = "in your account"
+        elif tier == "free":
+            where = "Voice Library voice: will fail on the free plan (paid_plan_required)"
+            problems += 1
+        else:
+            where = "Voice Library voice (works on paid plans)"
+        default = " (default)" if voice.key == catalog.default_key else ""
+        out(f"   {voice.key:<10} {voice.name}: {voice.description}, {voice.accent}{default}: {where}")
+    return problems
 
 
 def _list_voices(session, base_url: str, headers: dict) -> tuple[list[dict], str | None]:

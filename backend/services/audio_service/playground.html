@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ClaimPulse voice playground</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --card: #ffffff; --text: #1d2330; --muted: #5d6779; --line: #dde1e8;
+    --accent: #2f5bea; --accent-text: #ffffff; --soft: #eef2fd; --error: #b3261e; --ok: #1f7a3d;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #12151b; --card: #1b2029; --text: #e7eaf0; --muted: #9aa3b2; --line: #2c3340;
+      --accent: #7c9cff; --accent-text: #0d1220; --soft: #222a3a; --error: #ff8a80; --ok: #7ad19a;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 760px; margin: 0 auto; padding: 28px 16px 48px; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  .lead { color: var(--muted); margin: 0 0 20px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+  label.title { display: block; font-weight: 600; margin-bottom: 8px; }
+  textarea { width: 100%; min-height: 140px; resize: vertical; padding: 12px; border-radius: 8px;
+             border: 1px solid var(--line); background: var(--bg); color: var(--text); font: inherit; }
+  .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 10px; }
+  .muted { color: var(--muted); font-size: 13px; }
+  .voices { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px; }
+  .voice { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; cursor: pointer; display: block; }
+  .voice:has(input:checked) { border-color: var(--accent); background: var(--soft); }
+  .voice input { margin-right: 6px; }
+  .voice .name { font-weight: 600; }
+  .voice .desc { color: var(--muted); font-size: 13px; margin: 2px 0 8px; }
+  button { font: inherit; border-radius: 8px; border: 1px solid var(--line); background: var(--card);
+           color: var(--text); padding: 6px 12px; cursor: pointer; }
+  button.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent);
+                   font-weight: 600; padding: 9px 20px; }
+  button:disabled { opacity: .55; cursor: wait; }
+  audio { width: 100%; margin-top: 10px; }
+  #status { min-height: 22px; }
+  #status.error { color: var(--error); }
+  #status.ok { color: var(--ok); }
+  #spoken { white-space: pre-wrap; color: var(--muted); font-size: 13px; margin-top: 8px; }
+  ul#history { list-style: none; padding: 0; margin: 0; }
+  #history li { display: flex; gap: 10px; align-items: baseline; padding: 6px 0; border-top: 1px solid var(--line); }
+  #history li:first-child { border-top: 0; }
+  #history .what { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+</style>
+</head>
+<body>
+<main>
+  <h1>ClaimPulse voice playground</h1>
+  <p class="lead">Type anything, pick a voice, and press Speak. Your text goes to the text-to-speech
+    receiver on this computer, which asks ElevenLabs for the audio.</p>
+
+  <section class="card">
+    <label class="title" for="text">What should it say?</label>
+    <textarea id="text" maxlength="10000">Hi! I've checked your hospital bill. Your MRI was billed $3,200, which looks higher than usual.</textarea>
+    <div class="row">
+      <button id="speak" class="primary">Speak</button>
+      <span class="muted"><span id="count">0</span> characters &middot; Ctrl+Enter to speak &middot; the same text in the same voice again is free</span>
+    </div>
+  </section>
+
+  <section class="card">
+    <span class="title" style="display:block;font-weight:600;margin-bottom:8px">Voice</span>
+    <div id="voices" class="voices"><span class="muted">Loading voices&hellip;</span></div>
+  </section>
+
+  <section class="card">
+    <div id="status" class="muted">Ready.</div>
+    <audio id="player" controls></audio>
+    <div id="spoken"></div>
+  </section>
+
+  <section class="card">
+    <span style="display:block;font-weight:600;margin-bottom:6px">This session</span>
+    <ul id="history"><li class="muted">Nothing yet.</li></ul>
+  </section>
+</main>
+
+<script>
+const textBox = document.getElementById("text");
+const speakButton = document.getElementById("speak");
+const statusLine = document.getElementById("status");
+const player = document.getElementById("player");   // one player: a new clip always stops the old one
+const spokenLine = document.getElementById("spoken");
+const historyList = document.getElementById("history");
+const history = [];
+let voices = [];
+
+function setStatus(message, kind = "") {
+  statusLine.textContent = message;
+  statusLine.className = kind || "muted";
+}
+
+function selectedVoice() {
+  const checked = document.querySelector('input[name="voice"]:checked');
+  return checked ? checked.value : null;
+}
+
+function play(url) {
+  player.pause();
+  player.src = url;
+  player.play().catch(() => setStatus("Press play to listen (the browser blocked autoplay).", "ok"));
+}
+
+async function loadVoices() {
+  const response = await fetch("/api/voices");
+  if (!response.ok) { setStatus("Could not load voices: " + (await response.text()), "error"); return; }
+  const data = await response.json();
+  voices = data.voices;
+  const box = document.getElementById("voices");
+  box.textContent = "";
+  for (const voice of voices) {
+    const card = document.createElement("label");
+    card.className = "voice";
+    const radio = document.createElement("input");
+    radio.type = "radio"; radio.name = "voice"; radio.value = voice.key;
+    radio.checked = voice.key === data.default;
+    const name = document.createElement("span");
+    name.className = "name";
+    name.textContent = voice.name + (voice.key === data.default ? " (default)" : "");
+    const desc = document.createElement("div");
+    desc.className = "desc";
+    desc.textContent = `${voice.description} · ${voice.accent}, ${voice.gender}`;
+    const sample = document.createElement("button");
+    sample.type = "button";
+    sample.textContent = "▶ Sample";
+    sample.addEventListener("click", (event) => { event.preventDefault(); playSample(voice); });
+    card.append(radio, name, desc, sample);
+    box.append(card);
+  }
+}
+
+async function playSample(voice) {
+  setStatus(`Loading a sample of ${voice.name}… (made once, then free)`);
+  const response = await fetch(`/api/voices/${encodeURIComponent(voice.key)}/sample`);
+  if (!response.ok) { setStatus(`Sample failed: ${(await response.json()).detail}`, "error"); return; }
+  play(URL.createObjectURL(await response.blob()));
+  setStatus(`Sample: ${voice.name}`, "ok");
+}
+
+async function speak() {
+  const text = textBox.value.trim();
+  if (!text) { setStatus("Type something first.", "error"); return; }
+  const voiceKey = selectedVoice();
+  const voiceName = (voices.find(v => v.key === voiceKey) || {}).name || "default voice";
+  speakButton.disabled = true;
+  setStatus(`Generating with ${voiceName}…`);
+  try {
+    const response = await fetch("/api/speak", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text, voice: voiceKey }),
+    });
+    const result = await response.json();
+    if (!response.ok) { setStatus(`Request failed: ${JSON.stringify(result.detail)}`, "error"); return; }
+    if (!result.ok) {
+      setStatus(`${result.error_code}: ${result.error_message}`, "error");
+      spokenLine.textContent = "";
+      return;
+    }
+    play(result.audio_url);
+    const cost = result.cached ? "from the cache, 0 credits" : `${result.characters_billed ?? "?"} credits`;
+    setStatus(`${voiceName} · ${(result.elapsed_ms / 1000).toFixed(1)} s · ${cost}`, "ok");
+    spokenLine.textContent = "Spoken text: " + result.spoken_text;
+    addToHistory(voiceName, text, result.audio_url);
+  } catch (error) {
+    setStatus("Could not reach the playground server. Is it still running?", "error");
+  } finally {
+    speakButton.disabled = false;
+  }
+}
+
+function addToHistory(voiceName, text, url) {
+  history.unshift({ voiceName, text, url });
+  history.length = Math.min(history.length, 10);
+  historyList.textContent = "";
+  for (const item of history) {
+    const row = document.createElement("li");
+    const what = document.createElement("span");
+    what.className = "what";
+    what.textContent = `${item.voiceName}: ${item.text}`;
+    const replay = document.createElement("button");
+    replay.type = "button";
+    replay.textContent = "▶ Replay";
+    replay.addEventListener("click", () => play(item.url));
+    row.append(what, replay);
+    historyList.append(row);
+  }
+}
+
+const updateCount = () => { document.getElementById("count").textContent = textBox.value.length; };
+textBox.addEventListener("input", updateCount);
+textBox.addEventListener("keydown", (event) => {
+  if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) { event.preventDefault(); speak(); }
+});
+speakButton.addEventListener("click", speak);
+updateCount();
+loadVoices();
+</script>
+</body>
+</html>

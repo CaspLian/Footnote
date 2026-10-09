@@ -14,12 +14,13 @@ From `backend/main.py` (the backend runs from the `backend` folder):
 ```python
 from services.audio_service.text_to_speech import TTSRequest, synthesize
 
-result = synthesize(TTSRequest(request_id=message_id, text=gemini_answer_text))
+result = synthesize(TTSRequest(request_id=message_id, text=gemini_answer_text, voice="bunty"))
 
 if result.ok:
     result.audio       # MP3 bytes
     result.mime_type   # "audio/mpeg"
     result.audio_id    # stable ID for this audio: serve it from an audio endpoint (below)
+    result.voice       # the voice used, e.g. "bunty"
 else:
     result.error_code  # e.g. "PROVIDER_TIMEOUT"; still show the text answer
     result.retryable   # True = worth trying again later
@@ -45,6 +46,7 @@ else:
 | `text` | `str`, required | Gemini's **complete** answer as displayed. Markdown is fine; it is cleaned up for speech. |
 | `speech_text` | `str` or `None` | Optional speech-ready version of the answer. Used instead of `text` when given (see section 6). |
 | `language` | `str`, default `"en"` | Only English for now. |
+| `voice` | `str` or `None` | The user's voice choice, a key from `voices.json` (see "Voices" below). `None` = the default voice. |
 
 Pass the answer **text**, not Gemini's response object. A non-string `text` returns `INVALID_REQUEST`.
 Streaming (partial) Gemini output is not supported yet: send the finished answer.
@@ -56,7 +58,8 @@ Streaming (partial) Gemini output is not supported yet: send the finished answer
 | `request_id` | Same as in the request |
 | `ok` | `True` if `audio` is present |
 | `audio`, `mime_type` | The audio bytes and their type (`audio/mpeg`) |
-| `audio_id` | Content-based ID: same text + same voice settings → same ID. Use it in audio URLs. |
+| `audio_id` | Content-based ID: same text + same voice + same settings → same ID. Use it in audio URLs. |
+| `voice` | Key of the voice used, e.g. `"matilda"` |
 | `spoken_text` | Exactly what was sent to ElevenLabs after cleanup (captions, debugging) |
 | `cached` | `True` = no new ElevenLabs generation was needed (no cost) |
 | `characters_sent` | Characters this call sent to ElevenLabs (0 when cached) |
@@ -66,6 +69,50 @@ Streaming (partial) Gemini output is not supported yet: send the finished answer
 | `error_code`, `error_message`, `retryable` | Set when `ok` is `False` |
 
 `result.metadata()` returns every field except the audio bytes, ready for JSON or logs.
+
+### Voices users can choose
+
+The choices live in [`voices.json`](voices.json). To add or swap a voice, edit that file and
+restart the server; no code changes are needed. The 20 voices (each one generated real audio on the
+team's account on 2026-10-09): 10 female, 9 male, 1 neutral, 11 accents.
+
+| `voice` | Name | Style | Accent, gender | Source |
+|---|---|---|---|---|
+| `matilda` (default) | Matilda | Knowledgeable and professional | American, female | default |
+| `sarah` | Sarah | Mature, reassuring and confident | American, female | default |
+| `george` | George | Warm, captivating storyteller | British, male | default |
+| `charlie` | Charlie | Deep, confident and energetic | Australian, male | default |
+| `bunty` | Bunty | Energetic, expressive and fun | Indian, male | library |
+| `alice` | Alice | Clear, engaging educator | British, female | default |
+| `jessica` | Jessica | Playful, bright and warm | American, female | default |
+| `noor` | Noor | Expressive, sassy and funny | Indian, female | library |
+| `saavi` | Saavi | Warm, reassuring financial advisor | Indian, female | library |
+| `ololade` | Ololade | Calm, natural and reassuring | Nigerian, female | library |
+| `harris` | Ms. Harris | Caring Southern mom | Southern American, female | library |
+| `rachel` | Rachel | Inviting, warm and friendly | Filipino, female | library |
+| `claire` | Claire | Neutral, even and polished | South African, female | library |
+| `river` | River | Relaxed, neutral and informative | American, neutral | default |
+| `brian` | Brian | Deep, resonant and comforting | American, male | default |
+| `bill` | Bill | Wise, mature and balanced | American, male | default |
+| `patrick` | Patrick | Engaging, warm and trustworthy | Irish, male | library |
+| `dayo` | Dayo | Clear, direct and natural | Nigerian, male | library |
+| `elio` | Elio | Youthful, warm and hopeful | Spanish, male | library |
+| `andy` | Andy | Gentle and friendly | Chinese, male | library |
+
+- `list_voices()` returns `{"default": "matilda", "voices": [{key, name, description, accent, gender}, ...]}`
+  for the app's voice picker, in the order above. ElevenLabs voice IDs stay on the server.
+- An unknown `voice` returns `INVALID_REQUEST`, and the message lists the valid keys.
+- The same text in two voices is two separate audios, each cached on its own.
+- "default" voices are ElevenLabs default voices, which ElevenLabs says expire on December 31, 2026.
+  "library" voices come from the Voice Library and work through the API on paid plans only. All
+  of them cost the standard rate and have no live moderation, and their owners must give 730
+  days' notice before withdrawing them (Patrick: 90 days). Using them took none of the account's
+  30 voice slots. `python -m text_to_speech.check_setup` checks every voice against the account.
+- The first audio from a library voice took 5-7 s (default voices about 1 s); after that they
+  answer as quickly as the others.
+- To find more voices: `GET https://api.elevenlabs.io/v1/shared-voices?accent=indian&language=en`
+  (filters include `accent`, `gender`, `age`, `use_cases`; each voice has a free `preview_url`).
+  Add `include_custom_rates=false` to skip voices that cost extra credits.
 
 ### Error codes
 

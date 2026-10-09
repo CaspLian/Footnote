@@ -1,6 +1,6 @@
 """The only file that talks to ElevenLabs.
 
-One call to generate() = one HTTPS request:
+One call to generate(text, voice_id) = one HTTPS request:
 
     POST {base_url}/v1/text-to-speech/{voice_id}?output_format=mp3_44100_128
     xi-api-key: <your key>
@@ -56,10 +56,10 @@ class ElevenLabsProvider:
         self._session = session if session is not None else requests.Session()
         self._clock = clock
 
-    def generate(self, text: str) -> ProviderAudio:
+    def generate(self, text: str, voice_id: str) -> ProviderAudio:
         config = self._config
         settings = config.audio_settings()
-        url = f"{config.base_url}/v1/text-to-speech/{quote(settings['voice_id'], safe='')}"
+        url = f"{config.base_url}/v1/text-to-speech/{quote(voice_id, safe='')}"
         body: dict = {"text": text, "model_id": settings["model_id"]}
         if settings["voice_settings"]:
             body["voice_settings"] = settings["voice_settings"]

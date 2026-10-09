@@ -43,6 +43,7 @@ _MIME_TYPES = {
 @dataclass(frozen=True)
 class TTSConfig:
     api_key: str = field(default="", repr=False)  # repr=False keeps the key out of logs and tracebacks
+    # Optional (ELEVENLABS_VOICE_ID): replaces the default voice's ID. Users pick voices from voices.json.
     voice_id: str = ""
     model_id: str = DEFAULT_MODEL_ID
     output_format: str = DEFAULT_OUTPUT_FORMAT
@@ -82,7 +83,7 @@ class TTSConfig:
 
     @property
     def is_configured(self) -> bool:
-        return bool(self.api_key and self.voice_id)
+        return bool(self.api_key)  # voices come from voices.json
 
     @property
     def file_extension(self) -> str:
@@ -100,10 +101,9 @@ class TTSConfig:
         return settings or None
 
     def audio_settings(self) -> dict:
-        """Every setting that changes the sound. The cache key is built from this,
-        so changing any of them can never replay audio made with the old settings."""
+        """Every setting that changes the sound, apart from the voice (chosen per request). The cache
+        key is built from these plus the voice, so a change can never replay audio made with old settings."""
         return {
-            "voice_id": self.voice_id,
             "model_id": self.model_id,
             "output_format": self.output_format,
             "voice_settings": self.voice_settings(),
@@ -111,12 +111,16 @@ class TTSConfig:
 
 
 def find_env_file() -> str | None:
-    """The nearest .env above the folder you run from; otherwise backend/.env if it exists."""
+    """The nearest .env above the folder you run from; otherwise backend/.env, then backend/api.env
+    (the name the team's .gitignore protects)."""
     nearest = find_dotenv(usecwd=True)
     if nearest:
         return nearest
-    backend_env = BACKEND_DIR / ".env"
-    return str(backend_env) if backend_env.is_file() else None
+    for name in (".env", "api.env"):
+        candidate = BACKEND_DIR / name
+        if candidate.is_file():
+            return str(candidate)
+    return None
 
 
 def _cache_dir_from_env() -> str | None:

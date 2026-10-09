@@ -67,12 +67,16 @@ class STTConfig:
 
 
 def find_env_file() -> str | None:
-    """The nearest .env above the folder you run from; otherwise backend/.env if it exists."""
+    """The nearest .env above the folder you run from; otherwise backend/.env, then backend/api.env
+    (the name the team's .gitignore protects)."""
     nearest = find_dotenv(usecwd=True)
     if nearest:
         return nearest
-    backend_env = BACKEND_DIR / ".env"
-    return str(backend_env) if backend_env.is_file() else None
+    for name in (".env", "api.env"):
+        candidate = BACKEND_DIR / name
+        if candidate.is_file():
+            return str(candidate)
+    return None
 
 
 def _env_str(name: str, default: str) -> str:

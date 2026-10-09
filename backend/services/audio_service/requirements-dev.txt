@@ -1,2 +1,8 @@
 -r requirements.txt
 pytest==9.1.1
+# For the voice playground, voice_routes and their tests (the backend already lists fastapi, uvicorn
+# and python-multipart). Versions checked on PyPI 2026-10-09.
+fastapi==0.141.1
+uvicorn==0.53.0
+httpx==0.28.1
+python-multipart==0.0.32

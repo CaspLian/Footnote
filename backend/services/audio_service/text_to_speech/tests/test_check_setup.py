@@ -4,8 +4,12 @@ import pytest
 
 from text_to_speech.check_setup import run
 from text_to_speech.config import TTSConfig
+from text_to_speech.voices import Voice, VoiceCatalog
 
 CONFIG = TTSConfig(api_key="sk-test", voice_id="voice-george", cache_dir=None)
+# The voices users can choose, as the tests see them: one is in the account, one is not.
+CATALOG = VoiceCatalog((Voice("george", "George", "Warm storyteller", "British", "male", "voice-george"),), "george")
+LIBRARY_VOICE = Voice("bunty", "Bunty", "Fun", "Indian", "male", "voice-from-library")
 
 USER_FREE_NEW = {
     "subscription": {"tier": "free", "status": "free", "character_count": 1200, "character_limit": 10000},
@@ -46,9 +50,9 @@ class FakeSession:
         raise AssertionError(f"unexpected URL {url}")
 
 
-def check(routes, config=CONFIG):
+def check(routes, config=CONFIG, catalog=CATALOG):
     lines = []
-    code = run(config, FakeSession(routes), out=lines.append)
+    code = run(config, FakeSession(routes), out=lines.append, catalog=catalog)
     return code, "\n".join(lines)
 
 
@@ -66,11 +70,31 @@ def test_new_free_account_is_warned_about_default_voices():
     assert "paid_plan_required" in output
 
 
-def test_unknown_voice_id_is_a_problem():
+def test_each_voice_users_can_choose_is_checked():
+    _, output = check({"/v1/user": [(200, USER_FREE_OLD)], "/v2/voices": [(200, VOICES)]})
+    assert "george     George: Warm storyteller, British (default): in your account" in output
+
+
+def test_library_voices_fail_on_the_free_plan():
+    catalog = VoiceCatalog(CATALOG.voices + (LIBRARY_VOICE,), "george")
+    code, output = check({"/v1/user": [(200, USER_FREE_OLD)], "/v2/voices": [(200, VOICES)]}, catalog=catalog)
+    assert code == 1
+    assert "bunty      Bunty: Fun, Indian: Voice Library voice: will fail on the free plan" in output
+
+
+def test_library_voices_are_fine_on_paid_plans():
+    paid_user = {**USER_FREE_OLD, "subscription": {"tier": "creator", "status": "active"}}
+    catalog = VoiceCatalog(CATALOG.voices + (LIBRARY_VOICE,), "george")
+    code, output = check({"/v1/user": [(200, paid_user)], "/v2/voices": [(200, VOICES)]}, catalog=catalog)
+    assert code == 0
+    assert "Voice Library voice (works on paid plans)" in output
+
+
+def test_voice_id_override_is_reported():
     config = TTSConfig(api_key="sk-test", voice_id="not-in-account", cache_dir=None)
     code, output = check({"/v1/user": [(200, USER_FREE_OLD)], "/v2/voices": [(200, VOICES)]}, config)
-    assert code == 1
-    assert "not-in-account is not in the list" in output
+    assert code == 0
+    assert "ELEVENLABS_VOICE_ID=not-in-account replaces the default voice (george); not in your account." in output
 
 
 def test_missing_key_stops_early_without_network():
@@ -109,7 +133,7 @@ def test_voice_pages_are_followed():
     page2 = {"voices": [{"voice_id": "voice-george", "name": "George", "category": "premade"}], "has_more": False}
     session = FakeSession({"/v1/user": [(200, USER_FREE_OLD)], "/v2/voices": [(200, page1), (200, page2)]})
     lines = []
-    assert run(CONFIG, session, out=lines.append) == 0
+    assert run(CONFIG, session, out=lines.append, catalog=CATALOG) == 0
     assert session.calls[-1][2] == {"page_size": 100, "next_page_token": "t2"}
 
 

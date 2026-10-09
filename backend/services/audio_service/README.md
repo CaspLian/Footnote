@@ -1,9 +1,15 @@
 # audio_service: voice for ClaimPulse AI
 
-Lives at `backend/services/audio_service/`. Two features, both tested with real ElevenLabs calls:
+Lives at `backend/services/audio_service/`. Two features, both tested with real ElevenLabs calls,
+and the endpoints that connect them to the team's Gemini step:
 
 - **text_to_speech**: Gemini's answer → speech the app plays
 - **speech_to_text**: the user's recording → text, handed over ready for Gemini
+- **voice_routes.py**: `POST /api/v1/voice/analyze`: recording → transcript → `gemini_service.analyze()`
+  → spoken reply in the voice the user chose, `GET /api/v1/voice/audio/{id}` to play the reply, and
+  `GET /api/v1/voice/voices` (+ `/voices/{key}/sample`) for the app's voice picker
+- **20 voices to choose from** (10 female, 9 male, 1 neutral; 11 accents), listed in
+  `text_to_speech/voices.json`. Matilda is the default; Bunty and Noor are the fun Indian voices.
 
 ```
 audio_service/
@@ -16,6 +22,8 @@ audio_service/
 │   ├── cache.py                reuses audio so the same text is never paid for twice
 │   ├── config.py               settings from backend/.env
 │   ├── errors.py               internal error type
+│   ├── voices.json             the 20 voices users can choose (key → ElevenLabs voice); edit to add more
+│   ├── voices.py               reads and checks voices.json
 │   ├── pronunciations.json     word → how to say it (e.g. ClaimPulse → Claim Pulse)
 │   ├── demo.py                 mock Gemini answer → MP3, no backend needed
 │   ├── check_setup.py          checks key, plan, credits and voices without spending credits
@@ -33,7 +41,11 @@ audio_service/
 │   ├── config.py, errors.py    settings from backend/.env; internal error type
 │   ├── demo.py                 transcribe a recording, or a text-to-speech MP3 (round trip)
 │   ├── tests/                  automated tests; no network or API key needed
-│   └── README.md               integration guide: receiving endpoint, voice loop, app recording
+│   └── README.md               integration guide: the voice endpoints, app recording
+├── voice_routes.py             the /api/v1/voice endpoints: speech-to-text → Gemini → text-to-speech
+├── playground.py, .html        a local page to try the voices: type text, pick a voice, hear it
+├── tests/                      tests for voice_routes (a stand-in replaces the Gemini module)
+├── __init__.py                 makes this folder a package (see "Git notes")
 ├── conftest.py                 test setup for both features (never reads the real backend/.env)
 ├── .env.example                every audio setting, with explanations
 ├── .gitignore                  keeps generated audio, caches and stray .env files out of git
@@ -62,10 +74,10 @@ Then put your ElevenLabs settings in **`backend/.env`**, the backend's shared se
 
 ```
 ELEVENLABS_API_KEY=your-real-key
-ELEVENLABS_VOICE_ID=a-voice-id-from-check_setup
 ```
 
 One `NAME=value` per line: no dashes, no quotes, no spaces around `=`. Do not paste the key anywhere else.
+The voices users can choose come from `text_to_speech/voices.json`, so no voice setting is needed.
 
 ## Verify, step by step
 
@@ -78,12 +90,14 @@ Run these from `backend\services\audio_service` with the venv active:
 | 3. Check key, plan and voices | `python -m text_to_speech.check_setup` | yes | free |
 | 4. Hear it | `python -m text_to_speech.demo --open` | yes | ~96 characters |
 | 5. Prove the cache works | run step 4 again | yes | 0 characters |
+| 5b. See the voices | `python -m text_to_speech.demo --list-voices` | no | free |
+| 5c. Compare the voices | `python -m text_to_speech.demo --voice all --text "Hi! I checked your bill."` | yes | ~35 credits per voice |
 | 6. Check a recording | `python -m speech_to_text.demo --file recording.m4a --check` | no | free |
 | 7. Transcribe it | `python -m speech_to_text.demo --file recording.m4a` | yes | ~$0.004 per minute |
 | 8. Round trip | `python -m speech_to_text.demo --round-trip mock-bill-summary` | yes | ~$0.004 |
 
-Step 3 lists the voice IDs your key can use. Copy one into `ELEVENLABS_VOICE_ID` in `backend/.env`.
-Step 4 saves `audio_service/demo_output/mock-plain.mp3` and plays it. Each answer is requested twice,
+Step 3 also checks that every voice in `voices.json` works on your account.
+Step 5c saves one file per voice, e.g. `demo_output/custom-text-bunty.mp3`. Step 4 saves `audio_service/demo_output/mock-plain.mp3` and plays it. Each answer is requested twice,
 and the second request should print `cached=True characters_sent=0`. Other options:
 `--mock mock-numbers`, `--text "your sentence"`, `--all` (all mock answers, about 830 characters).
 
@@ -91,6 +105,23 @@ Step 8 transcribes the MP3 that `python -m text_to_speech.demo --mock mock-bill-
 compares it with the original Gemini text. On 2026-10-09 it took 4.6 s for 63 s of audio, with
 confidence 0.994 and every spoken word back (numbers come back written as words, e.g.
 "seven oh five five one").
+
+## Try the voices: the playground
+
+```powershell
+cd backend\services\audio_service
+python -m playground
+```
+
+This opens a page in your browser (http://127.0.0.1:8765). Type anything, pick one of the 20 voices
+(or press "Sample" to hear one first), and press Speak or Ctrl+Enter. The text goes to the
+playground's text-to-speech receiver (`POST /api/speak`), which uses the same `text_to_speech`
+module as the backend, and the audio plays on the page. It shows the cost of each clip and keeps
+a replay list for the session. The same text in the same voice again is free.
+
+It only listens on your computer, so nobody else on the network can use it. Stop it with Ctrl+C
+in the terminal. It needs `fastapi` and `uvicorn` (`pip install -r requirements-dev.txt`), and
+finds the key in `backend/.env` or `backend/api.env`.
 
 ## How the backend uses it
 
@@ -101,9 +132,16 @@ from services.audio_service.text_to_speech import TTSRequest, synthesize
 from services.audio_service.speech_to_text import STTRequest, to_gemini_handoff, transcribe
 ```
 
-The speech-to-text contract, the receiving endpoint, the full voice loop (speech → Gemini →
-speech) and the mobile recording code are in [speech_to_text/README.md](speech_to_text/README.md).
-File uploads in FastAPI need `python-multipart` in `backend/requirements.txt`.
+To switch on the voice endpoints (speech → the team's Gemini step → speech), add two lines to
+`backend/main.py`, after `app = FastAPI(...)`:
+
+```python
+from services.audio_service.voice_routes import router as voice_router
+app.include_router(voice_router)
+```
+
+Fields, response shape and error codes are in section 3 of
+[speech_to_text/README.md](speech_to_text/README.md), along with the mobile recording code.
 
 The text-to-speech contract, a FastAPI example and the mobile playback code are in
 [text_to_speech/README.md](text_to_speech/README.md). Generated audio is cached in
@@ -184,19 +222,24 @@ $1 until October 18).
   parsing, and rapid switching between answers. For speech-to-text: format detection for 10 audio
   formats, rejection of empty, oversized and non-audio uploads, silence, cache, retries, error
   mapping, confidence and the Gemini handoff.
-- **Run by hand:** a 400-call, 16-thread stress test with random failures; the FastAPI examples in
-  both READMEs (receiving endpoint and full voice loop) against the team's real `backend/main.py`;
-  a real text-to-speech call (the bill summary, played on a laptop) and a real speech-to-text call
-  (that MP3 transcribed back: 100% of spoken words, confidence 0.994).
+- **Run by hand:** a 400-call, 16-thread stress test with random failures; the FastAPI examples
+  against the team's real `backend/main.py`; a real text-to-speech call (the bill summary, played on
+  a laptop) and a real speech-to-text call (that MP3 transcribed back: 100% of spoken words,
+  confidence 0.994); and the whole voice path on a copy of the committed backend: the team's
+  `main.py` with the two lines above, real ElevenLabs both ways, and the team's `gemini_service`
+  in `MOCK=true` mode (a spoken question came back as text, went through the Gemini step, and the
+  reply was spoken: `demo_output/e2e-question.mp3` and `e2e-reply.mp3`).
 - **Not yet tested:** the mobile playback and recording snippets on a phone, a real human voice
-  recorded on a phone (only synthetic speech so far), and the real Gemini service (a stand-in was used).
+  recorded on a phone (only synthetic speech so far), and Gemini with a real key (only its mock mode).
 
 ## Git notes
 
 - Commit this folder. Its `.gitignore` keeps `.tts_cache/`, `demo_output/`, `__pycache__/` and any
   stray `.env` out of git. Never commit `backend/.env`.
 - This folder replaces the empty `backend/services/audio_service.py` placeholder from the first
-  commit; Git shows that file as deleted. Mention it to the team when you commit.
+  commit. Commit its deletion too. Until then, `__init__.py` in this folder makes sure Python
+  imports the folder and not that empty file (without it, `services.audio_service...` imports fail
+  with "is not a package").
 - `backend/requirements.txt` should also list `requests` (this module uses it directly; today it only
-  arrives as a dependency of `elevenlabs`) and `python-multipart` (FastAPI needs it to receive the
-  recording upload). That file belongs to the backend owner.
+  arrives as a dependency of `elevenlabs`). `python-multipart` is already there. That file belongs
+  to the backend owner.

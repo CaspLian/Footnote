@@ -89,79 +89,83 @@ from speech recognition and may contain misheard words.
 | `RATE_LIMITED`, `PROVIDER_TIMEOUT`, `PROVIDER_UNAVAILABLE` | yes | Temporary; already retried once inside the module. |
 | `INTERNAL_ERROR` | no | Bug in this module. Details are in the server log. |
 
-## 3. The receiving end (FastAPI)
+## 3. Connected to Gemini: the voice endpoints
 
-This was run against the team's real `backend/main.py` with a fake ElevenLabs on 2026-10-09.
-Add it to `backend/main.py`, below `app = FastAPI(...)`. File uploads in FastAPI need the
-**`python-multipart`** package, so add it to `backend/requirements.txt`.
-
-```python
-from fastapi import APIRouter, File, Form, UploadFile
-
-from services.audio_service.speech_to_text import STTRequest, to_gemini_handoff, transcribe_async
-
-stt_router = APIRouter(prefix="/api/stt", tags=["audio"])
-
-
-@stt_router.post("")
-async def receive_speech(audio: UploadFile = File(...), message_id: str = Form(...)):
-    result = await transcribe_async(
-        STTRequest(request_id=message_id, audio=await audio.read(), mime_type=audio.content_type)
-    )
-    handoff = to_gemini_handoff(result)
-    if handoff is None:
-        # Nothing to send to Gemini: the app should ask the user to try again.
-        return {"ok": False, "error_code": result.error_code, "retryable": result.retryable}
-    return {"ok": True, "gemini_handoff": handoff.to_dict()}
-
-
-app.include_router(stt_router)
-```
-
-## 4. The whole voice loop: speech → Gemini → speech
-
-How the teammate connects everything in one endpoint, also run against the real `main.py`.
-`ask_gemini` stands for the Gemini service's function:
+[`../voice_routes.py`](../voice_routes.py) receives the recording, transcribes it, passes the text to
+the team's Gemini step (`services.gemini_service.analyze`, called the same way `/api/v1/analyze`
+calls it), and turns Gemini's `spoken_summary` into audio. To switch it on, add two lines to
+`backend/main.py`, after `app = FastAPI(...)`:
 
 ```python
-import asyncio
-
-from fastapi import APIRouter, File, Form, UploadFile
-
-from services.audio_service.speech_to_text import STTRequest, to_gemini_handoff, transcribe_async
-from services.audio_service.text_to_speech import TTSRequest, synthesize_async
-
-voice_router = APIRouter(prefix="/api/voice", tags=["audio"])
-
-
-def ask_gemini(question: str) -> str:
-    """Replace with the Gemini service's function: question in, answer text out."""
-    raise NotImplementedError
-
-
-@voice_router.post("/ask")
-async def ask_by_voice(audio: UploadFile = File(...), message_id: str = Form(...)):
-    heard = await transcribe_async(
-        STTRequest(request_id=message_id, audio=await audio.read(), mime_type=audio.content_type)
-    )
-    handoff = to_gemini_handoff(heard)
-    if handoff is None:
-        return {"ok": False, "stage": "speech_to_text", "error_code": heard.error_code}
-    answer = await asyncio.to_thread(ask_gemini, handoff.text)
-    spoken = await synthesize_async(TTSRequest(request_id=message_id, text=answer))
-    return {
-        "ok": True,
-        "question": handoff.text,
-        "needs_confirmation": handoff.needs_confirmation,
-        "answer": answer,  # always show the text, even if the audio failed
-        "audio_url": f"/api/tts/audio/{spoken.audio_id}" if spoken.ok else None,
-    }
-
-
+from services.audio_service.voice_routes import router as voice_router
 app.include_router(voice_router)
 ```
 
-`audio_url` is served by the `/api/tts/audio/{audio_id}` route in `../text_to_speech/README.md`.
+### `POST /api/v1/voice/analyze` (multipart form)
+
+| Field | Required | Meaning |
+|---|---|---|
+| `audio` | yes | The recording: `.m4a` from the app, webm, mp3, wav, ... |
+| `file` | no | Photo or PDF of the bill, sent to Gemini together with the question |
+| `target_language` | no (`en`) | The language the user speaks and wants the answer in; speech-to-text uses it too |
+| `message_id` | no | Your ID for this message; one is made if missing |
+| `speak_reply` | no (`true`) | Also turn `spoken_summary` into audio |
+| `voice` | no (default voice) | The reply voice the user chose: a key from `GET /api/v1/voice/voices`, e.g. `bunty` |
+
+A successful answer (from the end-to-end run on 2026-10-09, shortened):
+
+```json
+{
+  "transcript": {"text": "Hi. Why was my MRI billed $3,200? Is that normal?", "language": "eng",
+                 "confidence": 0.991, "needs_confirmation": false, "audio_seconds": 5.43},
+  "analysis":   {"target_language": "en", "model": "gemini-3.8-flash", "mock": true, "result": {"...": "..."}},
+  "speech":     {"ok": true, "audio_url": "/api/v1/voice/audio/eb271c6235a68884ff2a308e63c5f7a5",
+                 "mime_type": "audio/mpeg", "voice": "matilda", "error_code": null, "error_message": null}
+}
+```
+
+`analysis` is exactly what `/api/v1/analyze` returns, so the app can show both the same way.
+Play `speech.audio_url` (`GET /api/v1/voice/audio/{audio_id}`, an MP3) with the playback code in
+`../text_to_speech/README.md`. Show `transcript.text` when `needs_confirmation` is true.
+
+Errors come back as `{"detail": {"stage": ..., ...}}` so the app knows which step failed:
+
+| Status | Stage | When |
+|---|---|---|
+| 422 | `speech_to_text` | Silent, empty or non-audio recording (`detail.error_code`: `NO_SPEECH`, `EMPTY_AUDIO`, `UNSUPPORTED_AUDIO`). Ask the user to try again. |
+| 413 | `speech_to_text` / `upload` | Recording over `STT_MAX_AUDIO_MB`, or bill over 15 MB |
+| 503 | `speech_to_text` | ElevenLabs temporarily unavailable (`detail.retryable` is true) |
+| 502 | `speech_to_text` / `gemini` | Key, permission or quota problem, or Gemini failed |
+| 400 / 504 | `gemini` | Gemini rejected the input / took too long (same as `/api/v1/analyze`) |
+
+A failed reply voice never fails the request: `speech.ok` is false and the text answer is still
+there. That includes an unknown `voice` (`INVALID_REQUEST`, and the message lists the valid keys).
+The reply voice is English-only for now: other languages get the text answer, with
+`speech.error_code` set to `INVALID_REQUEST`.
+
+### Voice picker: `GET /api/v1/voice/voices` and `GET /api/v1/voice/voices/{key}/sample`
+
+`/voices` returns the voices users can choose, for a picker in the app:
+
+```json
+{"default": "matilda",
+ "voices": [{"key": "matilda", "name": "Matilda", "description": "Knowledgeable and professional", "accent": "American", "gender": "female"},
+            {"key": "bunty", "name": "Bunty", "description": "Energetic, expressive and fun", "accent": "Indian", "gender": "male"},
+            "..."]}
+```
+
+`/voices/{key}/sample` returns a short MP3 of that voice saying "Hi, I'm Bunty. I can read your
+medical bill explanations out loud.", so users can hear a voice before choosing it. Each sample
+is made once (about 30 credits) and then served from the cache. Send the chosen `key` as `voice`
+with `/analyze`.
+
+**Tested:** `../tests/test_voice_routes.py` (24 cases with a stand-in for Gemini), and an
+end-to-end run on 2026-10-09: the team's `main.py` plus the two lines above, real ElevenLabs
+speech-to-text and text-to-speech, and the team's `gemini_service` in `MOCK=true` mode.
+
+## 4. Using speech-to-text on its own
+
+Section 1 shows the direct call. Use it when the backend needs a transcript without Gemini.
 
 ## 5. Recording in the mobile app (Expo; reference, not yet run on a phone)
 
@@ -182,13 +186,18 @@ async function startRecording() {
   recorder.record();
 }
 
-async function stopAndSend(messageId) {
+async function stopAndAsk(messageId, language = 'en', voice = 'matilda') {   // voice: from GET /api/v1/voice/voices
   await recorder.stop();
   const form = new FormData();
   form.append('audio', { uri: recorder.uri, name: 'question.m4a', type: 'audio/m4a' });
+  form.append('target_language', language);
+  form.append('voice', voice);
   form.append('message_id', messageId);
-  const response = await fetch(`${BACKEND_URL}/api/stt`, { method: 'POST', body: form });
-  return response.json();   // { ok: true, gemini_handoff: {...} } or { ok: false, error_code }
+  const response = await fetch(`${BACKEND_URL}/api/v1/voice/analyze`, { method: 'POST', body: form });
+  const body = await response.json();
+  if (!response.ok) return showVoiceError(body.detail);   // detail.stage says which step failed
+  showAnswer(body.transcript.text, body.analysis.result);  // same result shape as /api/v1/analyze
+  if (body.speech.ok) playReply(BACKEND_URL + body.speech.audio_url);
 }
 ```
 
@@ -198,9 +207,10 @@ Do not set the `Content-Type` header yourself; `fetch` adds the right one for `F
 
 | Part | Owner |
 |---|---|
-| Recording, microphone permission, upload | Mobile app |
-| The upload endpoint, calling Gemini with `handoff.text`, storing the conversation | Backend / Gemini teammates |
-| Checking the audio, transcription, retries, cache, tidying, error codes, the handoff | This module |
+| Recording, microphone permission, upload, showing and playing the answer | Mobile app |
+| Mounting the voice router in `main.py` (two lines) | Backend teammate |
+| What Gemini does with the question: prompt, model, `GeminiResult` | Gemini teammate (`services/gemini_service.py`) |
+| The voice endpoints, checking the audio, transcription, retries, cache, the handoff, the spoken reply | This module |
 | Recognition accuracy, billing | ElevenLabs |
 
 ## 7. Cost, privacy and options

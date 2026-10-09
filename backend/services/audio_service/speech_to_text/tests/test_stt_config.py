@@ -47,6 +47,14 @@ def test_backend_env_is_used_when_no_env_file_is_nearby(clean_env, tmp_path):
     assert STTConfig.from_env().api_key == "from-backend"
 
 
+def test_backend_api_env_is_used_when_there_is_no_env(clean_env, tmp_path):
+    backend = tmp_path / "backend"
+    backend.mkdir()
+    (backend / "api.env").write_text("ELEVENLABS_API_KEY=from-api-env\n", encoding="utf-8")
+    clean_env.setattr(config_module, "BACKEND_DIR", backend)
+    assert STTConfig.from_env().api_key == "from-api-env"
+
+
 @pytest.mark.parametrize(
     "name, value, message",
     [
