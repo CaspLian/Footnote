@@ -13,7 +13,7 @@ from services.gemini_service import LANGUAGES, analyze, is_mock, model_name  # n
 from services.snowflake_service import check_prices  # noqa: E402
 
 MAX_UPLOAD_MB = 15
-GEMINI_TIMEOUT_S = 75
+GEMINI_TIMEOUT_S = 150  # covers 2 attempts x 2 models
 
 app = FastAPI(title="ClaimPulse AI API")
 

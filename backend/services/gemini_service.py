@@ -38,6 +38,7 @@ Rules:
 - If the input is not a medical or insurance document, set document_type to "other" and explain that briefly."""
 
 RETRYABLE_CODES = {429, 500, 503}
+ATTEMPT_TIMEOUT_S = int(os.getenv("GEMINI_ATTEMPT_TIMEOUT_S", "40"))
 
 _client: Optional[genai.Client] = None
 MOCK_PATH = Path(__file__).parent / "mock_gemini_response.json"
@@ -101,13 +102,19 @@ async def analyze(
 
     last_error: Exception | None = None
     for model in models:
-        # Busy/rate-limited errors (429, 500, 503) are usually temporary: wait a bit and retry,
-        # then move on to the fallback model if one is set.
-        for wait in (0, 2, 5):
+        # Each attempt gets its own time limit, so one hung call can't eat the whole budget.
+        # Busy/rate-limited/slow responses are retried, then we move on to the fallback model.
+        for wait in (0, 2):
             if wait:
                 await asyncio.sleep(wait)
             try:
-                response = await client.aio.models.generate_content(model=model, contents=parts, config=config)
+                response = await asyncio.wait_for(
+                    client.aio.models.generate_content(model=model, contents=parts, config=config),
+                    timeout=ATTEMPT_TIMEOUT_S,
+                )
+            except asyncio.TimeoutError:
+                last_error = TimeoutError(f"{model} took longer than {ATTEMPT_TIMEOUT_S}s")
+                continue
             except errors.APIError as e:
                 last_error = e
                 if e.code in RETRYABLE_CODES:
