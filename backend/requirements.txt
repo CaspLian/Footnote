@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+pydantic
+google-genai
+elevenlabs
+psycopg2-binary
+snowflake-connector-python
+python-dotenv

@@ -1,0 +1,6 @@
+mobile/node_modules/
+mobile/.expo/
+backend/venv/
+backend/.env
+backend/__pycache__/
+.DS_Store
