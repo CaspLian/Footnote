@@ -10,9 +10,10 @@ from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
 
 from models import AnalyzeResponse  # noqa: E402
 from services.gemini_service import LANGUAGES, analyze, is_mock, model_name  # noqa: E402
+from services.snowflake_service import check_prices  # noqa: E402
 
 MAX_UPLOAD_MB = 15
-GEMINI_TIMEOUT_S = 45
+GEMINI_TIMEOUT_S = 75
 
 app = FastAPI(title="ClaimPulse AI API")
 
@@ -41,7 +42,7 @@ async def analyze_endpoint(
     text: Optional[str] = Form(None, description="Typed text or a question (optional if a file is sent)"),
     target_language: str = Form("en", description="Language code, e.g. en, es, zh, ar"),
 ):
-    """User input -> Gemini -> structured result. result.spoken_summary is the text for ElevenLabs."""
+    """User input -> Gemini -> Snowflake price check. result.spoken_summary is the text for ElevenLabs."""
     file_bytes, mime = None, None
     if file is not None and file.filename:
         file_bytes = await file.read()
@@ -61,4 +62,14 @@ async def analyze_endpoint(
     except Exception as e:  # API key problems, quota, network, bad output
         raise HTTPException(502, f"Gemini step failed: {e}")
 
-    return AnalyzeResponse(target_language=target_language, model=model_name(), mock=is_mock(), result=result)
+    # Step 2: compare each line item to Medicare's rate in Snowflake (never fails the request)
+    price_checks, price_summary = await check_prices(result.line_items)
+
+    return AnalyzeResponse(
+        target_language=target_language,
+        model=model_name(),
+        mock=is_mock(),
+        result=result,
+        price_checks=price_checks,
+        price_summary=price_summary,
+    )
