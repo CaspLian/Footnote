@@ -15,7 +15,11 @@ export type ImportResult =
 type PickedFile = { uri: string; name: string; mimeType?: string; size?: number };
 
 export function appendAttachmentToForm(form: FormData, attachment: DocumentAttachment): void {
-  form.append('files', { uri: attachment.uri, name: attachment.name, type: attachment.mimeType } as unknown as Blob);
+  // The global fetch is Expo's: it sends parts that are strings, Blobs or objects with bytes(), and refuses React
+  // Native's { uri, name, type } parts ("Unsupported FormDataPart implementation"). name and type become the part's
+  // filename and content type; the backend checks the type.
+  const file = new File(attachment.uri);
+  form.append('files', { name: attachment.name, type: attachment.mimeType, bytes: () => file.bytes() } as unknown as Blob);
 }
 
 function storageDirectory() {
