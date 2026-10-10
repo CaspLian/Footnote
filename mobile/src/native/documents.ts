@@ -49,7 +49,7 @@ export async function persistImportedAttachment(asset: PickedFile, kind: Documen
   const id = createLocalId();
   const destination = new File(directory, `${id}.${validation.extension}`);
   try {
-    source.copy(destination);
+    await source.copy(destination); // asynchronous since expo-file-system 57: check the copy only once it is done
     if (!destination.exists || destination.size !== size) throw new NativeActionError('import-failed');
     return {
       id,

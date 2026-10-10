@@ -28,7 +28,7 @@ export async function exportDraftPdf(draft: DraftExport): Promise<{ uri: string 
     const directory = new Directory(Paths.document, 'unfold', 'exports');
     directory.create({ intermediates: true, idempotent: true });
     destination = new File(directory, `${createLocalId('unfold-draft')}.pdf`);
-    temporary.copy(destination);
+    await temporary.copy(destination); // asynchronous since expo-file-system 57
     if (!destination.exists || destination.size <= 0) throw new Error('Export did not create a file');
     return { uri: destination.uri };
   } catch {
