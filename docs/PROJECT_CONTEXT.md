@@ -39,7 +39,7 @@ backend/main.py (FastAPI) ── POST /api/v1/analyze ── GET /api/v1/audits/
 Service responsibilities:
 - **Gemini (`gemini_services`)**: reads the image, PDF or text; returns `GeminiResult` (document type, provider,
   totals, line items with codes and amounts, `plain_summary`, `spoken_summary`, `questions_to_ask`) in one of the
-  39 locales from `GET /api/v1/languages` (`backend/locales.py`). Retries 429/500/503 once, then tries `GEMINI_FALLBACK_MODEL`.
+  42 locales from `GET /api/v1/languages` (`backend/locales.py`). Retries 429/500/503 once, then tries `GEMINI_FALLBACK_MODEL`.
   `MOCK=true` returns a fixed sample (in Spanish), whatever the input.
 - **Price check (`snowflake_services`)**: looks up each code's Medicare rate and flags each line as `typical`,
   `above_typical` (over 3× and up to 6× the rate), `far_above_typical` (over 6×), `no_code`, `no_benchmark` or
@@ -64,15 +64,15 @@ Between checkpoints, record status changes in your handoff.
 |---|---|---|
 | Bill photo (PNG) or typed question → structured analysis | VERIFIED: live (Gemini `gemini-3.5-flash`) and mocked | `POST /api/v1/analyze`; `gemini_service.py`; the sample bill photo was read correctly in 6–9 s |
 | PDF bills and EOB letters | VERIFIED live over HTTP (2026-10-10): the sample ER bill PDF, and the EOB PDF in Spanish | `backend/samples/test_bills/` |
-| Plain-language explanation in the chosen language | VERIFIED live over HTTP (2026-10-10) in `en-US`, `en-GB`, `es-MX`, `es-ES`, `pt-BR`, `ja-JP`, `zh-CN`, `ko-KR`, `hi-IN`; the other 30 locales IMPLEMENTED, UNVERIFIED. No native speaker has checked any | `backend/locales.py`, `gemini_service.py` |
+| Plain-language explanation in the chosen language | VERIFIED live over HTTP (2026-10-10) in `en-US`, `en-GB`, `es-MX`, `es-ES`, `pt-BR`, `ja-JP`, `zh-CN`, `ko-KR`, `hi-IN`, `he-IL`, `th-TH`, `zh-TW` (Traditional characters); the other 30 locales IMPLEMENTED, UNVERIFIED. No native speaker has checked any | `backend/locales.py`, `gemini_service.py` |
 | Questions to ask the billing office | IMPLEMENTED, UNVERIFIED: returned with every analysis; content never checked | `GeminiResult.questions_to_ask` |
 | Price comparison with Medicare rates | PARTIAL: runs live (Snowflake) and offline (CSV), but flags are misleading for doctor-only rates and multi-unit lines | `snowflake_service.py`; report §5; `docs/decisions/2026-10-10-proposal-price-flags.md` |
 | Saving and reopening an analysis | VERIFIED: live (Tiger Data, throwaway schema) and offline | `analysis_store.py`; `GET /api/v1/audits/{id}` |
 | Voice question → transcript → analysis → spoken reply | VERIFIED live (English) | `POST /api/v1/voice/analyze` |
-| Spoken reply includes the price findings | VERIFIED live: in English, and translated by Gemini in the 8 other locales above (2026-10-10) | `spoken_reply()`, `_spoken_text()` in `voice_routes.py` |
+| Spoken reply includes the price findings | VERIFIED live: in English, and translated by Gemini in the 11 other locales above (2026-10-10). In `zh-TW` the fallback model turned "30 times" into 31 or 3 times (`docs/API_CONTRACTS.md`, "Languages") | `spoken_reply()`, `_spoken_text()` in `voice_routes.py` |
 | Hear a saved analysis again, without re-analyzing | VERIFIED live | `POST /api/v1/voice/speak` |
 | Voice picker and samples; streamed replies; byte ranges for iPhones | Picker and samples: VERIFIED mocked. Streaming: VERIFIED live (first audio after 0.43 s, 2026-10-09). Byte ranges: live on 2026-10-10 just before `d1753db`, mocked at `d1753db`. iPhone playback: UNVERIFIED | `GET /api/v1/voice/voices`, `/audio/{id}` |
-| Spoken replies in languages other than English | VERIFIED live (2026-10-10): spoken and heard back in 10 languages, full replies in 9 locales. In Arabic, speech-to-text heard the formal "two hundred" as "one hundred" | `text_to_speech/config.py`, `voice_routes.py` |
+| Spoken replies in languages other than English | VERIFIED live (2026-10-10): spoken and heard back in 12 languages and both Chinese scripts, full replies in 12 locales. Hebrew and Thai are spoken by v4 Turbo (Flash v2.5 does not speak them), more slowly. In Arabic, speech-to-text heard the formal "two hundred" as "one hundred" | `text_to_speech/config.py`, `voice_routes.py` |
 | Developer console (every route in a browser) | VERIFIED mocked (headless Chrome, a stand-in for ElevenLabs, 58 checks). Its API also answered live requests (curl, 2026-10-10) | `backend/dev_console.py` |
 | Mobile app connected to the backend | VERIFIED in a browser (Expo web, live backend): uploads read, Medicare lookups, ElevenLabs playback. Typecheck, lint and 42 tests pass. Never run on a phone | `mobile/src/services/backend.ts`, `connected-services.ts` |
 | Follow-up questions about a saved bill | PLANNED: no route takes an `audit_id` plus a question | `docs/decisions/2026-10-10-proposal-followup-questions.md` |
@@ -125,8 +125,8 @@ rows, all from the **CMS 2026 Physician Fee Schedule (RVU26D, October release), 
   escrow or blockchain receipts protect credit scores, stop collections or have legal standing.
 - **Check current model availability and language support** before relying on it. On 2026-10-10 the code's
   default `gemini-3.8-flash` did not answer for the team's key, `gemini-2.5-flash` was no longer offered to new
-  keys. Replies cover the 39 locales in `backend/locales.py`, the 32 languages Flash v2.5 speaks (the whiteboard
-  mentions "30+ languages").
+  keys. Replies cover the 42 locales in `backend/locales.py`: the 32 languages Flash v2.5 speaks, and Hebrew and
+  Thai on v4 Turbo (the whiteboard mentions "30+ languages").
 
 ## Frontend: evidence and open choices
 
@@ -149,7 +149,7 @@ rows, all from the **CMS 2026 Physician Fee Schedule (RVU26D, October release), 
 | Response | `claim_id`, `fair_market_total`, `potential_savings`, `is_overcharge`, `audio_stream_url` | `AnalyzeResponse` with flags and ratios; no savings or overcharge fields, by design; `audit.audit_id`; `speech.audio_url` |
 | Benchmarks | regional, ZIP code, fair-market medians | national Medicare rates |
 | Tiger Data | time-series hypertables, deadlines, alerts | plain tables for saved analyses |
-| Languages | Gemini "100+", ElevenLabs "30+" | 39 locales (32 languages), in text and voice |
+| Languages | Gemini "100+", ElevenLabs "30+" | 42 locales (34 languages), in text and voice |
 | Models | Gemini 1.5 Flash/Pro; `eleven_multilingual_v2` / `eleven_v3` | `GEMINI_MODEL` setting (default `gemini-3.8-flash`); `eleven_flash_v2_5` (since 2026-10-10) |
 
 Which contract to keep is an open team decision: `docs/decisions/2026-10-10-open-whiteboard-contract.md`.

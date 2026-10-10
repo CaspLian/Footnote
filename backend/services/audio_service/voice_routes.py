@@ -56,10 +56,14 @@ GEMINI_TIMEOUT_S = 150  # same as main.py: covers 2 attempts x 2 models
 SAMPLE_TEXT = "Hi, I'm {name}. I can read your medical bill explanations out loud."
 TRANSLATION_TIMEOUT_S = 15  # the longest a reply waits for its price findings' translation; then it is said without them
 # Where ElevenLabs' speech-to-text knows a language by another code than backend/locales.py: Norwegian is "no".
+# Scribe takes the ISO 639-1 codes and uses them: "he" is heard as Hebrew, "th" as Thai, "zh" as Chinese in either
+# script; it refuses "zh-TW" and "cmn" (checked 2026-10-10).
 _SPEECH_TO_TEXT_CODES = {"nb": "no"}
-# What ends a sentence, in the reply languages; and what may follow it (closing quotes and brackets).
+# What ends a sentence, in the reply languages; and what may follow it (closing quotes and brackets, and the invisible
+# direction marks Hebrew and Arabic text may carry: LRM, RLM, ALM, embeddings and isolates).
 _SENTENCE_ENDS = (".", "!", "?", "\u2026", "\u3002", "\uff01", "\uff1f", "\u0964", "\u061f")
-_CLOSING_MARKS = "\"')]\u201d\u2019\u00bb\u300d\u300f"
+_DIRECTION_MARKS = "\u200e\u200f\u061c\u202a\u202b\u202c\u202d\u202e\u2066\u2067\u2068\u2069"
+_CLOSING_MARKS = "\"')]\u201d\u2019\u00bb\u300d\u300f" + _DIRECTION_MARKS
 _NAME_END = re.compile("[\u3002\uff01\uff1f\u0964\u061f]")
 
 router = APIRouter(prefix="/api/v1/voice", tags=["voice"])

@@ -37,7 +37,7 @@ from the code. The models are defined in `backend/models.py` and `backend/servic
 | Method and path | Purpose | Code |
 |---|---|---|
 | `GET /` | Health: `{"message", "mock", "model"}` | `main.py` |
-| `GET /api/v1/languages` | The 39 locales: `{"en-US": "English (United States)", "es-MX": "Spanish (Mexico)", ...}` (see "Languages") | `main.py`, `backend/locales.py` |
+| `GET /api/v1/languages` | The 42 locales: `{"en-US": "English (United States)", "es-MX": "Spanish (Mexico)", ...}` (see "Languages") | `main.py`, `backend/locales.py` |
 | `POST /api/v1/analyze` | A bill and/or text → analysis, price check, saved record | `main.py` |
 | `GET /api/v1/audits/{audit_id}` | A saved analysis, exactly as it was returned | `main.py`, `analysis_store.py` |
 | `GET /api/v1/benchmarks/{cpt_code}` | Medicare's national rate for one code, for the app's price comparison | `main.py`, `snowflake_service.py` |
@@ -53,33 +53,50 @@ from the code. The models are defined in `backend/models.py` and `backend/servic
 
 ### Languages
 
-The app offers 39 locales, the 32 languages ElevenLabs Flash v2.5 speaks. The list is `backend/locales.py`, served
-by `GET /api/v1/languages` as `{locale: name}`:
+The app offers 42 locales in 34 languages. The first 39 are the 32 languages ElevenLabs Flash v2.5 speaks; `zh-TW`,
+`he-IL` and `th-TH` were added on 2026-10-10 for the app's language picker (`mobile/src/domain/languages.ts`). The
+list is `backend/locales.py`, served by `GET /api/v1/languages` as `{locale: name}`, in this order:
 
 `en-US`, `en-GB`, `en-AU`, `en-CA`, `ja-JP`, `zh-CN`, `de-DE`, `hi-IN`, `fr-FR`, `fr-CA`, `ko-KR`, `pt-BR`, `pt-PT`,
 `it-IT`, `es-ES`, `es-MX`, `id-ID`, `nl-NL`, `tr-TR`, `fil-PH`, `pl-PL`, `sv-SE`, `bg-BG`, `ro-RO`, `ar-SA`, `ar-AE`,
-`cs-CZ`, `el-GR`, `fi-FI`, `hr-HR`, `ms-MY`, `sk-SK`, `da-DK`, `ta-IN`, `uk-UA`, `ru-RU`, `hu-HU`, `nb-NO`, `vi-VN`
+`cs-CZ`, `el-GR`, `fi-FI`, `hr-HR`, `ms-MY`, `sk-SK`, `da-DK`, `ta-IN`, `uk-UA`, `ru-RU`, `hu-HU`, `nb-NO`, `vi-VN`,
+`zh-TW` (Chinese, Traditional, Taiwan), `he-IL` (Hebrew), `th-TH` (Thai)
 
 - **What to send.** `target_language` takes one of these locales, case and `_` or `-` as you like (`en_us` works).
   A bare language means its default locale: `en` → `en-US`, `es` → `es-MX`, `pt` → `pt-BR`, `fr` → `fr-FR`,
-  `ar` → `ar-SA`, `zh` → `zh-CN`. `tl` means Filipino (`fil-PH`) and `no` means Norwegian (`nb-NO`). Anything else
-  (`es-AR`, `yue`, `ht`) is refused with 400 before anything is paid for.
+  `ar` → `ar-SA`, `zh` → `zh-CN`, `he` → `he-IL`, `th` → `th-TH`. Older codes work alone or with the region: `tl`
+  means Filipino (`fil-PH`), `no` Norwegian (`nb-NO`) and `iw` Hebrew (`iw-IL` → `he-IL`). The script tags phones
+  send for Chinese work too: `zh-Hans` and `zh-Hans-CN` mean `zh-CN`; `zh-Hant`, `zh-Hant-TW` and `zh-TW` mean
+  `zh-TW`. Anything else (`es-AR`, `yue`, `ht`, `zh-HK`, `zh-Hant-HK`) is refused with 400 before anything is paid
+  for. From the app's language picker, send the choice's `locale` (`es-ES`), not its bare `code` (`es` is `es-MX`).
 - **What comes back.** `AnalyzeResponse.target_language` is the resolved locale (`es-MX` when `es` was sent).
-  Gemini writes every text field in that language and regional variant, and keeps amounts in the document's own
-  currency (U.S. dollars on U.S. bills) in every language.
+  Gemini writes every text field in that language and regional variant (`zh-TW` in Traditional characters), and
+  keeps amounts in the document's own currency (U.S. dollars on U.S. bills) in every language.
 - **The spoken reply.** Gemini's `spoken_summary` is already in the language. The price findings that follow it are
   written in English, so for other languages Gemini translates them (cached while the server runs; at most 15 s).
   If it cannot, the reply is the summary alone, never English sentences in another language's reply.
 - **The voice.** Without a `voice`, each language gets a default whose accent suits it (`language_defaults` in
   `GET /api/v1/voice/voices`): `en-GB` Alice, `en-AU` Charlie, Spanish Elio, Hindi and Tamil Saavi, Filipino
-  Rachel, Chinese Andy; Matilda for the rest. Any voice speaks every language, with its own accent. Flash is sent
-  the language (`language_code`), which also decides how it reads numbers. English requests are unchanged, so
-  English clips made before still play from the cache.
-- **Speech-to-text** gets the language alone as a hint (`pt-BR` → `pt`; Norwegian as `no`).
-- **Checked live on 2026-10-10:** speech round trips in 10 languages, and full analyses with spoken replies in
-  `en-US`, `en-GB`, `es-MX`, `es-ES`, `pt-BR`, `ja-JP`, `zh-CN`, `ko-KR` and `hi-IN`. Not checked by a native
-  speaker in any language. In Arabic, the formal "two hundred" (ومائتا) was heard back as "one hundred" by
-  speech-to-text; the everyday form was heard right.
+  Rachel, Chinese Andy (both scripts); Matilda for the rest, Hebrew and Thai included. Any voice speaks every
+  language its model speaks, with its own accent. Flash is sent the language (`language_code`), which also decides
+  how it reads numbers. English requests are unchanged, so English clips made before still play from the cache.
+- **Hebrew and Thai are spoken by v4 Turbo** (`eleven_v4_turbo`), because Flash v2.5 does not speak them: the reply
+  voice uses the first of `FALLBACK_MODELS` in `text_to_speech/config.py` (v4 Turbo, then v4) that speaks the
+  language. Their replies take longer: on 2026-10-10 v4 Turbo made 593 and 766 characters in about 8.5 s, where
+  Flash made 253 characters of Traditional Chinese in 1.8 s. `POST /api/v1/voice/speak` took 12-18 s in Hebrew and
+  Thai, 5 s in Chinese. v4 is not sent `language_code`, which is not documented for it.
+- **Speech-to-text** gets the language alone as a hint (`pt-BR` → `pt`; Norwegian as `no`; Hebrew `he`, Thai `th`,
+  Chinese `zh` in either script). Scribe writes Mandarin in Simplified characters, also for `zh-TW` questions:
+  it refuses `zh-TW` and `cmn` as hints, and its `transcript_edit` did not change the script (2026-10-10).
+- **Checked live on 2026-10-10:** speech round trips in 12 languages and both Chinese scripts, and full analyses
+  with spoken replies in `en-US`, `en-GB`, `es-MX`, `es-ES`, `pt-BR`, `ja-JP`, `zh-CN`, `ko-KR`, `hi-IN`, `he-IL`,
+  `th-TH` and `zh-TW` (sent as `zh-Hant-TW`). Not checked by a native speaker in any language. In Arabic, the formal
+  "two hundred" (ومائتا) was heard back as "one hundred" by speech-to-text; the everyday form was heard right.
+- **Known issue: a translated ratio can be wrong.** Gemini's main model was out of quota, so the fallback
+  `gemini-3.5-flash-lite` translated the price findings. Into Traditional Chinese it turned "about 30 times" into
+  31 times in the spoken reply and into 3 times in 4 of 4 retries (other names for the language did no better);
+  Simplified Chinese, Japanese and Hebrew kept 30. Until translations are checked against the price check's
+  numbers, a translated reply can misstate a ratio.
 
 ### `POST /api/v1/analyze`
 

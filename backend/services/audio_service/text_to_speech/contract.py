@@ -54,15 +54,17 @@ class TTSRequest:
 
     language: str = "en"
     """Language of the text: a locale such as "es-MX", or a language code such as "es". It must be one the model
-    speaks (config.MODEL_LANGUAGES; Flash v2.5 speaks 32). It picks the default voice, the words spoken for marks
-    such as a check mark, and, on Flash v2.5, ElevenLabs' language_code, which also decides how numbers are read."""
+    speaks (config.MODEL_LANGUAGES; Flash v2.5 speaks 32). Without a `model`, a language the configured model
+    cannot speak goes to config.FALLBACK_MODELS (Hebrew and Thai: v4 Turbo). It picks the default voice, the words
+    spoken for marks such as a check mark, and, on Flash v2.5, ElevenLabs' language_code, which also decides how
+    numbers are read."""
 
     voice: str | None = None
     """The user's voice choice: a key from voices.json, e.g. "bunty". None means the default voice."""
 
     model: str | None = None
-    """Optional ElevenLabs model for this request, e.g. "eleven_flash_v2_5" (see config.MODELS).
-    None means the configured one (ELEVENLABS_MODEL_ID)."""
+    """Optional ElevenLabs model for this request, e.g. "eleven_flash_v2_5" (see config.MODELS). It must speak the
+    language. None means the configured one (ELEVENLABS_MODEL_ID), or a fallback for a language it cannot speak."""
 
 
 @dataclass(frozen=True)

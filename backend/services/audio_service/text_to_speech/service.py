@@ -3,7 +3,8 @@
     TTSRequest
       -> validate          (wrong input fails fast, no cost)
       -> pick the voice    (the user's choice from voices.json, or the default for the language)
-      -> pick the model    (the request's choice from config.MODELS, or ELEVENLABS_MODEL_ID; it must speak the language)
+      -> pick the model    (the request's choice from config.MODELS, which must speak the language; else
+                            ELEVENLABS_MODEL_ID, or config.FALLBACK_MODELS for a language it cannot speak)
       -> prepare text      (text_prep.py: Markdown, links, symbols..., in the reply's language)
       -> check limits      (empty / too long fail here, no cost)
       -> cache             (same text + same voice settings = reuse, no cost)
@@ -31,7 +32,7 @@ from dataclasses import dataclass
 from typing import Protocol
 
 from .cache import AudioCache, is_valid_key
-from .config import MODELS, TTSConfig, language_base, speaks
+from .config import FALLBACK_MODELS, MODELS, TTSConfig, language_base, speaks
 from .contract import AudioCutShort, AudioStream, ErrorCode, TTSRequest, TTSResult
 from .elevenlabs_provider import ElevenLabsProvider, ProviderAudio
 from .errors import TTSError
@@ -335,21 +336,27 @@ class TTSService:
         return voice.key, voice.voice_id
 
     def _settings_for(self, model: str | None, language: str = "en") -> dict:
-        """The audio settings for the request's model choice, in its language. No choice = ELEVENLABS_MODEL_ID.
-        A model that cannot speak the language is refused, before anything is paid for."""
-        model_id = self.config.model_id if model is None or not model.strip() else model.strip()
+        """The audio settings for the request's model choice, in its language. No choice = ELEVENLABS_MODEL_ID, or,
+        for a language it cannot speak, the first of config.FALLBACK_MODELS that can (Hebrew and Thai: v4 Turbo).
+        A chosen model that cannot speak the language, or a language no model here speaks, is refused before
+        anything is paid for."""
+        chosen = model is not None and model.strip() != ""
+        model_id = model.strip() if chosen else self.config.model_id
         if model_id != self.config.model_id and model_id not in MODELS:
             raise TTSError(
                 ErrorCode.INVALID_REQUEST,
                 f"Unknown model {model!r}. Choose one of: {', '.join(MODELS)}.",
             )
         if not speaks(model_id, language):
-            able = [name for name in MODELS if speaks(name, language)]
-            raise TTSError(
-                ErrorCode.INVALID_REQUEST,
-                f"{model_id} does not speak {language!r}."
-                + (f" Use {' or '.join(able)}." if able else " No voice model here speaks it."),
-            )
+            fallback = None if chosen else next((name for name in FALLBACK_MODELS if speaks(name, language)), None)
+            if fallback is None:
+                able = [name for name in MODELS if speaks(name, language)]
+                raise TTSError(
+                    ErrorCode.INVALID_REQUEST,
+                    f"{model_id} does not speak {language!r}."
+                    + (f" Use {' or '.join(able)}." if able else " No voice model here speaks it."),
+                )
+            model_id = fallback
         return self.config.audio_settings(model_id, language)
 
     def _prepare(self, request: TTSRequest) -> str:
@@ -655,10 +662,12 @@ def _elapsed_ms(started: float) -> int:
 def _log_result(result: TTSResult, source: str) -> None:
     # Lengths only: the text itself may be private.
     logger.info(
-        "tts request_id=%s ok=%s source=%s spoken_chars=%d chars_sent=%d attempts=%d elapsed_ms=%d error=%s",
+        "tts request_id=%s ok=%s source=%s model=%s spoken_chars=%d chars_sent=%d attempts=%d elapsed_ms=%d "
+        "error=%s",
         result.request_id,
         result.ok,
         source,
+        result.model or "-",
         len(result.spoken_text),
         result.characters_sent,
         result.attempts,

@@ -293,10 +293,49 @@ def test_a_language_not_offered_is_refused_before_paying_for_anything(voice, lan
     assert voice.scribe.calls == [] and voice.gemini.calls == [] and voice.speaker.texts == []
 
 
-@pytest.mark.parametrize("language, hint", [("pt-BR", "pt"), ("fil-PH", "fil"), ("nb-NO", "no"), ("zh-CN", "zh"), ("en-GB", "en")])
+@pytest.mark.parametrize("language, hint", [
+    ("pt-BR", "pt"), ("fil-PH", "fil"), ("nb-NO", "no"), ("zh-CN", "zh"), ("en-GB", "en"),
+    ("he-IL", "he"), ("iw", "he"), ("th-TH", "th"), ("zh-TW", "zh"), ("zh-Hant-TW", "zh"), ("zh-Hans", "zh"),
+])
 def test_speech_to_text_gets_the_language_as_elevenlabs_knows_it(voice, language, hint):
     assert ask(voice, target_language=language).status_code == 200
     assert voice.scribe.calls[0]["language"] == hint
+
+
+def test_a_hebrew_reply_is_spoken_by_v4_turbo(voice):
+    voice.gemini.spoken_summary = "החיוב על בדיקת ה-MRI הוא שלושת אלפים ומאתיים דולר."
+    voice.gemini.translated["he-IL"] = "השוויתי גם את החיובים לתעריפים הארציים של Medicare."
+    body = ask(voice, target_language="he").json()
+    assert body["analysis"]["target_language"] == "he-IL" and voice.gemini.calls[0]["lang"] == "he-IL"
+    assert voice.gemini.translations[0]["lang"] == "he-IL"
+    speech = body["speech"]
+    assert speech["ok"] is True and speech["voice"] == "matilda"  # no Hebrew voice in voices.json: the default
+    assert speech["text"] == voice.gemini.spoken_summary + " " + voice.gemini.translated["he-IL"]
+    # Flash v2.5 does not speak Hebrew, so v4 Turbo does, without Flash's language_code and number reading setting.
+    settings = voice.speaker.settings[-1]
+    assert settings["model_id"] == "eleven_v4_turbo"
+    assert "language_code" not in settings and "apply_text_normalization" not in settings
+
+
+def test_a_thai_reply_is_spoken_by_v4_turbo_with_its_sentences_apart(voice):
+    voice.gemini.spoken_summary = "ค่าตรวจ MRI ของคุณคือสามพันสองร้อยดอลลาร์"
+    voice.gemini.translated["th-TH"] = "ฉันได้เปรียบเทียบค่าบริการกับอัตราของ Medicare"
+    speech = ask(voice, target_language="th-TH").json()["speech"]
+    assert speech["ok"] is True and voice.speaker.settings[-1]["model_id"] == "eleven_v4_turbo"
+    # Thai separates sentences with a space; the summary gets a full stop so the findings do not run on from it.
+    assert speech["text"] == "ค่าตรวจ MRI ของคุณคือสามพันสองร้อยดอลลาร์. ฉันได้เปรียบเทียบค่าบริการกับอัตราของ Medicare."
+
+
+def test_a_traditional_chinese_reply_is_spoken_by_flash_like_mandarin(voice):
+    voice.gemini.spoken_summary = "您的核磁共振檢查收費三千二百美元"
+    voice.gemini.translated["zh-TW"] = "我也將費用與聯邦醫療保險的全國費率做了比較。"
+    body = ask(voice, target_language="zh-Hant-TW").json()
+    assert body["analysis"]["target_language"] == "zh-TW" and voice.gemini.translations[0]["lang"] == "zh-TW"
+    speech = body["speech"]
+    assert speech["ok"] is True and speech["voice"] == "andy"  # voices.json's default for Chinese
+    assert speech["text"] == "您的核磁共振檢查收費三千二百美元。我也將費用與聯邦醫療保險的全國費率做了比較。"  # no space
+    assert voice.speaker.settings[-1]["model_id"] == "eleven_flash_v2_5"
+    assert voice.speaker.settings[-1]["language_code"] == "zh"
 
 
 def test_without_a_translation_the_reply_is_the_summary_alone(voice):
@@ -704,6 +743,13 @@ def test_the_reply_reads_well_without_a_final_full_stop_or_a_plain_name(voice):
         "Line 2 was billed about 20 times Medicare's national rate, which is far above the usual range. "
         "It's worth asking the billing office about them."
     )
+
+
+def test_a_direction_mark_after_the_full_stop_does_not_hide_it(voice):
+    models = importlib.import_module("models")
+    analysis = _analysis(models, [_check(models, 0, "far_above_typical", 30.0)], language="he-IL")
+    analysis.result.spoken_summary = "\u200fהחיוב הוא 3,200$.\u200f"  # right-to-left marks, as Hebrew text may carry
+    assert voice.routes.spoken_reply(analysis, "שאלו על החיוב.") == "\u200fהחיוב הוא 3,200$.\u200f שאלו על החיוב."
 
 
 def test_a_charge_described_in_sentences_is_named_by_its_first(voice):

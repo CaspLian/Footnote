@@ -63,9 +63,9 @@ expected to work and iPhones may not, so test on phones first (see "Speed" in
 | `request_id` | `str`, required | Your ID for this answer (e.g. the chat message ID). Echoed back. |
 | `text` | `str`, required | Gemini's **complete** answer as displayed. Markdown is fine; it is cleaned up for speech. |
 | `speech_text` | `str` or `None` | Optional speech-ready version of the answer. Used instead of `text` when given (see section 6). |
-| `language` | `str`, default `"en"` | A locale such as `"es-MX"`, or a language such as `"es"`. The model must speak it (`config.MODEL_LANGUAGES`; Flash v2.5 speaks 32 languages). It picks the default voice, the words spoken for marks, and Flash's `language_code`. |
+| `language` | `str`, default `"en"` | A locale such as `"es-MX"`, or a language such as `"es"`: one of the app's 34 languages (`config.MODEL_LANGUAGES`). Flash v2.5 speaks 32 of them; Hebrew and Thai go to v4 Turbo when no `model` is given (`config.FALLBACK_MODELS`), which takes longer. It picks the default voice, the words spoken for marks, and Flash's `language_code`. |
 | `voice` | `str` or `None` | The user's voice choice, a key from `voices.json` (see "Voices" below). `None` = the default voice. |
-| `model` | `str` or `None` | Optional ElevenLabs model for this request: `eleven_multilingual_v2`, `eleven_flash_v2_5`, `eleven_v4_turbo` or `eleven_v4` (`config.MODELS`). `None` = `ELEVENLABS_MODEL_ID` (default `eleven_flash_v2_5`). |
+| `model` | `str` or `None` | Optional ElevenLabs model for this request: `eleven_multilingual_v2`, `eleven_flash_v2_5`, `eleven_v4_turbo` or `eleven_v4` (`config.MODELS`). It must speak the language. `None` = `ELEVENLABS_MODEL_ID` (default `eleven_flash_v2_5`), or for a language it cannot speak the first of `config.FALLBACK_MODELS` that can. `TTSResult.model` names the model used. |
 
 Pass the answer **text**, not Gemini's response object. A non-string `text` returns `INVALID_REQUEST`.
 Streaming (partial) Gemini output is not supported yet: send the finished answer.
@@ -126,8 +126,9 @@ team's account on 2026-10-09): 10 female, 9 male, 1 neutral, 11 accents.
   and then by language ("es": Elio), else the default. `list_voices()` includes them. `ELEVENLABS_VOICE_ID` replaces
   only the default voice. Any voice speaks every language its model speaks, keeping its own accent: on 2026-10-10
   speech-to-text misheard a Japanese phrase said by Matilda, and heard it right from two native Japanese voices.
-- In other languages than English, the cleanup speaks marks in that language ("Reembolsable: sí") and leaves out
-  the English-only rewrites (English month names, "about" for "~", the code-block note).
+- In other languages than English, the cleanup speaks marks in that language ("Reembolsable: sí", also in table
+  cells) and leaves out the English-only rewrites (English month names, "about" for "~", the code-block note).
+  Right-to-left text keeps its direction marks, which the captions need.
 - The same text in two voices is two separate audios, each cached on its own.
 - "default" voices are ElevenLabs default voices, which ElevenLabs says expire on December 31, 2026.
   "library" voices come from the Voice Library and work through the API on paid plans only. All
@@ -144,7 +145,7 @@ team's account on 2026-10-09): 10 female, 9 male, 1 neutral, 11 accents.
 
 | `error_code` | Retry? | What it means / what to do |
 |---|---|---|
-| `INVALID_REQUEST` | no | Our integration bug: wrong types, empty `request_id`, a language the model does not speak. Read `error_message`. |
+| `INVALID_REQUEST` | no | Our integration bug: wrong types, empty `request_id`, a language no model here speaks, or a chosen `model` that cannot speak it. Read `error_message`. |
 | `EMPTY_TEXT` | no | Nothing speakable after cleanup (e.g. only formatting). Hide the play button. |
 | `TEXT_TOO_LONG` | no | Over `TTS_MAX_CHARS` after cleanup. Ask Gemini for shorter answers, or raise the limit. |
 | `NOT_CONFIGURED` | no | `ELEVENLABS_API_KEY` missing, or a bad value in `backend/.env`. |

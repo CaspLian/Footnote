@@ -97,10 +97,14 @@ def test_a_typed_question_is_analyzed_price_checked_and_saved(backend):
 
 def test_the_app_can_list_the_languages(backend):
     languages = backend.client.get("/api/v1/languages").json()
-    assert len(languages) == 39 and languages["en-US"] == "English (United States)" and languages["vi-VN"] == "Vietnamese"
+    assert len(languages) == 42 and languages["en-US"] == "English (United States)" and languages["vi-VN"] == "Vietnamese"
+    assert list(languages)[-3:] == ["zh-TW", "he-IL", "th-TH"] and languages["zh-TW"] == "Chinese (Traditional, Taiwan)"
 
 
-@pytest.mark.parametrize("sent, answered", [(None, "en-US"), ("es", "es-MX"), ("pt_br", "pt-BR"), ("ja-JP", "ja-JP")])
+@pytest.mark.parametrize("sent, answered", [
+    (None, "en-US"), ("es", "es-MX"), ("pt_br", "pt-BR"), ("ja-JP", "ja-JP"),
+    ("zh-Hant-TW", "zh-TW"), ("zh-Hans", "zh-CN"), ("he", "he-IL"), ("iw-IL", "he-IL"), ("th-TH", "th-TH"),
+])
 def test_the_analysis_answers_in_the_resolved_locale(backend, sent, answered):
     data = {"text": "Why is my CT so expensive?", **({"target_language": sent} if sent else {})}
     body = backend.client.post("/api/v1/analyze", data=data).json()

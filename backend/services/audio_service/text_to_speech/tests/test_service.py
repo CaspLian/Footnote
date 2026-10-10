@@ -132,7 +132,8 @@ def test_too_long_text_fails_without_calling_provider():
         TTSRequest(request_id="", text="Hello"),
         TTSRequest(request_id="r1", text={"candidates": []}),  # the whole Gemini response object
         TTSRequest(request_id="r1", text="Hello", speech_text=123),
-        TTSRequest(request_id="r1", text="Bonjour", language="fr"),
+        TTSRequest(request_id="r1", text="Bonjour", language="fr", model="model-1"),  # a chosen model that cannot speak it
+        TTSRequest(request_id="r1", text="Nei hou", language="yue"),  # no model here speaks it
     ],
 )
 def test_invalid_requests_return_an_error_instead_of_raising(bad_request):
