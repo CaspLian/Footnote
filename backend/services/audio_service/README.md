@@ -132,7 +132,8 @@ To compare voices, switch voice and the page speaks the same text in the new one
   When you step quickly, only the voice you stop on is made, so skipping costs nothing.
 - Filter by gender or accent. Previous / Next then step through the voices shown.
 - "Play this text in every shown voice" plays them one after another and shows the credit
-  estimate first (about 0.44 credits per character per voice). It asks before anything over
+  estimate first, at the selected model's rate (about 0.22 credits per character per voice on Flash v2.5, 0.44 on
+  Multilingual v2). It asks before anything over
   2,000 credits. Stop ends it, and so does choosing a voice or model or pressing any play button.
 - The newest click always wins: an answer that arrives after you moved on is not played, but
   it is kept in the replay list.
@@ -204,8 +205,8 @@ On 2026-10-10 the app's whole reading of a test bill, in voice Matilda, took:
 - 10.19 s on v4 Turbo and 12.20 s on v4 (963 characters)
 
 Flash read every amount, date and ratio right (transcribed back). That is why it became the default
-(`docs/decisions/2026-10-09-tts-default-model.md`). v4 can start in about 1-2 s only if the audio is streamed or
-made sentence by sentence; neither is built for v4.
+(`docs/decisions/2026-10-09-tts-default-model.md`). v4 starts in about 1-2 s only when streamed or made sentence by
+sentence. Streaming is built (`stream_reply=true`, any model), but the app does not send it and it is untested on iPhones; sentence-by-sentence generation is not built.
 
 What this module now does:
 
@@ -303,7 +304,8 @@ The text-to-speech contract, a FastAPI example and the mobile playback code are 
 - **Shared Wi-Fi:** free accounts can be blocked for "unusual activity" when many people share one
   IP address, as at a hackathon. Test from the venue early.
 - **Licence:** the free plan has no commercial licence; credit "elevenlabs.io" if you publish the audio.
-- **Concurrency:** 2 requests at a time on the free plan. More get queued or return `RATE_LIMITED`.
+- **Concurrency:** on the free plan, 2 requests at a time on Multilingual v2 and 4 on Flash v2.5, the default
+  (Creator: 5 and 10). More get queued or return `RATE_LIMITED`.
 
 Paid plans remove the first two problems (Starter is $6/month; ElevenLabs shows the first month at
 $1 until October 18).
@@ -318,7 +320,7 @@ $1 until October 18).
 | `UNSUPPORTED_AUDIO` | The upload was not an audio file | Check the app sends the recording (`recorder.uri`) |
 | `PROVIDER_REJECTED` | Voice not usable by this account/plan, unknown voice ID, or format not on your plan | Run `check_setup`; use a voice from its list |
 | `QUOTA_EXCEEDED` | Out of credits (account or key limit) | Wait for the reset date shown by `check_setup` |
-| `RATE_LIMITED` | More than 2 requests at once on free | Usually fine on retry |
+| `RATE_LIMITED` | More requests at once than the plan allows (free: 4 on Flash, 2 on Multilingual v2) | Usually fine on retry |
 | `PROVIDER_TIMEOUT` / `PROVIDER_UNAVAILABLE` | Network or ElevenLabs problem | Retry; check https://status.elevenlabs.io |
 | `TEXT_TOO_LONG` | Answer longer than `TTS_MAX_CHARS` after cleanup | Shorter Gemini answers, or raise the limit |
 | `ModuleNotFoundError: text_to_speech` | `python -m text_to_speech...` run from the wrong folder | Run it from `backend\services\audio_service` |

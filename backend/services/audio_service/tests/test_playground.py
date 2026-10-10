@@ -112,6 +112,8 @@ def test_the_page_can_list_the_models_to_compare(client):
     assert ids == ["eleven_multilingual_v2", "eleven_flash_v2_5", "eleven_v4_turbo", "eleven_v4"]
     flash = next(m for m in data["models"] if m["id"] == "eleven_flash_v2_5")
     assert flash["label"] == "Flash v2.5" and flash["credits_per_character"] == 0.22 and flash["note"]
+    assert flash["note"].startswith("today's default.")  # marked from the configured model, not hard-coded
+    assert not next(m for m in data["models"] if m["id"] == "eleven_multilingual_v2")["note"].startswith("today's")
 
 
 def test_the_chosen_model_is_used_and_reported(client):

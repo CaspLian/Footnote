@@ -145,7 +145,7 @@ team's account on 2026-10-09): 10 female, 9 male, 1 neutral, 11 accents.
 | `AUTH_FAILED` | no | Key rejected, missing the *Text to Speech* permission, or a free account blocked for unusual activity. |
 | `QUOTA_EXCEEDED` | no | Out of ElevenLabs credits (or the key's credit limit). |
 | `PROVIDER_REJECTED` | no | ElevenLabs refused the request: unknown voice, voice not allowed on the plan, bad model or format. |
-| `RATE_LIMITED` | yes | Too many requests at once (free plan: 2 at a time). Try again in a few seconds. |
+| `RATE_LIMITED` | yes | Too many requests at once (free plan: 4 at a time on Flash v2.5, 2 on Multilingual v2). Try again in a few seconds. |
 | `PROVIDER_TIMEOUT` | yes | ElevenLabs did not answer within `TTS_TIMEOUT_SECONDS`. |
 | `PROVIDER_UNAVAILABLE` | yes | Network problem or ElevenLabs server error. |
 | `INTERNAL_ERROR` | no | Bug in this module. Details are in the server log. |

@@ -5,7 +5,7 @@
 
 The page sends your text to POST /api/speak on this small server: the text-to-speech receiver.
 It uses the same text_to_speech module the backend uses, so it costs the same credits (about
-0.44 per character on today's model; the same text in the same voice again is free).
+0.22 per character on Flash v2.5, the default, 0.44 on Multilingual v2; the same text in the same voice again is free).
 
 The audio is streamed: /api/speak answers as soon as the first audio exists, and the page plays
 /api/audio/{id} while the rest is still being made. The page can also switch models, to compare
@@ -45,9 +45,8 @@ DEFAULT_PORT = 8765
 # of numbers. Credits per character are what ElevenLabs' character-cost header reported; for v4 and
 # v4 Turbo they are the regular rates, because the 72%-off launch price we measured ends Oct 12, 2026.
 MODEL_NOTES = {
-    "eleven_multilingual_v2": (0.44, "the most lifelike, and the default until 2026-10-10. First audio in about 1.5 s, "
-                                     "or 3.6 s for longer text"),
-    "eleven_flash_v2_5": (0.22, "today's default, and the fastest. First audio in about 0.3-1 s; numbers are read right with number "
+    "eleven_multilingual_v2": (0.44, "the most lifelike. First audio in about 1.5 s, or 3.6 s for longer text"),
+    "eleven_flash_v2_5": (0.22, "the fastest. First audio in about 0.3-1 s; numbers are read right with number "
                                 "reading on (sent automatically); ElevenLabs says the quality is slightly lower"),
     "eleven_v4_turbo": (0.22, "newest real-time model. First audio in about 0.4-1 s, but slow to finish; "
                               "ElevenLabs documents it for its dialogue API, it works here too"),
@@ -94,7 +93,7 @@ def models():
                 "id": model_id,
                 "label": label,
                 "credits_per_character": MODEL_NOTES.get(model_id, (None, ""))[0],
-                "note": MODEL_NOTES.get(model_id, (None, ""))[1],
+                "note": ("today's default. " if model_id == default else "") + MODEL_NOTES.get(model_id, (None, ""))[1],
             }
             for model_id, label in choices.items()
         ],
@@ -127,7 +126,7 @@ def audio(audio_id: str, request: Request):
 
 @app.get("/api/voices/{voice_key}/sample")
 async def sample(voice_key: str):
-    """A short sample of one voice. Made once (about 30 credits), then served from the cache."""
+    """A short sample of one voice. Made once (about 15 credits on Flash v2.5), then served from the cache."""
     try:
         catalog = list_voices()
     except ValueError as e:

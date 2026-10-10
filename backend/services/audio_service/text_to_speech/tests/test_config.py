@@ -143,7 +143,7 @@ def test_speed_goes_into_voice_settings_and_audio_settings(clean_env):
     assert config.audio_settings()["voice_settings"] == {"speed": 1.1}
 
 
-def test_default_audio_settings_are_unchanged_so_cached_audio_stays_valid(clean_env):
+def test_audio_settings_keep_cache_keys_stable_per_model(clean_env):
     # The cache key is built from these. Adding a key here would make every clip already made
     # (and paid for) unreachable, so new settings are only added when they are not the default.
     # The default model changed on purpose on 2026-10-10, to Flash v2.5. Clips made with Multilingual v2 stay
@@ -159,6 +159,11 @@ def test_default_audio_settings_are_unchanged_so_cached_audio_stays_valid(clean_
         "output_format": "mp3_44100_128",
         "voice_settings": None,
     }
+
+
+def test_an_empty_model_setting_means_the_default(clean_env):
+    clean_env.setenv("ELEVENLABS_MODEL_ID", "  ")
+    assert TTSConfig.from_env().model_id == "eleven_flash_v2_5"
 
 
 def test_flash_and_turbo_get_number_reading_on_by_default(clean_env):

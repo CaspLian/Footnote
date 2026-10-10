@@ -39,5 +39,4 @@ says the same. Measured on the app's whole reading of a test bill, voice Matilda
 - 963 characters: 10.19 s on v4 Turbo and 12.20 s on v4, slower to finish than both
 
 Flash read every amount, date and ratio right (transcribed back). 19 of the 20 voices are tuned for Flash; "sarah"
-is not. v4 sounds richer, but it only starts quickly when streamed or made sentence by sentence, and neither is
-built. To go back: `ELEVENLABS_MODEL_ID=eleven_multilingual_v2`.
+is not. v4 sounds richer, but it only starts quickly when streamed or made sentence by sentence. Streaming is built (`stream_reply=true`, any model), but the app does not send it and it is untested on iPhones; sentence-by-sentence generation is not built. To go back: `ELEVENLABS_MODEL_ID=eleven_multilingual_v2`.

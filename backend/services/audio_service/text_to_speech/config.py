@@ -107,7 +107,7 @@ class TTSConfig:
         return cls(
             api_key="" if api_key == PLACEHOLDER_API_KEY else api_key,
             voice_id=_env_str("ELEVENLABS_VOICE_ID", ""),
-            model_id=_env_str("ELEVENLABS_MODEL_ID", DEFAULT_MODEL_ID),
+            model_id=_env_str("ELEVENLABS_MODEL_ID", DEFAULT_MODEL_ID) or DEFAULT_MODEL_ID,
             output_format=_env_str("ELEVENLABS_OUTPUT_FORMAT", DEFAULT_OUTPUT_FORMAT),
             speed=speed,
             text_normalization=_env_choice("ELEVENLABS_TEXT_NORMALIZATION", TEXT_NORMALIZATION_VALUES),
