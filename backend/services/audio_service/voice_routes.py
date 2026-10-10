@@ -304,12 +304,18 @@ def spoken_reply(analysis: AnalyzeResponse) -> str:
         they = "it looks" if len(compared) == 1 else "they look"
         return _sentences(summary, f"I also compared {_charges(len(compared))} with Medicare's national rates, and {they} "
                                    "within the usual range for hospital prices.")
-    sentences = [
-        f"{_line_name(analysis, check)} was billed about {_times(check.times_medicare)} times Medicare's national rate, "
-        f"which is {'far above the usual range' if check.flag == 'far_above_typical' else 'higher than usual'}."
-        for check in flagged[:2]
-    ]
-    others = len(flagged) - 2
+    sentences, named = [], 0
+    for check in flagged:
+        sentence = (f"{_line_name(analysis, check)} was billed about {_times(check.times_medicare)} times Medicare's national "
+                    f"rate, which is {'far above the usual range' if check.flag == 'far_above_typical' else 'higher than usual'}.")
+        if sentence in sentences:  # the same charge listed twice on the bill: said once
+            named += 1
+            continue
+        if len(sentences) == 2:
+            break
+        sentences.append(sentence)
+        named += 1
+    others = len(flagged) - named
     if others > 0:
         sentences.append(f"{_charges(others, 'other')} also {'looks' if others == 1 else 'look'} high.")
     if any("facility fee" in check.note for check in flagged):

@@ -41,13 +41,13 @@ async function confirmedCase(claims: ClaimTracker) {
   return { store, caseId };
 }
 
-test('confirming a case records its claim once and marks the audit complete; later steps update that claim', async () => {
+test('confirming a case records its claim once (which marks the audit complete); later steps update that claim', async () => {
   const fake = fakeTracker();
   const { store, caseId } = await confirmedCase(fake.tracker);
   assert.equal(fake.recorded.length, 1);
   assert.equal(fake.recorded[0].provider, 'Metropolitan Medical Center');
   assert.equal(store.getState().cases.find(c => c.id === caseId)?.claimId, 'claim-1');
-  assert.deepEqual(fake.updates, [['claim-1', { status: 'audit_complete' }]]);
+  assert.deepEqual(fake.updates, []); // recording already marks the audit complete
   // Tiger Data's estimate from the bill's dates is kept on the case for the timeline.
   assert.deepEqual(store.getState().cases.find(c => c.id === caseId)?.claimDeadlines, { creditWarningDate: '2027-03-13', creditWarningIsEstimate: true, collectionIsEstimate: false });
 
@@ -56,6 +56,7 @@ test('confirming a case records its claim once and marks the audit complete; lat
   await store.getState().verifyCase(caseId);
   await settle();
   assert.equal(fake.recorded.length, 1);
+  assert.deepEqual(fake.updates, []); // and a claim already in dispute would not be moved back
 
   const draftId = store.getState().saveDraft(caseId, 'billing_correction', 'Please explain code 99285.', 'en');
   store.getState().markSubmitted(draftId);
@@ -64,7 +65,7 @@ test('confirming a case records its claim once and marks the audit complete; lat
   store.getState().setNoticeDeadline(caseId, null); // Tiger Data cannot clear a date, so the removal is logged as an action
   store.getState().markResolved(caseId);
   await settle();
-  assert.deepEqual(fake.updates.slice(2), [
+  assert.deepEqual(fake.updates, [
     ['claim-1', { status: 'dispute_in_progress' }],
     ['claim-1', { action: 'Follow-up reminder set', note: '2026-11-15' }],
     ['claim-1', { collectionDeadline: '2026-12-01' }],

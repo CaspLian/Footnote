@@ -119,12 +119,14 @@ export function createUnfoldStore(storage: LocalStorage, options: StoreOptions =
         let claimId = current.claimId;
         if (!claimId) {
           if (step) return; // nothing recorded yet, so nothing to update
+          // Recording the claim also marks its audit complete. Confirming again later sends nothing, so a claim
+          // already in dispute is never moved back.
           claimId = await claims.record(current);
           if (!claimId || !get().cases.some(item => item.id === caseId)) return;
           const recorded = claimId;
           change({ cases: get().cases.map(item => item.id === caseId ? { ...item, claimId: recorded } : item) });
-        }
-        await claims.update(claimId, step ?? { status: 'audit_complete' });
+        } else if (!step) return;
+        if (step) await claims.update(claimId, step);
         if (!step || 'collectionDeadline' in step) {
           // Tiger Data estimates the deadlines when the claim is recorded; a confirmed notice date replaces one.
           const deadlines = await claims.deadlines(claimId);

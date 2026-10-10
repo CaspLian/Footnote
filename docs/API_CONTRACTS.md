@@ -136,8 +136,8 @@ How the app uses it (`mobile/src/services/claim-tracker.ts`, from the store):
 
 | When the user... | The app sends |
 |---|---|
-| confirms a case for the first time | `POST /api/v1/claims`, then status `audit_complete` |
-| confirms it again after edits | status `audit_complete` (the same claim, never a second one) |
+| confirms a case for the first time | `POST /api/v1/claims` (recording marks the audit complete) |
+| confirms it again after edits | nothing: the same claim keeps its status (a dispute is never moved back) |
 | marks a request submitted | status `dispute_in_progress` |
 | sets a notice date | `deadlines` with `collection_deadline` |
 | marks the case resolved | `resolve` with the confirmed statement balance |

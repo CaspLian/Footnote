@@ -556,6 +556,25 @@ def test_the_spoken_reply_adds_what_the_price_check_found(voice):
     )
 
 
+def test_the_spoken_reply_names_a_charge_listed_twice_only_once(voice):
+    models = importlib.import_module("models")
+    ekg = dict(cpt_code="93000", original_description="EKG", plain_description="The EKG", billed_amount=310.0)
+    result = models.GeminiResult(
+        document_type="hospital_bill",
+        line_items=[models.LineItem(**ekg), models.LineItem(**ekg),
+                    models.LineItem(cpt_code="70450", original_description="CT HEAD", plain_description="The head CT scan", billed_amount=3200.0)],
+        plain_summary="Summary.", spoken_summary="Here is your bill.",
+    )
+    checks = [_check(models, 0, "far_above_typical", 20.0), _check(models, 1, "far_above_typical", 20.0), _check(models, 2, "far_above_typical", 15.0)]
+    analysis = models.AnalyzeResponse(target_language="en", model="m", mock=True, result=result, price_checks=checks)
+    assert voice.routes.spoken_reply(analysis) == (
+        "Here is your bill. I also compared the charges with Medicare's national rates. "
+        "The EKG was billed about 20 times Medicare's national rate, which is far above the usual range. "
+        "The head CT scan was billed about 15 times Medicare's national rate, which is far above the usual range. "
+        "It's worth asking the billing office about them."
+    )
+
+
 def test_the_spoken_reply_when_prices_look_usual_or_were_not_compared(voice):
     models = importlib.import_module("models")
     usual = voice.routes.spoken_reply(_analysis(models, [_check(models, 2, "typical", 1.2)]))
