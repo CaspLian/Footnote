@@ -1,24 +1,60 @@
 {
   "expo": {
-    "name": "mobile",
-    "slug": "mobile",
-    "version": "1.0.0",
+    "name": "Unfold",
+    "slug": "unfold",
+    "version": "0.1.0",
+    "scheme": "unfold",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true
-    },
-    "android": {
-      "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+      "bundleIdentifier": "org.hackknights.unfold",
+      "supportsTablet": false,
+      "infoPlist": {
+        "CADisableMinimumFrameDurationOnPhone": true
       }
     },
+    "android": {
+      "package": "org.hackknights.unfold",
+      "permissions": [
+        "CAMERA"
+      ]
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "enableSceneSupport": true
+          }
+        }
+      ],
+      "@config-plugins/react-native-blob-util",
+      "@config-plugins/react-native-pdf",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Unfold to select a bill or EOB from your photos.",
+          "cameraPermission": "Allow Unfold to photograph your bill or EOB.",
+          "microphonePermission": false
+        }
+      ],
+      "expo-image",
+      "expo-secure-store",
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Use Face ID to unlock your private Unfold workspace."
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "bundler": "metro",
+      "output": "single",
+      "name": "Unfold"
     }
   }
 }
