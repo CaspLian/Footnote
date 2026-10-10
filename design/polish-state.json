@@ -1,0 +1,39 @@
+{
+  "fileKey": "rZ1cdq02M7Q3CS9S9qQ8kC",
+  "pageId": "51:934",
+  "updatedAt": "2026-10-10T19:49:58.705Z",
+  "headers": [
+    "51:1032",
+    "51:1094",
+    "51:1387",
+    "51:1504"
+  ],
+  "intake": "51:1140",
+  "timeline": "51:1387",
+  "orb": {
+    "componentSet": "84:398",
+    "idle": "84:220",
+    "speaking": "84:309",
+    "dots": 128,
+    "size": 144,
+    "control": "standalone transparent orb"
+  },
+  "validation": {
+    "editable": true,
+    "compositionScreenshotsReviewed": [
+      "51:1032",
+      "51:1094",
+      "51:1140",
+      "51:1271",
+      "51:1387"
+    ],
+    "device": "iPhone 18 Pro / iOS 27",
+    "nativeBuild": "passed",
+    "checks": "54 tests, TypeScript, lint, Doctor 21/21, exports all platforms"
+  },
+  "pending": [
+    "Native search keyboard and picker interaction automation",
+    "Android emulator/device runtime",
+    "Physical-device drag and scroll performance"
+  ]
+}

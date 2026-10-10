@@ -1,0 +1,49 @@
+{
+  "runId": "unfold-compact-docks-20261010",
+  "scope": "reconciliation",
+  "fileKey": "rZ1cdq02M7Q3CS9S9qQ8kC",
+  "pageId": "51:934",
+  "entities": {
+    "listeningControl": "84:398",
+    "idle": "84:220",
+    "reading": "84:309",
+    "review": "51:1271",
+    "guideTerm": "66:365",
+    "reviewDock": "84:401",
+    "termDock": "84:493"
+  },
+  "validation": {
+    "fontFamilies": [
+      "Geist"
+    ],
+    "flattenedImageNodes": 0,
+    "editableVectorsPerOrbState": 84,
+    "linkedOrbStateTransitions": 2,
+    "dockWidth": 342,
+    "orbControlSize": [
+      148,
+      56
+    ],
+    "primaryActionSize": [
+      182,
+      48
+    ],
+    "dockGap": 12,
+    "compositionScreenshotsReviewed": [
+      "51:1271",
+      "66:365"
+    ]
+  },
+  "completedSteps": [
+    "existing assets inspected",
+    "compatible tokens reused",
+    "docks and glass actions reconciled",
+    "Geist and editable vectors verified",
+    "composition screenshots reviewed"
+  ],
+  "pendingValidations": [
+    "Original pill geometry and removed dock IDs no longer describe current screens."
+  ],
+  "status": "historical-superseded",
+  "supersededBy": "polish-state.json"
+}
