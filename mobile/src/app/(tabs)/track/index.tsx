@@ -1,3 +1,1 @@
-import { Timeline } from '@/screens/timeline';
-export default Timeline;
-
+export { Track as default } from '@/screens/timeline';

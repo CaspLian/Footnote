@@ -3,3 +3,4 @@ export * from './money';
 export * from './fixtures';
 export * from './review';
 export * from './glossary';
+export * from './profiles';

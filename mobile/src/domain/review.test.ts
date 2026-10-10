@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createManualCase, createSampleCase } from './fixtures';
-import { expectedRemaining, formatMoney, isISODate, parseMoney } from './money';
+import { expectedRemaining, formatMoney, isISODate, isMoney, parseMoney } from './money';
 import { getCaseSummary, validateCase } from './review';
 import { glossary, searchGlossary } from './glossary';
 import { benchmarkService, buildDraft, documentService } from '../services/local-services';
@@ -9,6 +9,7 @@ import type { DocumentAttachment } from './types';
 
 test('sample statement and EOB are separate, coherent cents ledgers', () => {
   const c = createSampleCase(); const f = c.financials;
+  assert.ok(isMoney(f.billedCents)&&isMoney(f.adjustmentCents)&&isMoney(f.postAdjustmentCents)&&isMoney(f.patientPaidCents));
   assert.equal(c.lineItems.reduce((sum, line) => sum + line.billedCents, 0), f.billedCents);
   assert.equal(f.billedCents - f.adjustmentCents, f.postAdjustmentCents);
   assert.equal(f.postAdjustmentCents - f.insurerPaidCents! - f.patientPaidCents, f.remainingCents);

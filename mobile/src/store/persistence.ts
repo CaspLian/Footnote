@@ -1,8 +1,12 @@
+import { isRelationshipLabel } from '../domain/profiles';
 import { isMoney } from '../domain/money';
 import type { AppealDraft, BillCase, CaseEvent, FamilyProfile, PersonalContext, IconWeight, Language } from '../domain/types';
+import { normalizePreferences, type AppPreferences } from '../domain/preferences';
 
 export const STORAGE_KEY = 'unfold-local-v1';
 export interface PersistedSnapshot {
+  preferences: AppPreferences;
+  savedTermIds: string[];
   version: 1;
   locale: Language;
   welcomeCompleted: boolean;
@@ -31,10 +35,9 @@ function validCase(value: unknown): boolean {
       || !['needs_details', 'ready', 'action_prepared', 'submitted', 'resolved'].includes(value.status as string)
       || !record(value.financials) || !Array.isArray(value.attachments) || !Array.isArray(value.lineItems) || !Array.isArray(value.findings)) return false;
   const financials = value.financials;
-  if (!['billedCents', 'adjustmentCents', 'postAdjustmentCents', 'patientPaidCents', 'remainingCents'].every(key => isMoney(financials[key]))) return false;
   if (!Object.values(financials).every(amount => amount === undefined || isMoney(amount))) return false;
   if (!value.attachments.every(a => record(a) && text(a.id) && text(a.uri) && text(a.name) && text(a.mimeType)
-    && ['bill', 'eob', 'policy'].includes(a.kind as string) && ['sample', 'import'].includes(a.origin as string) && text(a.importedAt))) return false;
+    && ['auto', 'bill', 'eob', 'policy'].includes(a.kind as string) && ['sample', 'import'].includes(a.origin as string) && text(a.importedAt))) return false;
   if (!value.lineItems.every(line => record(line) && text(line.id) && localized(line.description) && text(line.date)
     && Number.isSafeInteger(line.units) && (line.units as number) >= 1 && isMoney(line.billedCents) && evidence(line.evidence))) return false;
   return value.findings.every(finding => record(finding) && text(finding.id) && localized(finding.title)
@@ -62,12 +65,14 @@ export function parseSnapshot(serialized: string): PersistedSnapshot {
     throw new Error('saved_data_unreadable');
   }
   const profiles = value.profiles ?? [];
-  if (!Array.isArray(profiles) || !profiles.every(p => record(p) && text(p.id) && text(p.firstName) && p.firstName.trim().length > 0 && ['self','child','partner','dependent'].includes(p.relationship as string) && text(p.zipCode) && (!p.zipCode || /^\d{5}$/.test(p.zipCode)) && ['private','medicare','medicaid','uninsured','unsure'].includes(p.coverage as string) && text(p.insurer) && text(p.planName))) throw new Error('saved_data_unreadable');
+  if (!Array.isArray(profiles) || !profiles.every(p => record(p) && text(p.id) && text(p.firstName) && p.firstName.trim().length > 0 && ['self','child','partner','dependent','other'].includes(p.relationship as string) && (p.relationship !== 'other' || isRelationshipLabel(p.relationshipLabel)) && text(p.zipCode) && (!p.zipCode || /^\d{5}$/.test(p.zipCode)) && ['private','medicare','medicaid','uninsured','unsure'].includes(p.coverage as string) && text(p.insurer) && text(p.planName))) throw new Error('saved_data_unreadable');
   if (new Set(profiles.map(p => p.id)).size !== profiles.length || profiles.filter(p => p.relationship === 'self').length > 1) throw new Error('saved_data_unreadable');
   const context = value.personalContext ?? { explanationDepth: 'simple', goal: 'understand' };
   if (!record(context) || !['simple','detailed'].includes(context.explanationDepth as string) || !['understand','check_charges','prepare_request'].includes(context.goal as string)) throw new Error('saved_data_unreadable');
   // Return only known persistent fields. Stored content never overrides actions.
   return {
+    preferences: normalizePreferences(value.preferences),
+    savedTermIds: Array.isArray(value.savedTermIds) ? [...new Set(value.savedTermIds.filter((id): id is string => text(id) && id.length > 0 && id.length <= 80))] : [],
     version: 1, onboardingCompleted: value.onboardingCompleted === true && profiles.some(p => p.relationship === 'self'), profiles: profiles as FamilyProfile[], activeProfileId: text(value.activeProfileId) && profiles.some(p => p.id === value.activeProfileId) ? value.activeProfileId : profiles[0]?.id, personalContext: context as unknown as PersonalContext, locale: value.locale as Language, welcomeCompleted: value.welcomeCompleted,
     iconWeight: value.iconWeight as IconWeight, iconSize: value.iconSize, duotoneOpacity: value.duotoneOpacity,
     cases: value.cases as BillCase[], drafts: value.drafts as AppealDraft[], events: value.events as CaseEvent[],

@@ -14,8 +14,8 @@ const Layer = Animated.createAnimatedComponent(Path);
 const Control = Animated.createAnimatedComponent(Pressable);
 const Aura = Animated.createAnimatedComponent(G);
 const particles = orbParticles();
-export function ParticleOrb({ status, onPress, label, size = 132, onCollapse, enter = true }: { status: NarrationStatus; onPress: () => void; label: string; size?: number; onCollapse?: () => void; enter?: boolean }) {
-  const { colors, reducedMotion } = useTheme();
+export function ParticleOrb({ status, onPress, label, size = 132, onCollapse, enter = true, interactive = true, collapseProgress }: { status: NarrationStatus; onPress?: () => void; label: string; size?: number; onCollapse?: () => void; enter?: boolean; interactive?: boolean; collapseProgress?: SharedValue<number> }) {
+  const { colors, scheme, reducedMotion } = useTheme();
   const haptics = useUnfoldStore(s => s.preferences.haptics);
   const focused = useIsFocused();
   const [foreground, setForeground] = useState(AppState.currentState !== 'background' && AppState.currentState !== 'inactive');
@@ -43,19 +43,20 @@ export function ParticleOrb({ status, onPress, label, size = 132, onCollapse, en
   }, [enter, entrance, focused, reducedMotion]);
   const feedback = useMemo(() => () => { if (Platform.OS !== 'web' && haptics) void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); }, [haptics]);
   const pan = useMemo(() => Gesture.Pan().minDistance(8)
-    .onStart(() => { dragging.set(true); hiding.set(false); momentum.set(0); scheduleOnRN(feedback); })
-    .onChange(event => { dragY.set(onCollapse ? Math.max(0, event.translationY) * .55 : 0); if (!reducedMotion) { angle.set(a => a + event.changeX * .025); tilt.set(t => Math.max(-1.1, Math.min(1.1, t + event.changeY * .004))); } })
+    .onStart(() => { dragging.set(true); hiding.set(false); collapseProgress?.set(0); momentum.set(0); scheduleOnRN(feedback); })
+    .onChange(event => { const y = onCollapse ? Math.max(0, event.translationY) * .55 : 0; dragY.set(y); collapseProgress?.set(y); if (!reducedMotion) { angle.set(a => a + event.changeX * .025); tilt.set(t => Math.max(-1.1, Math.min(1.1, t + event.changeY * .004))); } })
     .onEnd(event => { if (onCollapse && (event.translationY > 44 && event.translationY > Math.abs(event.translationX) * .8 || event.velocityY > 650 && event.translationY > 20)) { hiding.set(true); dragY.set(withTiming(44, { duration: reducedMotion ? 0 : 180 })); scheduleOnRN(onCollapse); } else dragY.set(withSpring(0, { duration: 260, dampingRatio: .9 })); if (!reducedMotion) { momentum.set(Math.max(-12, Math.min(12, event.velocityX * .018))); tilt.set(withSpring(.32, { duration: 400, dampingRatio: .8, velocity: event.velocityY * .008 })); } scheduleOnRN(feedback); })
-    .onFinalize(() => { dragging.set(false); if (!hiding.get()) dragY.set(withSpring(0, { duration: 260, dampingRatio: .9 })); scale.set(withTiming(1, { duration: reducedMotion ? 0 : 140 })); }), [angle, tilt, momentum, dragging, hiding, scale, feedback, reducedMotion, onCollapse, dragY]);
+    .onFinalize(() => { dragging.set(false); if (!hiding.get()) { dragY.set(withSpring(0, { duration: 260, dampingRatio: .9 })); collapseProgress?.set(withSpring(0, { duration: 260, dampingRatio: .9 })); } scale.set(withTiming(1, { duration: reducedMotion ? 0 : 140 })); }), [angle, tilt, momentum, dragging, hiding, scale, feedback, reducedMotion, onCollapse, dragY, collapseProgress]);
   const style = useAnimatedStyle(() => ({ opacity: 1 - entrance.get(), transform: [{ translateY: 90 * entrance.get() + dragY.get() }, { scale: scale.get() * (.65 + .35 * (1 - entrance.get())) }] }));
   const auraProps = useAnimatedProps(() => ({ opacity: Math.max(0, 1 - dragY.get() / 24) }));
-  return <GestureDetector gesture={pan}><Control accessibilityRole="button" accessibilityLabel={label} accessibilityHint="Tap to open voice conversation controls. Drag sideways to spin; swipe down to hide." accessibilityState={{ busy: status === 'loading' }} onPressIn={() => scale.set(withTiming(reducedMotion ? 1 : .96, { duration: reducedMotion ? 0 : 120 }))} onPressOut={() => scale.set(withTiming(1, { duration: reducedMotion ? 0 : 140 }))} onPress={() => { feedback(); if (!reducedMotion) momentum.set(2.4); onPress(); }} style={[{ width: size, height: size, borderRadius: size / 2 }, style]}>
+  const control = <Control pointerEvents={interactive ? 'auto' : 'none'} accessible={interactive} accessibilityRole={interactive ? 'button' : undefined} accessibilityLabel={interactive ? label : undefined} accessibilityHint={interactive ? 'Tap to open voice conversation controls. Drag sideways to spin; swipe down to hide.' : undefined} accessibilityState={{ busy: status === 'loading' }} onPressIn={() => scale.set(withTiming(reducedMotion ? 1 : .96, { duration: reducedMotion ? 0 : 120 }))} onPressOut={() => scale.set(withTiming(1, { duration: reducedMotion ? 0 : 140 }))} onPress={() => { feedback(); if (!reducedMotion) momentum.set(2.4); onPress?.(); }} style={[{ width: size, height: size, borderRadius: size / 2 }, style]}>
     <Svg pointerEvents="none" aria-hidden={true} width={size} height={size} viewBox="0 0 56 56" style={{position:'relative',zIndex:1}}>
-      <Defs><RadialGradient id="orbSoftening"><Stop offset="0" stopColor={colors.background}/><Stop offset=".55" stopColor={colors.background}/><Stop offset="1" stopColor={colors.background} stopOpacity={0}/></RadialGradient><RadialGradient id="orbShadow"><Stop offset="0" stopColor={colors.ink} stopOpacity={.2} /><Stop offset=".65" stopColor={colors.ink} stopOpacity={.08} /><Stop offset="1" stopColor={colors.ink} stopOpacity={0} /></RadialGradient></Defs>
+      <Defs><RadialGradient id="orbSoftening"><Stop offset="0" stopColor={colors.background}/><Stop offset={.55} stopColor={colors.background}/><Stop offset="1" stopColor={colors.background} stopOpacity={0}/></RadialGradient><RadialGradient id="orbShadow"><Stop offset="0" stopColor={scheme === 'dark' ? '#050F0C' : colors.ink} stopOpacity={scheme === 'dark' ? .8 : .24} /><Stop offset={.65} stopColor={scheme === 'dark' ? '#050F0C' : colors.ink} stopOpacity={scheme === 'dark' ? .3 : .1} /><Stop offset="1" stopColor={scheme === 'dark' ? '#050F0C' : colors.ink} stopOpacity={0} /></RadialGradient></Defs>
       <Aura animatedProps={auraProps}><Circle cx={28} cy={28} r={28} fill="url(#orbSoftening)"/><Circle cx={28} cy={30} r={28} fill="url(#orbShadow)" /></Aura>
       {([0, 1, 2] as const).map(index => <ParticleLayer key={index} index={index} paths={paths} activity={activity} ink={colors.ink} accent={colors.accent} />)}
     </Svg>
-  </Control></GestureDetector>;
+  </Control>;
+  return interactive ? <GestureDetector gesture={pan}>{control}</GestureDetector> : control;
 }
 function ParticleLayer({ index, paths, activity, ink, accent }: { index: 0|1|2; paths: SharedValue<[string, string, string]>; activity: SharedValue<number>; ink: string; accent: string }) {
   const props = useAnimatedProps(() => ({ d: paths.get()[index], fill: interpolateColor(activity.get(), [0, 1], [ink, accent]) }));

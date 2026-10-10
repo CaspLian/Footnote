@@ -101,7 +101,7 @@ rounded:
   control: "16px"
   card: "20px"
   sheet-close: "24px"
-  orb: "72px"
+  orb: "66px"
 spacing:
   xs: "4px"
   sm: "8px"
@@ -233,7 +233,7 @@ components:
   particle-orb:
     backgroundColor: "transparent"
     rounded: "{rounded.orb}"
-    size: "144px"
+    size: "132px"
   scroll-fade-top:
     height: "24px"
     width: "100%"
@@ -253,7 +253,7 @@ components:
 
 Unfold keeps the spacious editorial document workspace established in the approved design. Proportional Geist, generous page edges, grouped rows and softly raised paper make the original document and its explanation easy to scan. Warm ivory grounds Light; deep green neutrals carry the same hierarchy in Dark. Teal marks actions, selected states and source context.
 
-Native iOS materials now join this world at the main-tab navigation controls, sheet close controls, primary actions and the floating listening orb. Liquid Glass belongs to controls, while reading surfaces remain paper. The app follows the system appearance by default and provides explicit Light and Dark choices. Android, web and devices without the glass API use the corresponding solid surfaces. System Reduce Transparency replaces custom glass controls with opaque fills.
+Native iOS materials now join this world at the main-tab navigation controls, sheet close controls, primary actions. Liquid Glass belongs to controls, while reading surfaces remain paper. The app follows the system appearance by default and provides explicit Light and Dark choices. Android, web and devices without the glass API use the corresponding solid surfaces. System Reduce Transparency replaces custom glass controls with opaque fills.
 
 **Key Characteristics:**
 
@@ -263,7 +263,7 @@ Native iOS materials now join this world at the main-tab navigation controls, sh
 - Equivalent content hierarchy in Light and Dark.
 - Native controls for navigation, search, preferences and dates.
 - A folded-paper loader with a still reduced-motion state.
-- A persistent listening action with a state-driven particle sphere.
+- A contextual voice action with a state-driven particle sphere.
 - Deliberate scroll-edge fades around content, separate from native toolbar material.
 
 ## Colors
@@ -362,7 +362,7 @@ Hover adjusts supporting-action fills. Focus adds a ring. Presses lower opacity 
 
 ### Chips
 
-Badges are compact, noninteractive semantic labels. Needs details uses amber, Ready to review blue, Draft prepared purple, Marked submitted teal and Resolved green. Text always names the status. Filters in Bills and Guide use button variants rather than a separate chip system.
+Badges are compact, noninteractive semantic labels. Needs details uses amber, Ready to review teal, Draft prepared purple, Marked submitted teal and Resolved green. Text always names the status. Filters in Bills and Guide use button variants rather than a separate chip system.
 
 ### Cards / Containers
 
@@ -380,25 +380,29 @@ The initial native tabs retain quiet labeled navigation, accent for the active t
 
 Desktop navigation uses grouped links on paper, a soft-teal selected background and accent labels. Keyboard focus stays visible.
 
-### Floating listening orb
+### Contextual voice orb
 
-Review and Guide term detail keep Prepare request and Copy question as full-width footer actions. A separate 144×144 transparent orb floats 12px above the scroll region’s bottom; 184px of trailing content padding makes content behind it reachable. It has a page-colored radial fade and a soft ink shadow, with no pill, button background or idle helper text. Speaking, loading and retry feedback appears only when relevant.
+Review and Guide term detail keep Prepare request and Copy question as full-width footer actions. A 132×132 transparent orb overlays the full scrolling viewport, 4pt above its bottom. The footer adds 8pt top padding, making 12pt of visual clearance to the CTA. It has a page-colored circular fade and an offset radial shadow; no idle helper text, rectangular reserve band or button fill. A separate 20pt fade softens the immediate CTA edge. Only trailing content padding reserves the measured overlay height, so the scroll viewport stays full height.
 
-The deterministic Fibonacci sphere has 128 dots at medium weight: radius is (0.36 + front × 0.38) × perspective in a 56-unit viewBox. Three depth-grouped native SVG paths share one projection pass. Idle animation updates at 30fps on the UI thread and pauses offscreen, in the background and under Reduce Motion. Idle rotation is 0.22 radians/second, speaking 0.92; state color and activity transition over 240ms.
+The deterministic Fibonacci sphere has 128 dots at medium weight: radius is (0.36 + front × 0.38) × perspective in a 56-unit viewBox. Three depth-grouped native SVG paths share one projection pass. Idle animation updates at 30fps on the UI thread and pauses offscreen, in the background and under Reduce Motion. Idle rotation is 0.22 radians/second, speaking 0.92; state color and activity transition over 240ms. The dark radial shadow uses deep ink rather than a white glow.
 
-Horizontal dragging rotates the sphere; vertical dragging tilts it. Release adds decaying angular momentum and returns tilt with a spring. Tapping scales to 0.96, gives a light haptic when enabled and plays/stops narration. The orb enters with a 280ms fade and downward settling motion; Reduce Motion applies the state directly. Its accessible label names Play, Stop or Retry. Decorative SVG is hidden from accessibility. Playback remains device speech; the orb never implies microphone input or connected ElevenLabs synthesis.
+Horizontal dragging rotates the sphere. Downward dragging moves and fades the circular shadow continuously; distance or velocity commits minimization. Release carries decaying angular momentum and returns tilt with a spring. Tapping scales to 0.96 and gives a light haptic when enabled. Entrance waits 180ms, then rises and zooms over 420ms; Reduce Motion applies the visible state directly. Minimized controls show the upper half of a 120pt orb in a 64pt target. Restoring them brings back the full orb.
+
+Live captions sit immediately below the orb, with up to three centered 15pt/22pt lines expanded and one 13pt/19pt line minimized. They fade and move with the drag using shared values, and the content reserve follows their measured height. Partial transcript updates replace the same turn; final messages remain in the transcript. Captions clear between agent turns and after ending. Final text is announced politely; partial chunks do not repeatedly interrupt a screen reader. The minimized conversation continues until explicitly ended or interrupted by navigation, context changes or backgrounding.
+
+The orb opens Talk it through with start/mute/end, voice selection and a transcript. It represents a conversational agent, with confirmed case context or a Guide term at the service boundary. The default adapter reports unavailable and never substitutes device speech or opens a microphone. Speaking UI follows provider status and text, without fabricated audio activity.
 
 ### Document import actions
 
 Take a photo is a full-width, 96px-minimum glass action with a purpose caption. Choose photos and Choose a PDF share a row with 140px-minimum source cards. All use Phosphor artwork, proportional 18px action labels and 12px purpose captions. Native glass falls back to raised paper, with soft teal on the camera action. Document type follows these actions and opens a focused sheet; Auto (Recommended) is the default. Current Auto metadata awaits a connected classifier rather than inventing a type.
 
-Home’s 64px glass camera shortcut goes directly to capture. A selected photo/PDF triggers the folding-paper preparation screen during actual validation and private copying, then advances to verification. Picker cancellation or a cancelled preparation creates no new case; permission and import failures retain recovery controls.
+Home’s 64px glass camera shortcut, raised 22pt above the tabs, goes directly to capture. A selected photo/PDF triggers the folding-paper preparation screen during actual validation and private copying, then opens confirmation. Users can add more captures and preview/remove documents before starting understanding, followed by verification. Picker cancellation or a cancelled preparation creates no new case; permission and import failures retain recovery controls.
 
 ### Case trail and cards
 
-Timeline is the fourth main tab. It shows Gather documents, Confirm details, Review & prepare, Send request and Follow through as a connected trail, with named completed/current/upcoming states and the next workflow action. Recorded actions stay separately readable. A resolved card opens this history with Update case; marking a case resolved returns Home. A card’s follow-up control opens its own calendar sheet without navigation.
+Timeline is the third main tab. It shows Gather documents, Confirm details, Review & prepare, Send request and Follow through as a connected trail, with named completed/current/upcoming states and the next workflow action. Recorded actions stay separately readable. A resolved card opens this history with Update case; marking a case resolved returns Home. A card’s follow-up control opens its own calendar sheet without navigation.
 
-Bill cards use 18px provider labels beneath 24px section headings, paper shadows and semantic status borders/backgrounds. Mobile cards have press feedback and no hover effect. Home’s profile selector appears only when a family profile exists. Other relationships accept a locally saved label of 1–40 letters, numbers and spaces.
+Bill cards use 18px provider labels beneath 24px section headings, paper shadows and semantic status borders/backgrounds. Status badges sit at the upper right, above the amount and document facts. Ready uses teal; resolved uses green. Mobile cards have press feedback and no hover effect. Home’s profile selector appears only when a family profile exists. Other relationships accept a locally saved label of 1–40 letters, numbers and spaces.
 
 ### Scroll-edge fades
 
@@ -430,7 +434,7 @@ Two offset paper leaves and a folded corner indicate actual local work. The loop
 - **Do** fill standalone compact action rows and split related actions with ButtonRow.
 - **Do** make the full editable-field surface focusable by tap and keep its focus border from shifting layout.
 - **Do** keep the main review/term action full width in the safe-area-padded footer and the orb separate over the scrolling content.
-- **Do** drive orb state from narration status and pause its frame loop when inactive or reduced motion is requested.
+- **Do** drive orb state from agent status and pause its frame loop when inactive or reduced motion is requested.
 - **Do** clear edge fades at their respective scroll endpoints and when content fits.
 
 ### Don't:
@@ -440,6 +444,12 @@ Two offset paper leaves and a folded corner indicate actual local work. The loop
 - **Don't** use typed text fields for bill, line-item, reminder or notice calendar dates.
 - **Don't** turn opaque reading surfaces into glass or spread the colored paper gradient across them.
 - **Don't** use monospace for app content or decorative gauges.
-- **Don't** present particle motion as microphone input, audio analysis or a live ElevenLabs voice.
+- **Don't** imply microphone access or a connected live service until a real agent adapter is configured.
 
 Editable design authority: [Unfold mobile and web prototype](https://www.figma.com/design/rZ1cdq02M7Q3CS9S9qQ8kC?node-id=51-934). Runtime tokens are extracted from mobile/src/theme and shared components; the code is the reference for this update.
+
+### Language selection and required setup
+
+Onboarding uses a two-column grid of equal-height 76pt language tiles with 16pt corners, with compact flags, single-line truncated native names and English explanations. The selected pill has teal fill/border and a check, plus a checked radio accessibility state. Fresh setup waits for explicit selection. Continue/Finish setup appear only once required values are entered; optional context is never invented. Language sheets use 20/27 native titles and 15/22 secondary names. The Settings language row uses the standard 14/20 label and 12/18 detail hierarchy with a 26×19 flag. Native iOS errors use alerts, and recovery controls remain available after dismissal.
+
+Portuguese is a single Portugal-dialect choice at the end of the grid; legacy Brazil selections normalize to Portugal while retaining local records. Minimized orbs retain the circular page softening and offset radial shadow. Bills and Guide use 32pt dynamic scroll-edge fades (24pt during search), anchored to the actual viewport/keyboard boundary. In Choose voice the orb has hit testing disabled; a screen-wide horizontal gesture owns selection, yields to vertical scrolling, carries drag velocity into a spring and retains explicit arrows/preview controls.

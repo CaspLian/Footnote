@@ -23,7 +23,7 @@ export function getCaseSummary(billCase: BillCase, language: Language): string {
   const derived = expectedRemaining(f);
   if (billCase.source === 'manual' || billCase.reviewMode === 'manual') {
     return language === 'en'
-      ? `Your confirmed statement balance is ${balance}. These details were entered manually. Document extraction and comparison services are not connected yet; review the original documents and contact the billing office with any questions.`
+      ? `${f.remainingCents === undefined ? 'No statement balance has been confirmed.' : `Your confirmed statement balance is ${balance}.`} ${billCase.evidenceContextId ? 'These details use the document information you confirmed. Benchmark comparisons are not connected yet.' : 'These details were entered manually. Document extraction and comparison services are not connected yet;'} Review the available original documents and contact the billing office with any questions.`
       : `El saldo que confirmaste es de ${balance}. Estos datos se ingresaron manualmente. Los servicios de extracción y comparación aún no están conectados; revisa los documentos originales y consulta tus dudas con facturación.`;
   }
   const prefix = billCase.entriesEdited

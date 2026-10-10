@@ -1,11 +1,45 @@
 import { useState } from 'react';
-import { Linking, Pressable, View } from 'react-native';
-import { glossary } from '@/domain';
-import { Button, Divider, Field, Group, Screen, Txt, useLanguage } from '@/components/ui';
+import { Pressable, View } from 'react-native';
+import { router } from 'expo-router';
+import { glossary, searchGlossary, type GlossaryTerm } from '@/domain';
+import { useUnfoldStore } from '@/store';
+import { Button, Divider, Group, Screen, Section, Txt, useLanguage } from '@/components/ui';
+import { SearchTransition } from '@/components/search-transition';
+import { SearchControl } from '@/components/search-control';
 import { Icon } from '@/components/icon';
-import { colors, sizes, space } from '@/theme';
+import { radius, space, useTheme } from '@/theme';
+function TermRow({ term }: { term: GlossaryTerm }) {
+  const { colors } = useTheme();
+  const saved = useUnfoldStore(s => s.savedTermIds.includes(term.id));
+  return <Pressable accessibilityRole="button" accessibilityLabel={`${term.title.en}, open explanation${saved ? ', saved' : ''}`} onPress={() => router.navigate({ pathname: '/term', params: { termId: term.id } })} style={({ pressed }) => ({ paddingVertical: space.lg, paddingHorizontal: space.md, minHeight: 72, gap: space.md, flexDirection: 'row', alignItems: 'center', backgroundColor: pressed ? colors.accentSoft : 'transparent', borderRadius: radius.small })}>
+    <Group style={{ flex: 1 }} gap={space.xs}><Txt variant="item">{term.title.en}</Txt><Txt variant="caption" muted>{term.id === 'eob' ? 'EOB · Documents' : ['deductible', 'coinsurance', 'copayment'].includes(term.id) ? 'Your share of costs' : term.id === 'appeal' ? 'Asking for a review' : term.id === 'itemized-bill' ? 'Documents' : 'Your coverage'}</Txt></Group>
+    {saved ? <Icon name="bookmark" selected color={colors.accent} size={18} /> : null}<Icon name="next" size={20} color={colors.muted} />
+  </Pressable>;
+}
 export function Guide() {
-  const {locale,copy}=useLanguage(); const [search,setSearch]=useState('');const [open,setOpen]=useState<string|null>('eob');const [error,setError]=useState(false);
-  const norm=(s:string)=>s.normalize('NFD').replace(/\p{Diacritic}/gu,'').toLowerCase();const terms=glossary.filter(term=>norm(term.title[locale]+' '+term.definition[locale]).includes(norm(search)));
-  return <Screen testID="guide"><Txt variant="display">{copy('Plain words. Useful context.','Un poco de claridad ayuda mucho.')}</Txt><Field label={copy('Search terms','Buscar términos')} placeholder={copy('EOB, deductible, appeal…','EOB, deducible, apelación…')} value={search} onChangeText={setSearch} returnKeyType="search"/>{terms.map(term=><View key={term.id}><Pressable accessibilityRole="button" accessibilityState={{expanded:open===term.id}} accessibilityLabel={term.title[locale]} onPress={()=>setOpen(open===term.id?null:term.id)} style={({pressed})=>({minHeight:sizes.touch,paddingVertical:space.md,flexDirection:'row',alignItems:'center',gap:space.md,opacity:pressed?.6:1})}><Txt variant={open===term.id?'section':'body'} style={{flex:1}}>{term.title[locale]}</Txt><Icon name="next" color={colors.muted}/></Pressable>{open===term.id?<Group gap={space.lg}><Txt muted>{term.definition[locale]}</Txt><Txt>{term.example[locale]}</Txt><Button variant="quiet" title={copy('Read the source','Leer la fuente')} onPress={()=>{void Linking.openURL(term.source.url).catch(()=>setError(true));}} /></Group>:null}<Divider/></View>)}{!terms.length?<Txt muted>{copy('No matching terms. Try EOB or appeal.','No hay términos coincidentes. Prueba EOB o apelación.')}</Txt>:null}{error?<Txt style={{color:colors.error}}>{copy('The source could not be opened. Try again when online.','No se pudo abrir la fuente. Intenta cuando tengas conexión.')}</Txt>:null}<Txt variant="caption" muted>{copy('General explanations; your plan documents control your coverage.','Son explicaciones generales; los documentos de tu plan determinan tu cobertura.')}</Txt></Screen>;
+  const { locale } = useLanguage();
+  const [search, setSearch] = useState('');
+  const [focused, setFocused] = useState(false);
+  const [savedOnly, setSavedOnly] = useState(false);
+  const saved = useUnfoldStore(s => s.savedTermIds);
+  const starterTerms=glossary.filter(t=>['eob','deductible','appeal'].includes(t.id));
+  const moreTerms=glossary.filter(t=>!['eob','deductible','appeal'].includes(t.id));
+  const filtered = searchGlossary(search, locale).filter(term => !savedOnly || saved.includes(term.id));
+  const searching = focused || !!search.trim();
+  const isSearching = searching || savedOnly;
+  return <><Screen softenSearchEdge scrollEdgeHeight={32} contentWidth={760} testID="guide" searchMode={searching}>
+    {!searching ? <SearchTransition reveal><Group gap={space.lg}><Txt variant="display">A little clarity{'\n'}goes a long way.</Txt><Txt muted>Insurance terms, with examples you can read or listen to.</Txt></Group></SearchTransition> : null}
+    <SearchControl key="search" softenBelow active={searching} onActiveChange={setFocused} label="Search insurance terms" placeholder="EOB, deductible, appeal…" value={search} onChange={setSearch} />
+    <SearchTransition><Group style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.sm }}>
+      <Button compact title="All terms" variant={savedOnly ? 'secondary' : 'quiet'} onPress={() => setSavedOnly(false)} />
+      <Button compact title={`Saved${saved.length ? ` · ${saved.length}` : ''}`} icon="bookmark" variant={savedOnly ? 'quiet' : 'secondary'} onPress={() => setSavedOnly(true)} />
+    </Group></SearchTransition>
+    <SearchTransition>{isSearching ? <Section title={savedOnly ? 'Saved terms' : `${filtered.length} ${filtered.length === 1 ? 'result' : 'results'}`}>
+      {filtered.length ? filtered.map(term => <View key={term.id}><TermRow term={term} /><Divider /></View>) : <Group gap={space.lg}><Txt muted>{savedOnly ? 'Save a term from its explanation to keep it handy here.' : `No terms match “${search}”. Try EOB, deductible or appeal.`}</Txt><Button title={savedOnly ? 'Browse all terms' : 'Clear search'} variant="secondary" onPress={() => { setSavedOnly(false); setSearch(''); }} /></Group>}
+    </Section> : <>
+      <Section title="Start here"><Group gap={space.xs}>{starterTerms.map((term,index) => <View key={term.id}><TermRow term={term} />{index<starterTerms.length-1?<Divider />:null}</View>)}</Group></Section>
+      <Group style={{paddingTop:space.xl}}><Section title="More useful terms"><Group gap={space.sm}>{moreTerms.map((term,index) => <View key={term.id}><TermRow term={term} />{index<moreTerms.length-1?<Divider />:null}</View>)}</Group></Section></Group>
+    </>}</SearchTransition>
+    {!searching ? <Txt variant="caption" muted>General explanations. Your own plan documents determine your coverage.</Txt> : null}
+  </Screen></>;
 }

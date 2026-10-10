@@ -6,11 +6,11 @@ import { UnfoldLoader } from '@/components/loader';
 import { DraftKind } from '@/domain';
 import { useUnfoldStore } from '@/store';
 import { copyDraft, exportDraftPdf, nativeErrorMessage, shareDocument } from '@/native';
-import { Button, Choice, Feedback, Group, Screen, Txt, styles, useDesktop, useLanguage } from '@/components/ui';
-import { colors, type, space } from '@/theme';
+import { Button, ButtonRow, Choice, Feedback, Group, Screen, Txt, useUIStyles, useDesktop, useLanguage } from '@/components/ui';
+import { useTheme, type, space } from '@/theme';
 import { MissingCase, caseRoute, useCase } from './shared';
 
-export function DraftWorkspace() {
+export function DraftWorkspace() { const { colors } = useTheme(); const styles = useUIStyles();
   const c = useCase();
   const desktop = useDesktop();
   const { locale, copy } = useLanguage();
@@ -70,15 +70,15 @@ export function DraftWorkspace() {
     <Choice title="Insurer review / appeal" detail="Ask your health plan to review a coverage decision." selected={kind === 'insurer_appeal'} onPress={() => { setKind('insurer_appeal'); setError(''); setMessage(''); }} />
   </Group>;
   const utilities = <Group gap={space.lg}>
-    <Group gap={space.md} style={{ flexDirection: desktop ? 'column' : 'row', flexWrap: 'wrap' }}>
+    <ButtonRow stack={desktop}>
       <Button icon="copy" variant="secondary" title="Copy" disabled={busy || loading || !body.trim()} onPress={() => void run('copy')} />
       <Button icon="export" variant="secondary" title={Platform.OS === 'web' ? 'Print / save PDF' : 'Share PDF'} disabled={busy || loading || !body.trim()} onPress={() => void run('pdf')} />
-    </Group>
+    </ButtonRow>
     <Button title="Open call script" variant="quiet" onPress={() => router.push({ pathname: '/call-script', params: { caseId: c.id, kind } })} />
     <Button title="Open timeline" variant="quiet" onPress={() => caseRoute('/timeline', c.id)} />
     <Txt variant="caption" muted>Mark submitted only after you send the request yourself.</Txt>
   </Group>;
-  return <Screen testID="draft" asideWidth={320} aside={<Group gap={space.xl}>{heading}{choices}{utilities}</Group>} footer={<Button title={draft?.submittedAt ? 'Open submission timeline' : 'Mark submitted'} disabled={loading || busy || !body.trim() || !!storageError} onPress={() => draft?.submittedAt ? caseRoute('/timeline', c.id) : submitted()} />}>
+  return <Screen testID="draft" asideWidth={320} aside={<Group gap={space.xl}>{heading}{choices}{utilities}</Group>} footerHint={loading ? 'Preparing your draft…' : storageError ? 'Saving needs attention' : draft ? 'Draft saved on this device' : undefined} footer={<Button title={draft?.submittedAt ? 'Open submission timeline' : 'Mark submitted'} disabled={loading || busy || !body.trim() || !!storageError} onPress={() => draft?.submittedAt ? caseRoute('/timeline', c.id) : submitted()} />}>
     {!desktop ? <>{heading}{choices}</> : <Group gap={space.sm}><Txt variant="section">Your draft</Txt><Txt muted>{c.provider}</Txt></Group>}
     {kind === 'insurer_appeal' ? <Feedback text="Identify the insurer decision and your reason for asking for review. The sample has no denial; this is an explanation request. Confirm any deadline from your plan documents." /> : null}
     {loading ? <UnfoldLoader compact title="Preparing your draft" detail="Turning your confirmed questions into words." /> : <TextInput testID="draft-body" accessibilityLabel="Editable request draft" value={body} onChangeText={edit} multiline scrollEnabled textAlignVertical="top" style={[type.body, styles.page, { color: colors.ink, height: desktop ? 640 : 420 }]} />}

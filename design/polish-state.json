@@ -1,7 +1,7 @@
 {
   "fileKey": "rZ1cdq02M7Q3CS9S9qQ8kC",
   "pageId": "51:934",
-  "updatedAt": "2026-10-10T19:49:58.705Z",
+  "updatedAt": "2026-10-10T22:11:12.272922+00:00",
   "headers": [
     "51:1032",
     "51:1094",
@@ -15,8 +15,15 @@
     "idle": "84:220",
     "speaking": "84:309",
     "dots": 128,
-    "size": 144,
-    "control": "standalone transparent orb"
+    "size": 132,
+    "control": "standalone transparent orb",
+    "compactSize": 120,
+    "actionClearance": 12,
+    "captionStates": [
+      "122:609",
+      "122:779"
+    ],
+    "captionContract": "Stable turn IDs replace streaming partials; final transcripts retained; minimized conversation continues."
   },
   "validation": {
     "editable": true,
@@ -28,12 +35,34 @@
       "51:1387"
     ],
     "device": "iPhone 18 Pro / iOS 27",
-    "nativeBuild": "passed",
-    "checks": "54 tests, TypeScript, lint, Doctor 21/21, exports all platforms"
+    "nativeBuild": "Restored build installed and launched on iPhone 18 Pro / iOS 27",
+    "checks": "66 tests, TypeScript, lint, Expo Doctor 21/21, iOS/Android/web exports",
+    "latestCaptures": [
+      ".impeccable/review/phone-ios.jpg",
+      ".impeccable/review/mobile.png",
+      ".impeccable/review/desktop.png",
+      ".impeccable/review/agent-collapsed-mobile.png"
+    ]
   },
   "pending": [
     "Native search keyboard and picker interaction automation",
     "Android emulator/device runtime",
     "Physical-device drag and scroll performance"
-  ]
+  ],
+  "onboarding": {
+    "languageCount": 31,
+    "columns": 2,
+    "height": 76,
+    "radius": 16,
+    "portuguese": "pt-PT",
+    "truncate": true,
+    "requiredActionGating": true
+  },
+  "latestCorrections": {
+    "minimizedRadialShadow": true,
+    "voiceChooserOrbHitTesting": false,
+    "screenWideVoiceSwipe": true,
+    "billsGuideEdgeSoftening": true,
+    "nativeIosErrorAlerts": true
+  }
 }

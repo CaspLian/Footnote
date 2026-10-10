@@ -1,8 +1,11 @@
 import { View } from 'react-native';
-import { router } from 'expo-router';
+import { usePathname } from 'expo-router';
 import { IconButton, useLanguage } from './ui';
+import { openProfiles, openSettings } from './navigation';
 
 export function HeaderActions() {
   const { copy } = useLanguage();
-  return <View style={{ flexDirection: 'row' }}><IconButton name="profile" label="Family profiles" onPress={() => router.push('/profiles')} /><IconButton name="settings" label={copy('Settings','Ajustes')} onPress={() => router.push('/settings')} /></View>;
+  const path = usePathname();
+  if (!['/', '/bills', '/guide', '/track'].includes(path)) return null;
+  return <View style={{ flexDirection: 'row', gap: 8 }}><IconButton plain name="profile" label="Family profiles" onPress={openProfiles} /><IconButton plain name="settings" label={copy('Settings','Ajustes')} onPress={openSettings} /></View>;
 }

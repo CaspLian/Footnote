@@ -6,8 +6,9 @@ import { NativeActionError, nativeMessages, type NativeErrorCode } from './error
 import { classifyPickerOutcome, safeDisplayFilename, validateFileMetadata, validateImportedFile } from './import-validation';
 
 export type ImportSource = 'camera' | 'photos' | 'files';
+export type ImportPreparation = (file: { name: string }) => void | Promise<void>;
 export type ImportResult =
-  | { status: 'success'; attachment: DocumentAttachment }
+  | { status: 'success'; attachment: DocumentAttachment; additionalAttachments?: DocumentAttachment[] }
   | { status: 'cancelled' }
   | { status: 'permission-denied'; canAskAgain: boolean }
   | { status: 'error'; code: NativeErrorCode; message: { en: string; es: string } };
@@ -63,40 +64,32 @@ export async function persistImportedAttachment(asset: PickedFile, kind: Documen
   }
 }
 
-export async function importDocument(source: ImportSource, kind: DocumentKind = 'bill'): Promise<ImportResult> {
+export async function importDocument(source: ImportSource, kind: DocumentKind = 'auto', onPreparing?: ImportPreparation): Promise<ImportResult> {
+  const saved: DocumentAttachment[] = [];
   try {
-    let picked: PickedFile;
+    let picked: PickedFile[];
     if (source === 'files') {
-      const result = classifyPickerOutcome(await DocumentPicker.getDocumentAsync({
-        type: ['application/pdf', 'image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'],
-        copyToCacheDirectory: true,
-        multiple: false,
-      }));
-      if (result.status !== 'selected') {
-        return result.status === 'error'
-          ? { ...result, message: nativeMessages[result.code] }
-          : result;
-      }
-      picked = result.asset;
+      const result = await DocumentPicker.getDocumentAsync({ type: ['application/pdf', 'image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'], copyToCacheDirectory: true, multiple: true });
+      const outcome = classifyPickerOutcome(result);
+      if (outcome.status !== 'selected') return outcome.status === 'error' ? { ...outcome, message: nativeMessages[outcome.code] } : outcome;
+      picked = result.assets!;
     } else {
-      if (source === 'camera') {
-        const permission = await ImagePicker.requestCameraPermissionsAsync();
-        if (!permission.granted) return { status: 'permission-denied', canAskAgain: permission.canAskAgain };
-      }
-      // The OS photo picker grants access to the selected photo without broad library access.
-      const result = classifyPickerOutcome(await (source === 'camera'
+      if (source === 'camera') { const permission = await ImagePicker.requestCameraPermissionsAsync(); if (!permission.granted) return { status: 'permission-denied', canAskAgain: permission.canAskAgain }; }
+      const result = await (source === 'camera'
         ? ImagePicker.launchCameraAsync({ mediaTypes: ['images'], allowsEditing: false, quality: 1, cameraType: ImagePicker.CameraType.back })
-        : ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: false, quality: 1, allowsMultipleSelection: false })));
-      if (result.status !== 'selected') {
-        return result.status === 'error'
-          ? { ...result, message: nativeMessages[result.code] }
-          : result;
-      }
-      const asset = result.asset;
-      picked = { uri: asset.uri, name: asset.fileName ?? 'document.jpg', mimeType: asset.mimeType, size: asset.fileSize };
+        : ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: false, quality: 1, allowsMultipleSelection: true, selectionLimit: 10, orderedSelection: true }));
+      const outcome = classifyPickerOutcome(result);
+      if (outcome.status !== 'selected') return outcome.status === 'error' ? { ...outcome, message: nativeMessages[outcome.code] } : outcome;
+      picked = result.assets!.map(a => ({ uri: a.uri, name: a.fileName ?? 'document.jpg', mimeType: a.mimeType, size: a.fileSize }));
     }
-    return { status: 'success', attachment: await persistImportedAttachment(picked, kind) };
+    if (picked.length > 10) return { status: 'error', code: 'import-failed', message: { en: 'Choose up to 10 documents at a time. You can add more before starting the review.', es: 'Elige hasta 10 documentos a la vez. Puedes agregar más antes de revisar.' } };
+    for (const [index, file] of picked.entries()) {
+      await onPreparing?.({ name: picked.length > 1 ? `${index + 1} of ${picked.length} · ${safeDisplayFilename(file.name)}` : safeDisplayFilename(file.name) });
+      saved.push(await persistImportedAttachment(file, kind));
+    }
+    return { status: 'success', attachment: saved[0], additionalAttachments: saved.slice(1) };
   } catch (error) {
+    await Promise.all(saved.map(a => deleteAttachment(a).catch(() => {})));
     const code = error instanceof NativeActionError ? error.code : source === 'camera' ? 'camera-unavailable' : 'import-failed';
     return { status: 'error', code, message: nativeMessages[code] };
   }

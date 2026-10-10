@@ -1,16 +1,76 @@
+import { OrbMark } from '@/components/orb-mark';
+import { LanguageFlag } from '@/components/language-picker';
+import { languageOption } from '@/domain/languages';
 import { useState } from 'react';
-import { Platform, Switch } from 'react-native';
+import { Platform } from 'react-native';
 import { router } from 'expo-router';
 import { useUnfoldStore } from '@/store';
-import { languageOption } from '@/domain/languages';
 import { clearLocalAttachments, nativeErrorMessage } from '@/native';
-import { Button, Choice, Divider, Feedback, Group, Screen, Section, Txt } from '@/components/ui';
+import { voiceChoices } from '@/domain/preferences';
+import { Feedback, Group, Screen, Txt } from '@/components/ui';
 import { usePrivacy } from '@/components/privacy';
 import { confirmAction } from '@/components/confirm';
-import { Icon } from '@/components/icon';
-import { colors, space } from '@/theme';
-export function Settings(){const privacy=usePrivacy();const weight=useUnfoldStore(s=>s.iconWeight);const size=useUnfoldStore(s=>s.iconSize);const opacity=useUnfoldStore(s=>s.duotoneOpacity);const cases=useUnfoldStore(s=>s.cases);const workingLang=useUnfoldStore(s=>s.preferences.workingLanguage);const [custom,setCustom]=useState(false);const [busy,setBusy]=useState(false);const [error,setError]=useState('');
-function reset(){confirmAction('Reset the sample?','Sample drafts, actions and follow-up will reset. Your family profiles and imported cases are kept.','Reset sample',()=>{setBusy(true);void useUnfoldStore.getState().resetDemo().then(()=>router.replace('/(tabs)')).catch(()=>setError('Reset failed. Try again.')).finally(()=>setBusy(false));});}
-function clearImports(){confirmAction('Delete imported cases?','This removes imported documents, drafts and their history from this device. Family profiles and the sample are kept.','Delete imports',()=>{setBusy(true);void(async()=>{try{for(const c of cases.filter(c=>c.source==='manual'))await useUnfoldStore.getState().deleteCase(c.id);await clearLocalAttachments();}catch(e){setError(nativeErrorMessage(e,'en'));}finally{setBusy(false);}})();},true);}
-return <Screen testID="settings"><Group gap={space.lg}><Txt variant="display">Your workspace.{'\n'}Your choices.</Txt><Txt muted>A few useful preferences. Everything stays local.</Txt></Group><Section title="Personal context"><Button title="Family profiles" variant="quiet" icon="family" onPress={()=>router.push('/profiles')}/><Button title={`Working language · ${languageOption(workingLang).native}`} variant="quiet" icon="globe" onPress={()=>router.push('/languages')}/><Button title="Update my details & preferences" variant="quiet" icon="profile" onPress={()=>router.push('/onboarding')}/></Section><Divider/><Section title="Privacy">{Platform.OS==='web'?<Txt muted>Face ID and fingerprint lock are available in the native iOS and Android apps.</Txt>:<><Group style={{flexDirection:'row',alignItems:'center',gap:space.lg,minHeight:48}}><Icon name="lock" color={colors.accent}/><Group style={{flex:1}} gap={space.xs}><Txt variant="label">{privacy.label} app lock</Txt><Txt variant="caption" muted>{privacy.supported?'Authenticate after reopening Unfold.':'Set up device biometrics to use app lock.'}</Txt></Group><Switch accessibilityLabel={`Require ${privacy.label} to open Unfold`} value={privacy.enabled} disabled={privacy.busy} onValueChange={()=>void privacy.toggle()} trackColor={{false:colors.line,true:colors.accent}}/></Group><Txt variant="caption" muted>Your device passcode can be used as a fallback. App lock controls access; it does not encrypt imported files.</Txt>{privacy.message?<Feedback text={privacy.message}/>:null}{privacy.enabled?<Button title="Lock workspace now" variant="secondary" onPress={privacy.lock}/>:null}</>}</Section><Divider/><Section title="Appearance"><Group style={{flexDirection:'row',alignItems:'center',gap:space.lg}}><Icon name="document" color={colors.accent}/><Icon name="speaker" color={colors.accent}/><Icon name="document" feature size={32} color={colors.accent}/></Group><Button title={custom?'Hide icon preferences':'Customize icons'} variant="quiet" onPress={()=>setCustom(v=>!v)}/>{custom?<Group gap={space.screen}><Group><Txt variant="label" muted>Utility weight</Txt>{(['thin','regular','bold'] as const).map(w=><Choice key={w} title={w==='thin'?'Thin':w==='bold'?'Bold':'Regular'} selected={weight===w} onPress={()=>useUnfoldStore.getState().setIconPreferences({iconWeight:w})}/>)}</Group><Group><Txt variant="label" muted>Utility size</Txt>{[20,24,28].map(v=><Choice key={v} title={`${v} points`} selected={size===v} onPress={()=>useUnfoldStore.getState().setIconPreferences({iconSize:v})}/>)}</Group><Group><Txt variant="label" muted>Feature tint</Txt>{[.15,.2,.3].map(v=><Choice key={v} title={`${Math.round(v*100)}%`} selected={opacity===v} onPress={()=>useUnfoldStore.getState().setIconPreferences({duotoneOpacity:v})}/>)}</Group></Group>:null}</Section><Divider/><Section title="Demo & local data"><Button title="Reset the sample" variant="secondary" loading={busy} onPress={reset}/><Button title="Delete imported cases" variant="quiet" disabled={busy||!cases.some(c=>c.source==='manual')} onPress={clearImports}/></Section>{error?<Feedback danger text={error}/>:null}<Txt variant="caption" muted>No sponsor services are connected. There’s no account or shared family cloud.</Txt></Screen>;
+import { SettingsDivider, SettingsGroup, SettingsLink, SettingsPicker, SettingsToggle } from '@/components/settings-controls';
+import { openProfiles } from '@/components/navigation';
+import { space } from '@/theme';
+
+export function Settings() {
+  const privacy = usePrivacy();
+  const prefs = useUnfoldStore(s => s.preferences);
+  const context = useUnfoldStore(s => s.personalContext);
+  const cases = useUnfoldStore(s => s.cases);
+  const profiles = useUnfoldStore(s => s.profiles);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const set = useUnfoldStore.getState().setPreferences;
+  const voice = voiceChoices.find(v => v.id === (prefs.voice === 'device' ? 'calm' : prefs.voice))!;
+  const language = languageOption(prefs.workingLanguage);
+  function reset() {
+    confirmAction('Reset the sample?', 'Sample drafts, actions and follow-up will reset. Your family profiles and imported cases are kept.', 'Reset sample', () => {
+      setBusy(true); setError('');
+      void useUnfoldStore.getState().resetDemo().catch(() => setError('Reset failed. Try again.')).finally(() => setBusy(false));
+    });
+  }
+  function clearImports() {
+    confirmAction('Delete imported cases?', 'This removes imported documents, drafts and their history from this device. Family profiles and the sample are kept.', 'Delete imports', () => {
+      setBusy(true); setError('');
+      void (async () => { try { for (const c of cases.filter(c => c.source === 'manual')) await useUnfoldStore.getState().deleteCase(c.id); await clearLocalAttachments(); } catch (e) { setError(nativeErrorMessage(e, 'en')); } finally { setBusy(false); } })();
+    }, true);
+  }
+  return <Screen contentWidth={720} testID="settings">
+    <Group gap={space.lg}><Txt variant="display">Make it feel{'\n'}like yours.</Txt><Txt muted>Useful preferences, saved on this device.</Txt></Group>
+    <SettingsGroup title="Your household">
+      <SettingsLink title="Family profiles" detail={`${profiles.length} ${profiles.length === 1 ? 'profile' : 'profiles'} saved locally`} icon="family" onPress={openProfiles} />
+      <SettingsDivider /><SettingsLink title="Personal context" detail="Your insurance, region and review goals" icon="profile" onPress={() => router.navigate('/onboarding')} />
+    </SettingsGroup>
+    <SettingsGroup title="Language"><SettingsLink title="Working language" detail={language.native} leading={<LanguageFlag country={language.country} size="compact" />} onPress={() => router.navigate('/languages')} /></SettingsGroup>
+    <SettingsGroup title="Appearance">
+      <SettingsPicker title="App theme" value={prefs.theme} options={[{ label: 'System', value: 'system' }, { label: 'Light', value: 'light' }, { label: 'Dark', value: 'dark' }]} onChange={theme => set({ theme })} />
+    </SettingsGroup>
+    <SettingsGroup title="Voice & explanations" note="Choose a language and voice for two-way conversations. Live ElevenLabs agents will connect through the backend.">
+      <SettingsLink title="Agent voice" detail={`${voice.name} · ElevenLabs placeholder`} leading={<OrbMark/>} onPress={() => router.navigate('/voices')} />
+      <SettingsDivider /><SettingsPicker title="Explanation detail" value={context.explanationDepth} options={[{ label: 'Simple', value: 'simple' }, { label: 'Detailed', value: 'detailed' }]} onChange={useUnfoldStore.getState().setExplanationDepth} />
+    </SettingsGroup>
+    <SettingsGroup title="Interaction" note="System accessibility preferences are always respected.">
+      <SettingsToggle title="Haptic feedback" detail={Platform.OS === 'web' ? 'Used in the mobile app.' : 'Gentle feedback for main actions.'} value={prefs.haptics} onChange={haptics => set({ haptics })} />
+      <SettingsDivider /><SettingsToggle title="Reduce motion" detail="Simpler transitions and a still loading indicator." value={prefs.reduceMotion} onChange={reduceMotion => set({ reduceMotion })} />
+    </SettingsGroup>
+    <SettingsGroup title="Bills">
+      <SettingsPicker title="Sort bills by" value={prefs.billSort} options={[{ label: 'Most recent', value: 'recent' }, { label: 'Highest balance', value: 'balance' }, { label: 'Next follow-up', value: 'follow_up' }]} onChange={billSort => set({ billSort })} />
+      <SettingsDivider /><SettingsToggle title="Show resolved bills" value={prefs.showResolved} onChange={showResolved => set({ showResolved })} />
+    </SettingsGroup>
+    <SettingsGroup title="Privacy" note="App lock controls access; it does not encrypt imported files.">
+      {Platform.OS === 'web' ? <Group style={{ padding: space.lg }}><Txt variant="label">Biometric app lock</Txt><Txt muted>Available with Face ID or fingerprint authentication in the mobile app.</Txt></Group> : <>
+        <SettingsToggle title={`${privacy.label} app lock`} detail="Authenticate after reopening Unfold. Device passcode can be used as a fallback." value={privacy.enabled} disabled={privacy.busy} onChange={() => { void privacy.toggle(); }} />
+        {privacy.enabled ? <><SettingsDivider /><SettingsLink title="Lock workspace now" icon="lock" onPress={privacy.lock} /></> : null}
+      </>}
+    </SettingsGroup>
+    {privacy.message ? <Feedback text={privacy.message} /> : null}
+    <SettingsGroup title="Local data & demo" note="Deleting a case removes its documents, drafts and recorded actions from this device.">
+      <SettingsLink title={busy ? 'Updating local data…' : 'Reset the sample'} detail="Keep profiles and imported cases" icon="document" onPress={reset} disabled={busy} />
+      <SettingsDivider /><SettingsLink title="Delete imported cases" detail={`${cases.filter(c => c.source === 'manual').length} imported ${cases.filter(c => c.source === 'manual').length === 1 ? 'case' : 'cases'}`} icon="files" danger onPress={clearImports} disabled={busy || !cases.some(c => c.source === 'manual')} />
+    </SettingsGroup>
+    {error ? <Feedback danger text={error} /> : null}
+    <Group gap={space.sm}><Txt variant="label">Unfold · Prototype 0.1</Txt><Txt variant="caption" muted>No account. No family cloud. Sponsor services are not connected.</Txt></Group>
+  </Screen>;
 }

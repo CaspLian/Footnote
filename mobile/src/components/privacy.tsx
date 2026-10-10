@@ -6,12 +6,12 @@ import { narrationService } from '@/native';
 import { Button, Feedback, Group, Txt } from './ui';
 import { Icon } from './icon';
 import { UnfoldLoader } from './loader';
-import { colors, space } from '@/theme';
+import { useTheme, space } from '@/theme';
 const KEY='unfold-privacy-lock-v1';
 interface PrivacyState { enabled:boolean; supported:boolean; label:string; message:string; busy:boolean; toggle:()=>Promise<void>; lock:()=>void; }
 const PrivacyContext=createContext<PrivacyState>({enabled:false,supported:false,label:'Biometrics',message:'',busy:false,toggle:async()=>{},lock:()=>{}});
 export const usePrivacy=()=>useContext(PrivacyContext);
-export function PrivacyProvider({children}:{children:ReactNode}) {
+export function PrivacyProvider({children}:{children:ReactNode}) { const { colors } = useTheme();
   const [ready,setReady]=useState(Platform.OS==='web');const [enabled,setEnabled]=useState(false);const [locked,setLocked]=useState(false);const [supported,setSupported]=useState(false);const [label,setLabel]=useState('Biometrics');const [message,setMessage]=useState('');const [busy,setBusy]=useState(false);const [readError,setReadError]=useState(false);const authenticating=useRef(false);
   async function initialize(){try{const flag=await SecureStore.getItemAsync(KEY);const [hardware,types]=await Promise.all([LocalAuthentication.hasHardwareAsync(),LocalAuthentication.supportedAuthenticationTypesAsync()]);setSupported(hardware);setLabel(types.includes(LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION)?'Face ID':types.includes(LocalAuthentication.AuthenticationType.FINGERPRINT)?Platform.OS==='ios'?'Touch ID':'Fingerprint':'Biometrics');setEnabled(flag==='1');setLocked(flag==='1');setReadError(false);setReady(true);}catch{setReadError(true);}}
   useEffect(()=>{if(Platform.OS!=='web')void Promise.resolve().then(initialize);},[]);
