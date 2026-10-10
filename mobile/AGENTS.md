@@ -1,5 +1,19 @@
 This is an Expo/React Native mobile application. Prioritize mobile-first patterns, performance, and cross-platform compatibility.
 
+## This project today (checked 2026-10-10)
+
+The guidance below is Expo's generated template.
+
+- On this branch the app is still the starter `App.js`, and it calls no backend route.
+- The frontend prototype is on the branch `frontend-aarush` (Aarush Kumar, 2026-10-10): Expo Router in `src/app/`,
+  TypeScript, React Native Web and a development build (`expo start --dev-client`). It uses local sample data and
+  does not call the backend yet. Once it is merged, its structure is the app's: follow it, and update this note.
+- Playing the backend's spoken replies (MP3 URLs) needs an audio player, which `frontend-aarush` does not have yet
+  (it uses `expo-speech`, the phone's own voice). The backend's audio docs recommend `expo-audio`: check the Expo
+  SDK 57 docs before choosing.
+- The backend contract the app calls, including how a phone reaches the backend, is in `docs/API_CONTRACTS.md`.
+  Shared rules are in the repository's root `AGENTS.md`.
+
 ## Expo has changed — do not trust your training data
 
 Expo ships breaking changes every SDK release. APIs you remember are likely renamed, moved, or removed. Before writing any code that touches an Expo, EAS, or React Native API:

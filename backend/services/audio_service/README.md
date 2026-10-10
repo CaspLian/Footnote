@@ -240,40 +240,27 @@ Flash makes it unnecessary; lower-quality audio formats barely matter for speed,
 
 ## How the backend uses it
 
-In `backend/main.py` (your backend teammate's file):
-
-```python
-from services.audio_service.text_to_speech import TTSRequest, synthesize
-from services.audio_service.speech_to_text import STTRequest, to_gemini_handoff, transcribe
-```
-
-The voice endpoints (speech → the team's Gemini step → price check → Tiger Data → speech) are
-switched on at the end of `backend/main.py`:
+`backend/main.py` (your backend teammate's file) only switches the voice endpoints on (speech → the
+team's Gemini step → price check → Tiger Data → speech), at its end:
 
 ```python
 from services.audio_service.voice_routes import router as voice_router
 app.include_router(voice_router)
 ```
 
-How the routes fit together:
+`voice_routes.py` does the rest. It calls this module's async functions:
 
-| Route | File | What it does |
-|---|---|---|
-| `POST /api/v1/analyze` | `main.py` | bill and/or text → Gemini → price check → saved (`audit`) |
-| `POST /api/v1/voice/analyze` | `voice_routes.py` | recording → transcript → the same three steps → spoken reply |
-| `GET /api/v1/audits/{audit_id}` | `main.py` | a saved analysis, exactly as it was returned |
-| `POST /api/v1/voice/speak` | `voice_routes.py` | speak a saved analysis again, without Gemini |
-| `GET /api/v1/voice/audio/{id}`, `/voices`, `/voices/{key}/sample` | `voice_routes.py` | play replies; the voice picker |
+```python
+from services.audio_service.speech_to_text import STTRequest, to_gemini_handoff, transcribe_async
+from services.audio_service.text_to_speech import TTSRequest, synthesize_async, synthesize_streaming_async
+```
 
-Saving is in `services/analytical_services/analysis_store.py`. It uses Tiger Data's database
-(`TIGER_DATA_POSTGRES_URL`) and two tables of its own, `bill_analyses` and `bill_analysis_lines`
-(made on first use if missing), because a Gemini line item may have no code or no amount, which
-`tigerdata_service`'s audit tables do not accept. Missing codes and amounts are stored as NULL, never
-dropped or made up. Every statement has a time limit, and while Tiger Data cannot be reached saving
-pauses for 30 s, so a database problem never holds up an answer for long.
+Scripts and demos can use the plain `transcribe()` and `synthesize()` instead.
 
-Fields, response shape and error codes are in section 3 of
-[speech_to_text/README.md](speech_to_text/README.md), along with the mobile recording code.
+Every route the app calls, with fields, responses and errors, is in
+[`docs/API_CONTRACTS.md`](../../../docs/API_CONTRACTS.md). That is the single source; keep it current when a route
+changes. Saving analyses is `services/analytical_services/analysis_store.py`; why it has its own tables is
+explained in `docs/decisions/2026-10-10-analysis-storage.md`.
 
 The text-to-speech contract, a FastAPI example and the mobile playback code are in
 [text_to_speech/README.md](text_to_speech/README.md). Generated audio is cached in
@@ -335,7 +322,8 @@ $1 until October 18).
   stable, recommended by ElevenLabs where numbers must be read correctly, and it supports the
   speed setting. It is also the slowest (see "Speed"). `eleven_flash_v2_5` misreads numbers with
   ElevenLabs' default setting, so the module turns number reading on for it; in our test it then
-  read every amount, date and code right. Switching is the team's call after listening.
+  read every amount, date and code right. Switching is the team's call after listening (an open
+  proposal: `docs/decisions/2026-10-09-tts-default-model.md`).
 - **Streaming shares the generation, not the connection.** Every listener of a clip reads the same
   buffer from its first byte, so a player that reconnects (iPhones do) never pays for a second
   generation. A failed generation is retried only before anyone has heard part of it, because a
@@ -379,9 +367,12 @@ $1 until October 18).
   `test_dev_console.py`. In headless Chrome, the developer console ran every flow above against a
   local PostgreSQL with a stand-in for ElevenLabs, including microphone recording and a streamed
   reply. The audio and backend suites also pass together in one pytest session, in either order.
+- **Live (2026-10-10, `d1753db`):** with every key in `backend/.env`, 15 of 15 checks passed: real
+  Gemini (`gemini-3.5-flash`), Snowflake, Tiger Data (inside a throwaway schema) and ElevenLabs both
+  ways, alone and together through `main.app`, including a spoken question through
+  `POST /api/v1/voice/analyze`. Details: `BACKEND_VERIFICATION_REPORT.md`.
 - **Not yet tested:** the mobile playback and recording snippets on a phone, streaming on an iPhone,
-  a real human voice recorded on a phone (only synthetic speech so far), and Gemini with a real key
-  (only its mock mode).
+  and a real human voice recorded on a phone (only synthetic speech so far).
 
 ## Git notes
 

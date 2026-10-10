@@ -2,7 +2,10 @@
 
 Date: 2026-10-10. Verified: branch `Gemini-Tiger-Snow-Integration-V1` at `f86e22f`, the merge of
 `nimesh/audio-service`, `backend-gemini` and `Tiger-data`. After verification, the parts were wired together
-(section 2). That wiring is **not committed yet**: it is in the working tree of the local clone, on the same branch.
+(section 2) and committed on the same branch as `d1753db`.
+
+This report is the dated evidence. For the current state, see `docs/PROJECT_STATUS.md`. For the HTTP contract, see
+`docs/API_CONTRACTS.md`.
 
 **New layout (after the verification, at the team's request):** each service now has its own folder under
 `backend/services/`. Folder names use underscores, because Python cannot import a folder whose name has a space.
@@ -69,7 +72,8 @@ New:
   - The full response is kept as JSON, so it reads back exactly as it was returned.
   - Saving never fails a request. Database work runs on its own threads with a time limit on every statement.
   - If Tiger Data cannot be reached, saving pauses for 30 s instead of every request waiting 10 s or more.
-  - A save that runs out of time is rolled back, so "not saved" is always true.
+  - A save that runs out of time is reported as not saved and rolled back. Rarely, one that is already
+    committing still commits: a known issue (`docs/handoffs/backend-follow-ups.md`).
   - Tables are created only when missing, under an advisory lock, so an app role without CREATE permission
     still works.
   - Logs show only the error type, never bill data or the URL.
@@ -103,7 +107,8 @@ Changed:
   guard let a real key leak into tests, which was proven with a probe.
 - **Docs:** `audio_service/README.md` (how the routes fit together, the developer console) and
   `speech_to_text/README.md` (`/speak`, `audit`, `speech.text`, privacy). The audio tests and
-  `text_to_speech/README.md` were updated to match.
+  `text_to_speech/README.md` were updated to match. After `d1753db` (not yet committed on 2026-10-10), the HTTP
+  contract moved to `docs/API_CONTRACTS.md`, and both READMEs now point there.
 
 Otherwise unchanged: the Gemini, Snowflake and Tiger Data code (`gemini_service.py`, `snowflake_service.py`,
 `tigerdata_service.py`), apart from the move and the two path lines above. Their bugs are listed in section 5 with
@@ -217,7 +222,7 @@ Python 3.14, FastAPI 0.141, in a scratch virtual environment. The test database 
 | `python -m pytest -q` (backend), what a teammate would type | stops at collection, 2 errors | unchanged |
 | Tiger Data checks (`tiger_checks.py`, local PostgreSQL) | 28 passed | n/a |
 | Developer console in headless Chrome (fake ElevenLabs, local PostgreSQL) | n/a | **58 passed** |
-| Live smoke test, real ElevenLabs (`wired_workflows.py`) | earlier live run: all passed except the invalid-key mapping | **13 passed** |
+| Live smoke test, real ElevenLabs (`wired_workflows.py`) | earlier live run: all passed except the invalid-key mapping | **13 passed** (10:18 on 2026-10-10, on the working tree before `d1753db`) |
 | Full live test, every real service (`full_live.py`, 2026-10-10) | n/a | **15 passed** (an earlier run, with the Tiger Data URL incomplete: 14 of 15) |
 
 Notes on these totals:
@@ -314,8 +319,9 @@ The app now saves through `analysis_store`, so these no longer block it. They ma
 1. **Gemini live: done**, with `GEMINI_MODEL=gemini-3.5-flash` and `GEMINI_FALLBACK_MODEL=gemini-3.5-flash-lite` in
    `backend/.env`. Try `gemini-3.8-flash` again later; it is the model Google now recommends.
 2. **Snowflake live: done.** The `CPT_BENCHMARKS` table is loaded and matches the CSV.
-3. **Tiger Data live: done** (the complete connection string is in `backend/.env`). For testing, the developer
-   console saves to a schema of its own, `claimpulse_console`, so test data stays apart from the team's tables.
+3. **Tiger Data live: done** (the complete connection string is in `backend/.env`). For the live test session,
+   a local helper script (in the session's scratch folder, not in the repo) ran the developer console with its
+   saves in a schema of its own, `claimpulse_console`, so test data stayed apart from the team's tables.
    `DROP SCHEMA claimpulse_console CASCADE;` removes it all. Plain `python dev_console.py`, like the app, saves to
    the `public` schema, and creates the tables `bill_analyses` and `bill_analysis_lines` there on the first save.
 
@@ -327,8 +333,7 @@ The app now saves through `analysis_store`, so these no longer block it. They ma
 ## 9. Ready for frontend integration?
 
 **Yes, for building and demoing with test data.** The evidence:
-- **Contract:** the app's contract is in `services/audio_service/speech_to_text/README.md` (section 3) and
-  `services/audio_service/README.md` ("How the backend uses it"). Every route the app needs is mounted.
+- **Contract:** the app's contract is in `docs/API_CONTRACTS.md`. Every route the app needs is mounted.
 - **Offline tests:** 587 tests pass across the audio and backend suites.
 - **Browser test:** the developer console passes 58 checks in headless Chrome.
 - **Live:** a full live run with every real service passed 15 of 15. Real Gemini read the bill photo, Snowflake
@@ -361,6 +366,6 @@ The app now saves through `analysis_store`, so these no longer block it. They ma
 1. **Fix the price flags** for doctor-only rates, and the source label, in `snowflake_service.py`. The app shows
    them, and the voice now says them out loud.
 2. **Connect the app.** The backend is fully live, so connect `mobile/App.js` to `/api/v1/analyze` and
-   `/api/v1/voice/*`, using the contract in `speech_to_text/README.md` section 3.
+   `/api/v1/voice/*`, using the contract in `docs/API_CONTRACTS.md`.
 3. **Secure it before it goes public.** Before the backend is public, add an app key on the paid and data routes,
    limit CORS, and decide how long saved bills, transcripts and audio are kept.

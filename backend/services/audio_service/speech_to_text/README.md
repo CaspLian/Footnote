@@ -94,116 +94,29 @@ from speech recognition and may contain misheard words.
 [`../voice_routes.py`](../voice_routes.py) receives the recording, transcribes it, passes the text to
 the team's Gemini step (`services.gemini_services.gemini_service.analyze`, called the same way `/api/v1/analyze`
 calls it) and the price check, saves the analysis to Tiger Data, and speaks the answer. The router
-is mounted in `backend/main.py` (`app.include_router(voice_router)`), so these routes are part of
-the app.
+is mounted in `backend/main.py`.
 
-The reply voice says Gemini's `spoken_summary`, then a sentence or two on what the price check
-found (for example "Head CT was billed about 30 times Medicare's national rate, which is far above
-the usual range. It's worth asking the billing office about it."). Gemini writes its summary before
-the price check runs, so this is added here. These sentences are English, like the reply voices for
-now; they compare with Medicare's national rates and never say a charge is wrong.
+**The HTTP contract** (fields, responses, error codes, audio delivery, the voice picker) is in
+[`docs/API_CONTRACTS.md`](../../../../docs/API_CONTRACTS.md), the single source for every route.
+What this module adds on top of it:
 
-### `POST /api/v1/voice/analyze` (multipart form)
+- **What the reply says.** The reply voice says Gemini's `spoken_summary`, then a sentence or two on what the
+  price check found, for example "Head CT was billed about 30 times Medicare's national rate, which is far above
+  the usual range. It's worth asking the billing office about it."
+  - Gemini writes its summary before the price check runs, so these sentences are added here (`spoken_reply()`).
+  - They are English, like the reply voices for now.
+  - They compare with Medicare's national rates and never say a charge is wrong.
+- **Captions.** `speech.text` is exactly what the voice says: show it as captions.
+- **Playback.** Play `speech.audio_url` with the mobile code in `../text_to_speech/README.md`, section 4.
 
-| Field | Required | Meaning |
-|---|---|---|
-| `audio` | yes | The recording: `.m4a` from the app, webm, mp3, wav, ... |
-| `file` | no | Photo or PDF of the bill, sent to Gemini together with the question |
-| `target_language` | no (`en`) | The language the user speaks and wants the answer in; speech-to-text uses it too |
-| `message_id` | no | Your ID for this message; one is made if missing |
-| `speak_reply` | no (`true`) | Also turn `spoken_summary` into audio |
-| `voice` | no (default voice) | The reply voice the user chose: a key from `GET /api/v1/voice/voices`, e.g. `bunty` |
-| `stream_reply` | no (`false`) | `true`: answer as soon as the first reply audio exists, and stream the rest. Faster. Tested in Chrome; expected to work on Android, may not on iPhones, so test on both phones first. Needs the backend to run as one process |
-
-A successful answer (from the end-to-end run on 2026-10-09, shortened):
-
-```json
-{
-  "transcript": {"text": "Hi. Why was my MRI billed $3,200? Is that normal?", "language": "eng",
-                 "confidence": 0.991, "needs_confirmation": false, "audio_seconds": 5.43},
-  "analysis":   {"target_language": "en", "model": "gemini-3.8-flash", "mock": true, "result": {"...": "..."},
-                 "price_checks": ["..."], "price_summary": {"...": "..."},
-                 "audit": {"saved": true, "audit_id": "6ddb0e91-707f-4a1e-90b8-26aa751f0307", "error": null}},
-  "speech":     {"ok": true, "audio_url": "/api/v1/voice/audio/eb271c6235a68884ff2a308e63c5f7a5",
-                 "mime_type": "audio/mpeg", "voice": "matilda", "streaming": false,
-                 "text": "Your MRI was billed at three thousand two hundred dollars. I also compared ...",
-                 "error_code": null, "error_message": null}
-}
-```
-
-`analysis` is exactly what `/api/v1/analyze` returns, so the app can show both the same way.
-Play `speech.audio_url` (`GET /api/v1/voice/audio/{audio_id}`, an MP3) with the playback code in
-`../text_to_speech/README.md`; `speech.text` is what the voice says, for captions. Show
-`transcript.text` when `needs_confirmation` is true.
-`analysis.audit` says whether the analysis was saved to Tiger Data (with the question's transcript).
-Saving never fails the request: without `TIGER_DATA_POSTGRES_URL`, or if Tiger Data is down,
-`audit.saved` is false, `audit.audit_id` is null and `audit.error` says why. When `saved` is true,
-keep `audit.audit_id`: it loads the analysis again (`GET /api/v1/audits/{audit_id}`) and speaks it
-again (`POST /api/v1/voice/speak`, below). The voice route saves while it makes the reply audio, so a
-healthy save adds nothing to the wait. If Tiger Data cannot be reached, one request waits for the
-connection to time out (5 s per address), and saving is then skipped for 30 s ("could not be
-reached a moment ago") instead of every request waiting again. A save that takes over 15 s is
-rolled back, so "not saved" is always true.
-`speech.streaming` is `true` only with `stream_reply=true`: the audio URL then plays while the rest
-of the reply is still being made. Finished audio supports byte ranges, which iPhones need.
-
-Errors come back as `{"detail": {"stage": ..., ...}}` so the app knows which step failed:
-
-| Status | Stage | When |
-|---|---|---|
-| 422 | `speech_to_text` | Silent, empty or non-audio recording (`detail.error_code`: `NO_SPEECH`, `EMPTY_AUDIO`, `UNSUPPORTED_AUDIO`). Ask the user to try again. |
-| 413 | `speech_to_text` / `upload` | Recording over `STT_MAX_AUDIO_MB`, or bill over 15 MB (checked before the recording is sent, so it costs nothing) |
-| 503 | `speech_to_text` | ElevenLabs temporarily unavailable (`detail.retryable` is true) |
-| 502 | `speech_to_text` / `gemini` | Key, permission or quota problem, or Gemini failed |
-| 400 / 504 | `gemini` | Gemini rejected the input / took too long (same as `/api/v1/analyze`) |
-
-A failed reply voice never fails the request: `speech.ok` is false and the text answer is still
-there. That includes an unknown `voice` (`INVALID_REQUEST`, and the message lists the valid keys).
-The reply voice is English-only for now: other languages get the text answer, with
-`speech.error_code` set to `INVALID_REQUEST`.
-
-### `POST /api/v1/voice/speak` (multipart form): hear a saved analysis again
-
-| Field | Required | Meaning |
-|---|---|---|
-| `audit_id` | yes | `analysis.audit.audit_id` from `/api/v1/analyze` or `/api/v1/voice/analyze` |
-| `voice` | no (default voice) | As for `/analyze` |
-| `stream_reply` | no (`false`) | As for `/analyze` |
-
-It answers with the `speech` object above, made from the saved analysis without calling Gemini
-again (the same text in the same voice comes from the cache, free; each other voice is a new, paid
-clip). Only saved analyses can be spoken: the server never reads out text sent to it directly.
-Errors: 400 (`audit_id` is not a UUID), 404 (no saved analysis with this ID), 409 (saved in an older
-format that no longer fits `models.py`), 503 (Tiger Data not configured or not reachable), all with
-`detail.stage` = `audit`.
-
-`GET /api/v1/audits/{audit_id}` (in `main.py`) returns the saved analysis itself:
-`{"audit_id", "created_at", "source": "text" | "file" | "voice", "transcript", "analysis"}`, where
-`analysis` is exactly what was returned the first time.
-
-### Voice picker: `GET /api/v1/voice/voices` and `GET /api/v1/voice/voices/{key}/sample`
-
-`/voices` returns the voices users can choose, for a picker in the app:
-
-```json
-{"default": "matilda",
- "voices": [{"key": "matilda", "name": "Matilda", "description": "Knowledgeable and professional", "accent": "American", "gender": "female"},
-            {"key": "bunty", "name": "Bunty", "description": "Energetic, expressive and fun", "accent": "Indian", "gender": "male"},
-            "..."]}
-```
-
-`/voices/{key}/sample` returns a short MP3 of that voice saying "Hi, I'm Bunty. I can read your
-medical bill explanations out loud.", so users can hear a voice before choosing it. Each sample
-is made once (about 30 credits) and then served from the cache. Send the chosen `key` as `voice`
-with `/analyze`.
-
-**Tested:** `../tests/test_voice_routes.py` (with stand-ins for Gemini, the price check and Tiger
-Data), `backend/tests/test_wiring.py` and `test_analysis_store.py` (the real store against a local
-PostgreSQL), end-to-end runs on 2026-10-09 (the team's `main.py` with the voice router, real
-ElevenLabs speech-to-text and text-to-speech, and the team's `gemini_service` in `MOCK=true` mode;
-the second run, after merging `backend-gemini` and `Tiger-data`, also checked that a spoken question
-gets the same price check as a typed one), and a headless-Chrome run of the developer console
-(`backend/dev_console.py`) on 2026-10-10 with a stand-in for ElevenLabs and a local PostgreSQL.
+**Tested:**
+- `../tests/test_voice_routes.py`, with stand-ins for Gemini, the price check and Tiger Data.
+- `backend/tests/test_wiring.py` and `test_analysis_store.py`; the latter runs the real store against a local
+  PostgreSQL.
+- End-to-end runs on 2026-10-09 with real ElevenLabs in both directions, and Gemini in MOCK mode.
+- The developer console in headless Chrome, on 2026-10-10, with a stand-in for ElevenLabs.
+- A full live run on 2026-10-10, with real Gemini, Snowflake, Tiger Data and ElevenLabs (see
+  `docs/PROJECT_STATUS.md`).
 
 ## 4. Using speech-to-text on its own
 
