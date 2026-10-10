@@ -1,0 +1,18 @@
+{
+  "subject": "Request for Itemized Bill and Billing Review - Account [ACCOUNT NUMBER]",
+  "body": "[DATE]\n\n[PATIENT NAME]\n[PATIENT ADDRESS]\n\nMetropolitan Medical Center\nPatient Billing Department\n\nRe: Account [ACCOUNT NUMBER], date of service September 2, 2026\n\nDear Patient Billing Department,\n\nI am writing about my bill for emergency care on September 2, 2026. I want to pay what I fairly owe, and I am asking for your help reviewing a few charges first.\n\nFirst, please send me a fully itemized bill. The charge \"FACILITY FEE - MISC\" for $450.00 has no billing code, and I would like to know exactly what it covers.\n\nSecond, I am asking for a review of the following charges, which appear far above typical prices:\n- CT head/brain without contrast (CPT 70450): billed $3,200.00. For comparison, Medicare's national rate for this service is $106.55.\n- Emergency department visit, level 4 (CPT 99284): billed $1,200.00. For comparison, Medicare's national rate for the physician portion of this service is $118.24.\n\nI would appreciate a reduction on these charges. Please also let me know whether I qualify for your financial assistance program, and whether an interest-free payment plan is available.\n\nWhile this review is pending, please place my account on hold so it is not sent to collections and no late fees are added.\n\nPlease send your response in writing. You can reach me at [PATIENT PHONE] or [PATIENT EMAIL].\n\nThank you for your help.\n\nSincerely,\n\n[PATIENT NAME]",
+  "key_points": [
+    "Requests a fully itemized bill, including what the $450 facility fee covers",
+    "Asks for a review of the CT scan and ER visit charges, citing Medicare rates for comparison",
+    "Asks about financial assistance and an interest-free payment plan",
+    "Asks to pause collections and late fees during the review"
+  ],
+  "explanation": "Esta carta le pide al hospital una factura detallada y una revisión de dos cargos que son mucho más altos de lo normal. También pregunta si usted califica para ayuda financiera o un plan de pagos, y pide que no envíen su cuenta a cobranzas mientras la revisan.",
+  "next_steps": [
+    "Complete los espacios entre corchetes con sus datos.",
+    "Envíe la carta por correo certificado o por el portal de pagos del hospital.",
+    "Guarde una copia de la carta y del recibo de envío.",
+    "Anote la fecha y el nombre de cada persona con la que hable.",
+    "Si no recibe respuesta en 30 días, llame al hospital y pregunte por su carta."
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "document_type": "hospital_bill",
+  "provider_name": "Metropolitan Medical Center",
+  "total_billed": 4850.00,
+  "amount_patient_owes": 1940.00,
+  "due_date": "2026-11-15",
+  "line_items": [
+    {
+      "cpt_code": "70450",
+      "original_description": "CT HEAD/BRAIN W/O CONTRAST",
+      "plain_description": "Tomografía (escaneo) de la cabeza sin tinte de contraste",
+      "billed_amount": 3200.00,
+      "date_of_service": "2026-09-02",
+      "possible_issues": []
+    },
+    {
+      "cpt_code": "99284",
+      "original_description": "ER VISIT LEVEL 4",
+      "plain_description": "Visita a la sala de emergencias, nivel 4 (problema moderadamente grave)",
+      "billed_amount": 1200.00,
+      "date_of_service": "2026-09-02",
+      "possible_issues": ["Pregunte por qué la visita fue clasificada como nivel 4."]
+    },
+    {
+      "cpt_code": null,
+      "original_description": "FACILITY FEE - MISC",
+      "plain_description": "Cargo general por usar el hospital",
+      "billed_amount": 450.00,
+      "date_of_service": "2026-09-02",
+      "possible_issues": ["Cargo sin código y con descripción vaga. Pida una factura detallada."]
+    }
+  ],
+  "plain_summary": "Esta es una factura del Metropolitan Medical Center por su visita a emergencias el 2 de septiembre. El hospital cobró $4,850 en total y le pide que pague $1,940 antes del 15 de noviembre. El cargo más grande es una tomografía de la cabeza de $3,200. Hay un cargo de $450 llamado 'facility fee' que no tiene código, así que vale la pena preguntar qué incluye.",
+  "spoken_summary": "Esta es una factura del Metropolitan Medical Center por su visita a emergencias en septiembre. Le piden pagar mil novecientos cuarenta dólares antes del quince de noviembre. El cargo más grande es una tomografía de la cabeza. También hay un cargo de cuatrocientos cincuenta dólares sin explicación clara. Antes de pagar, pida una factura detallada y pregunte qué incluye ese cargo.",
+  "questions_to_ask": [
+    "¿Me pueden enviar una factura detallada con todos los códigos?",
+    "¿Qué incluye el cargo de 'facility fee' de $450?",
+    "¿Ya procesó mi seguro esta factura?",
+    "¿Tienen un programa de asistencia financiera?"
+  ]
+}
