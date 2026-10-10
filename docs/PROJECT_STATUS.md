@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | Checked on | 2026-10-10 |
-| Branch | `Frontend-Integration-V2`: start frontend work here. It is `Gemini-Tiger-Snow-Integration-V1` (`d1753db`) plus these docs and one fix. `main` is older, at `8c1a321` |
+| Branch | `Gemini-Tiger-Snow-ElevenLabs-V2`: start frontend work here. It is `Gemini-Tiger-Snow-Integration-V1` (`d1753db`) plus these docs and one fix. `main` is older, at `8c1a321` |
 | Code | `d1753db` plus the null-text fix in `backend/models.py`; the results below apply to this code |
 | Last updated by | Nimesh, with Claude Code. Update this file only at integration checkpoints (see `docs/TEAM_WORKFLOW.md`) |
 
@@ -80,7 +80,7 @@
 
 ## Next three integration priorities
 
-1. **Connect the frontend.** Merge the frontend branch into `Frontend-Integration-V2`. Then replace its local
+1. **Connect the frontend.** Merge the frontend branch into `Gemini-Tiger-Snow-ElevenLabs-V2`. Then replace its local
    sample services with the routes in `docs/API_CONTRACTS.md`:
    - photo or file → `POST /api/v1/analyze`
    - `POST /api/v1/voice/speak` with `audit.audit_id`

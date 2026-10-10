@@ -1,6 +1,6 @@
 # ClaimPulse AI: project context
 
-Last checked: 2026-10-10, branch `Frontend-Integration-V2` (`d1753db` plus the null-text fix). Re-check
+Last checked: 2026-10-10, branch `Gemini-Tiger-Snow-ElevenLabs-V2` (`d1753db` plus the null-text fix). Re-check
 anything here against the code after merges: the code wins over this document.
 
 ## Product

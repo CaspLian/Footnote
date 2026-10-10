@@ -1,6 +1,6 @@
 # API contracts
 
-The HTTP contract the backend exposes today, checked on 2026-10-10 against the code on `Frontend-Integration-V2`
+The HTTP contract the backend exposes today, checked on 2026-10-10 against the code on `Gemini-Tiger-Snow-ElevenLabs-V2`
 (`d1753db` plus the null-text fix) and against the real server (`uvicorn main:app`, every live service) over HTTP.
 If the code and this file disagree, the code wins: fix this file in the same change.
 
