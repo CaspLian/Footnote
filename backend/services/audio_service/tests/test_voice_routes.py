@@ -360,9 +360,19 @@ def test_reply_audio_supports_byte_ranges_for_iphones(voice):
     assert voice.client.get(url).headers["accept-ranges"] == "bytes"
 
 
-def test_finished_reply_is_the_default_so_iphones_can_play_it(voice):
+def test_finished_reply_is_the_default_so_iphones_can_play_it(voice, monkeypatch):
+    async def must_not_stream(request):
+        raise AssertionError("by default the reply must wait for the finished clip")
+
+    monkeypatch.setattr(voice.routes, "synthesize_streaming_async", must_not_stream)
     speech = ask(voice).json()["speech"]
     assert speech["ok"] is True and speech["streaming"] is False
+
+
+def test_voice_samples_support_byte_ranges_for_iphones(voice):
+    probe = voice.client.get("/api/v1/voice/voices/bunty/sample", headers={"Range": "bytes=0-1"})
+    assert probe.status_code == 206 and probe.content == b"ID"
+    assert probe.headers["cache-control"] == "public, max-age=86400"
 
 
 class GatedStreamingVoice:

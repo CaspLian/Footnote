@@ -26,6 +26,7 @@ from dataclasses import dataclass
 from urllib.parse import quote
 
 import requests
+from urllib3.exceptions import ReadTimeoutError
 
 from .config import TTSConfig
 from .contract import ErrorCode
@@ -152,8 +153,8 @@ class ElevenLabsProvider:
                 chunks.append(chunk)
                 if self._clock() > deadline:
                     raise _timeout_error(self._config.timeout_seconds)
-        except requests.RequestException:  # connection dropped or stalled mid-download
-            raise _broken_connection_error(response) from None
+        except requests.RequestException as exc:  # connection dropped or stalled mid-download
+            raise self._download_error(exc, response) from None
         return b"".join(chunks)
 
     def _iter_body(self, response: requests.Response, deadline: float) -> Iterator[bytes]:
@@ -163,10 +164,17 @@ class ElevenLabsProvider:
                     yield chunk
                 if self._clock() > deadline:
                     raise _timeout_error(self._config.timeout_seconds)
-        except requests.RequestException:
-            raise _broken_connection_error(response) from None
+        except requests.RequestException as exc:
+            raise self._download_error(exc, response) from None
         finally:
             response.close()
+
+    def _download_error(self, exc: requests.RequestException, response: requests.Response) -> TTSError:
+        # While the body downloads, requests reports a read timeout as a ConnectionError that wraps
+        # urllib3's ReadTimeoutError: that is ElevenLabs going quiet, not a broken connection.
+        if isinstance(exc, requests.Timeout) or any(isinstance(arg, ReadTimeoutError) for arg in exc.args):
+            return _timeout_error(self._config.timeout_seconds)
+        return _broken_connection_error(response)
 
 
 def _timeout_error(timeout_seconds: float) -> TTSError:
@@ -234,6 +242,8 @@ def _error_detail(response: requests.Response) -> dict:
         payload = response.json()
     except ValueError:
         return {"message": (response.text or "")[:200].strip() or None}
+    except requests.RequestException:  # the error body broke off while it was read
+        return {"message": "the error details could not be read"}
     detail = payload.get("detail") if isinstance(payload, dict) else None
     if isinstance(detail, dict):
         return detail

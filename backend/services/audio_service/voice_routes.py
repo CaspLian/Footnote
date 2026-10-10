@@ -17,8 +17,9 @@ them, with the transcript as the user's text. The response's "analysis" field ha
 
 By default /analyze answers once the reply audio is finished. With stream_reply=true it answers as
 soon as the first audio exists and the audio URL plays while the rest is being made: faster, and
-fine on Android and in Chrome, Edge and Firefox, but iPhones may not play audio that is still
-arriving, so test on an iPhone before turning it on there (README, "Speed").
+tested in Chrome; Android is expected to play it too, iPhones may not, so test on both phones before
+turning it on (README, "Speed"). Streaming needs the backend to run as one process: audio that is
+still being made exists only in the process making it.
 """
 
 from __future__ import annotations
@@ -28,7 +29,6 @@ import uuid
 from typing import Optional
 
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import Response
 from pydantic import BaseModel
 
 from models import AnalyzeResponse
@@ -36,6 +36,7 @@ from services.audio_service.audio_http import audio_response
 from services.audio_service.speech_to_text import ErrorCode as STTErrorCode
 from services.audio_service.speech_to_text import STTRequest, to_gemini_handoff, transcribe_async
 from services.audio_service.text_to_speech import (
+    AudioStream,
     TTSRequest,
     list_voices,
     open_audio,
@@ -93,7 +94,7 @@ async def voice_analyze(
     speak_reply: bool = Form(True, description="Also turn result.spoken_summary into audio"),
     voice: Optional[str] = Form(None, description="Reply voice: a key from GET /api/v1/voice/voices; default if missing"),
     stream_reply: bool = Form(
-        False, description="Answer at the first reply audio and stream the rest (faster; test on iPhones first)"
+        False, description="Answer at the first reply audio and stream the rest (faster; test on phones first)"
     ),
 ):
     """Recording -> transcript -> Gemini -> spoken reply. Errors say which stage failed."""
@@ -168,8 +169,9 @@ def voices():
 
 
 @router.get("/voices/{voice_key}/sample")
-async def voice_sample(voice_key: str):
-    """A short sample of one voice, so users can hear it before choosing. Made once, then cached."""
+async def voice_sample(voice_key: str, request: Request):
+    """A short sample of one voice, so users can hear it before choosing. Made once, then cached.
+    Supports byte ranges, like the reply audio, because iPhones ask for them."""
     try:
         catalog = list_voices()
     except ValueError as e:
@@ -185,7 +187,8 @@ async def voice_sample(voice_key: str):
             503 if spoken.retryable else 502,
             detail={"stage": "text_to_speech", "error_code": spoken.error_code, "message": spoken.error_message},
         )
-    return Response(content=spoken.audio, media_type=spoken.mime_type, headers={"Cache-Control": "public, max-age=86400"})
+    finished = AudioStream(iter((spoken.audio,)), spoken.mime_type, complete=True, size=len(spoken.audio))
+    return audio_response(finished, request.headers.get("range"), finished_headers={"Cache-Control": "public, max-age=86400"})
 
 
 async def _ask_gemini(file_bytes: Optional[bytes], mime: Optional[str], text: str, target_language: str) -> AnalyzeResponse:

@@ -13,7 +13,7 @@ audio while the rest is still being made. list_voices() gives the voices users c
 voices.json). See README.md in this folder for the full contract.
 """
 
-from .contract import AudioStream, ErrorCode, TTSRequest, TTSResult
+from .contract import AudioCutShort, AudioStream, ErrorCode, TTSRequest, TTSResult
 from .service import (
     TTSService,
     get_audio,
@@ -27,6 +27,7 @@ from .service import (
 )
 
 __all__ = [
+    "AudioCutShort",
     "AudioStream",
     "ErrorCode",
     "TTSRequest",

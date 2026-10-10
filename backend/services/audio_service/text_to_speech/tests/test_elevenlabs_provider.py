@@ -340,3 +340,27 @@ def test_api_key_never_appears_in_errors_or_config_repr():
         assert SECRET_KEY not in error.message
         assert SECRET_KEY not in str(error)
     assert SECRET_KEY not in repr(CONFIG)
+
+
+def test_elevenlabs_going_quiet_part_way_is_a_timeout_not_a_broken_connection():
+    from urllib3.exceptions import ReadTimeoutError
+
+    stall = requests.ConnectionError(ReadTimeoutError(None, None, "Read timed out."))  # how requests reports it
+    stream, _ = open_stream(StreamedBody([b"ID3", stall]))
+    with pytest.raises(TTSError) as caught:
+        list(stream.chunks)
+    assert caught.value.code == ErrorCode.PROVIDER_TIMEOUT and caught.value.retryable
+
+
+def test_an_error_whose_body_breaks_off_is_still_mapped_by_its_status():
+    class BrokenErrorBody(requests.Response):
+        def json(self, **kwargs):
+            raise requests.exceptions.ChunkedEncodingError("connection reset")
+
+    response = BrokenErrorBody()
+    response.status_code = 503
+    response.reason = "Service Unavailable"
+    response.headers = CaseInsensitiveDict({"Content-Type": "application/json"})
+    response._content_consumed = True
+    error = generate_error(response)
+    assert error.code == ErrorCode.PROVIDER_UNAVAILABLE and error.retryable  # not an INTERNAL_ERROR

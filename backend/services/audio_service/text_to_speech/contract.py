@@ -25,7 +25,7 @@ class ErrorCode:
     TEXT_TOO_LONG = "TEXT_TOO_LONG"  # over TTS_MAX_CHARS after cleanup
 
     # Problems with our setup or account. A person has to fix these.
-    NOT_CONFIGURED = "NOT_CONFIGURED"  # API key or voice ID missing
+    NOT_CONFIGURED = "NOT_CONFIGURED"  # API key missing, or a malformed setting in .env
     AUTH_FAILED = "AUTH_FAILED"  # key rejected or lacks permission
     QUOTA_EXCEEDED = "QUOTA_EXCEEDED"  # out of ElevenLabs credits
     PROVIDER_REJECTED = "PROVIDER_REJECTED"  # ElevenLabs refused the request (bad voice/model/format, plan restriction)
@@ -102,11 +102,17 @@ class TTSResult:
         return data
 
 
+class AudioCutShort(Exception):
+    """Raised while reading AudioStream.chunks when the audio stops before the end: the
+    generation failed or stalled part-way. The message says why (e.g. "PROVIDER_TIMEOUT: ...")."""
+
+
 @dataclass(frozen=True)
 class AudioStream:
     """Audio to send to a player, from open_audio(). Finished audio comes in one piece
     (complete=True, safe to cache for good); audio still being made comes piece by piece
-    as it arrives (complete=False: don't let browsers cache it, it may still fail)."""
+    as it arrives (complete=False: don't let browsers cache it; reading it raises
+    AudioCutShort if it stops early)."""
 
     chunks: Iterator[bytes]
     mime_type: str

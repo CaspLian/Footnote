@@ -12,7 +12,8 @@ The audio is streamed: /api/speak answers as soon as the first audio exists, and
 speed and sound (see MODEL_NOTES).
 
 It only listens on this computer (127.0.0.1), so nobody else on the network can use it to spend
-your credits. Stop it with Ctrl+C.
+your credits, and it only answers requests addressed to 127.0.0.1 or localhost, so a web page
+cannot reach it through a look-alike address ("DNS rebinding"). Stop it with Ctrl+C.
 """
 
 from __future__ import annotations
@@ -29,6 +30,7 @@ from typing import Optional
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, Response
 from pydantic import BaseModel, Field
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from audio_http import audio_response
 from text_to_speech import TTSRequest, list_voices, open_audio, synthesize_async, synthesize_streaming_async
@@ -48,10 +50,11 @@ MODEL_NOTES = {
                                 "reading on (sent automatically); ElevenLabs says the quality is slightly lower"),
     "eleven_v4_turbo": (0.22, "newest real-time model. First audio in about 0.4-1 s, but slow to finish; "
                               "ElevenLabs documents it for its dialogue API, it works here too"),
-    "eleven_v4": (0.44, "newest quality model. First audio in about 0.7-1.2 s, slow to finish"),
+    "eleven_v4": (0.44, "newest quality model. First audio in about 0.7-1.7 s, slow to finish"),
 }
 
 app = FastAPI(title="ClaimPulse voice playground")
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=["127.0.0.1", "localhost"])
 
 
 class SpeakRequest(BaseModel):
@@ -101,11 +104,14 @@ def models():
 async def speak(body: SpeakRequest):
     """The text-to-speech receiver: text, a voice and a model in; a link to the audio and the cost out.
     It answers as soon as the first audio exists; the link plays while the rest is being made."""
+    request_id = f"playground-{uuid.uuid4().hex[:8]}"
     result = await synthesize_streaming_async(
-        TTSRequest(request_id=f"playground-{uuid.uuid4().hex[:8]}", text=body.text, voice=body.voice, model=body.model)
+        TTSRequest(request_id=request_id, text=body.text, voice=body.voice, model=body.model)
     )
     data = result.metadata()
-    data["audio_url"] = f"/api/audio/{result.audio_id}" if result.ok else None
+    # ?r= makes each answer's link new, so the browser never replays bytes from an earlier attempt
+    # that broke off; the server ignores it.
+    data["audio_url"] = f"/api/audio/{result.audio_id}?r={request_id}" if result.ok else None
     return data
 
 

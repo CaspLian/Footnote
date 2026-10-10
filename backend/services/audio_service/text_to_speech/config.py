@@ -3,7 +3,7 @@
 The .env file loaded is the nearest one above the folder you run from; if there is
 none, backend/.env. In the team repo that means backend/.env, which the repo's
 .gitignore already keeps out of git. See ../.env.example for every variable.
-Only ELEVENLABS_API_KEY and ELEVENLABS_VOICE_ID are required.
+Only ELEVENLABS_API_KEY is required: the voices come from voices.json.
 """
 
 from __future__ import annotations
@@ -49,9 +49,11 @@ MODELS = {
 def default_text_normalization(model_id: str) -> str:
     """How ElevenLabs should read numbers, money and dates for a model.
 
-    Flash and Turbo models misread money, codes and ranges with ElevenLabs' default ("auto") in
-    our test: "$12,345.67" became "12,340.67", "E11.9" became "11.9". With "on" they read every
-    one correctly. The other models read them correctly with "auto"."""
+    Flash v2.5 misread money, codes and ranges with ElevenLabs' default ("auto") in our test:
+    "$12,345.67" became "12,340.67", "E11.9" became "11.9". With "on" it read every one
+    correctly. The deprecated Turbo v2/v2.5 models, which ElevenLabs calls functionally
+    equivalent to Flash, get "on" too (not measured). The other models read them right with
+    "auto", including eleven_v4_turbo."""
     return "on" if model_id.startswith(("eleven_flash_", "eleven_turbo_")) else "auto"
 
 

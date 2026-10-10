@@ -32,7 +32,7 @@ from typing import Protocol
 
 from .cache import AudioCache, is_valid_key
 from .config import MODELS, TTSConfig
-from .contract import AudioStream, ErrorCode, TTSRequest, TTSResult
+from .contract import AudioCutShort, AudioStream, ErrorCode, TTSRequest, TTSResult
 from .elevenlabs_provider import ElevenLabsProvider, ProviderAudio
 from .errors import TTSError
 from .text_prep import prepare_for_speech
@@ -80,6 +80,9 @@ class _Job:
         self.attempts = 0
         self.provider_request_id: str | None = None
         self.characters_billed: int | None = None
+        # (attempts, provider_request_id, characters_billed) when the first audio arrived: what a
+        # streamed result reports. Anything after that is counted when the job ends (_run).
+        self.at_first_audio: tuple[int, str | None, int | None] | None = None
 
     # --- The generating thread ---------------------------------------------------------
 
@@ -91,6 +94,8 @@ class _Job:
 
     def add(self, chunk: bytes) -> None:
         with self._changed:
+            if self.at_first_audio is None:
+                self.at_first_audio = (self.attempts, self.provider_request_id, self.characters_billed)
             self._chunks.append(chunk)
             self._changed.notify_all()
 
@@ -135,19 +140,27 @@ class _Job:
 
     def read(self, timeout: float) -> Iterator[bytes]:
         """The audio piece by piece: what has arrived so far, then each new piece as it comes.
-        Stops at the end of the job; if the job failed part-way, the audio is cut short."""
+        Raises AudioCutShort if the job fails or stalls before the end, so an audio endpoint
+        breaks the connection and the player reports an error, instead of a clip that just stops."""
         index = 0
         while True:
             with self._changed:
                 if not self._changed.wait_for(lambda: index < len(self._chunks) or self._outcome is not None, timeout):
-                    logger.warning("Gave up waiting for more audio for %s", self.key)
-                    return
+                    raise AudioCutShort(f"No more audio arrived for {timeout:g} s.")
                 if index >= len(self._chunks):
-                    return  # finished (or failed) and everything has been read
+                    if isinstance(self._outcome, BaseException):
+                        raise AudioCutShort(_describe(self._outcome))
+                    return  # finished and everything has been read
                 chunk = self._chunks[index]
                 index += 1
                 self._delivered = True
             yield chunk
+
+
+def _describe(error: BaseException) -> str:
+    if isinstance(error, TTSError):
+        return f"{error.code}: {error.message}"
+    return f"{ErrorCode.INTERNAL_ERROR}: unexpected error while making the audio (see the server logs)."
 
 
 def _waiting_timeout() -> TTSError:
@@ -213,9 +226,9 @@ class TTSService:
             key = self._cache_key(spoken, request.language, voice_id, settings)
             found = self._get_or_generate(key, spoken, voice_id, settings, streaming=streaming)
             source = found.source
-            if found.job is not None:  # still arriving: what is known so far
+            if found.job is not None:  # still arriving: what was known at the first audio
                 made_here = found.source == "provider"
-                job = found.job
+                attempts, provider_request_id, characters_billed = found.job.at_first_audio
                 result = TTSResult(
                     request_id=request_id,
                     ok=True,
@@ -226,11 +239,11 @@ class TTSService:
                     streaming=True,
                     spoken_text=spoken,
                     cached=not made_here,
-                    characters_sent=len(spoken) * job.attempts if made_here else 0,
-                    characters_billed=job.characters_billed if made_here else None,
-                    attempts=job.attempts if made_here else 0,
+                    characters_sent=len(spoken) * attempts if made_here else 0,
+                    characters_billed=characters_billed if made_here else None,
+                    attempts=attempts if made_here else 0,
                     elapsed_ms=_elapsed_ms(started),
-                    provider_request_id=job.provider_request_id if made_here else None,
+                    provider_request_id=provider_request_id if made_here else None,
                 )
             else:
                 generation = found.generation
@@ -381,9 +394,7 @@ class TTSService:
         try:
             if streaming:
                 if is_owner:
-                    threading.Thread(
-                        target=self._run, args=(job, spoken, voice_id, settings, True), daemon=True, name="tts-stream"
-                    ).start()
+                    self._start_in_background(job, spoken, voice_id, settings)
                 generation = job.wait_for_audio(wait)
                 if generation is None:
                     return _Found(source, job=job)
@@ -398,6 +409,17 @@ class TTSService:
             raise TTSError(exc.code, exc.message, retryable=exc.retryable) from exc
         return _Found(source, audio=generation.audio, generation=generation if is_owner else None)
 
+    def _start_in_background(self, job: _Job, spoken: str, voice_id: str, settings: dict) -> None:
+        try:
+            threading.Thread(
+                target=self._run, args=(job, spoken, voice_id, settings, True), daemon=True, name="tts-stream"
+            ).start()
+        except BaseException as exc:  # e.g. "can't start new thread": don't leave a job nobody runs
+            with self._lock:
+                self._in_flight.pop(job.key, None)
+            job.finish(exc)
+            raise
+
     def _run(self, job: _Job, spoken: str, voice_id: str, settings: dict, in_background: bool) -> None:
         """Make the audio for a job, then cache it. Never raises: the outcome goes into the job."""
         outcome: _Generation | BaseException
@@ -411,6 +433,15 @@ class TTSService:
                     logger.warning("Streamed audio %s failed: %s (%s)", job.key, exc.code, exc.message)
                 else:
                     logger.exception("Unexpected error while streaming audio %s", job.key)
+        if in_background and job.at_first_audio is not None:
+            # The streamed result was returned (and counted) at the first audio; count the rest.
+            extra_attempts = job.attempts - job.at_first_audio[0]
+            failed = isinstance(outcome, BaseException)
+            self._stats.record_after_first_audio(
+                extra_attempts,
+                len(spoken) * extra_attempts,
+                (outcome.code if isinstance(outcome, TTSError) else ErrorCode.INTERNAL_ERROR) if failed else None,
+            )
         # Leave in-flight before telling anyone the outcome: a request that comes after a failure
         # then starts afresh instead of joining this finished job and getting its old error.
         with self._lock:
@@ -426,7 +457,8 @@ class TTSService:
         while True:
             attempt += 1
             try:
-                return self._attempt(job, spoken, voice_id, settings, attempt)
+                made = self._attempt(job, spoken, voice_id, settings, attempt)
+                break
             except TTSError as exc:
                 exc.attempts = attempt
                 if not exc.retryable or attempt > self.config.max_retries or not job.start_over():
@@ -436,31 +468,32 @@ class TTSService:
                     "ElevenLabs attempt %d failed (%s); retrying in %.1fs", attempt, exc.code, delay
                 )
                 self._sleep(delay)
+        if not made.audio:  # not retried: an empty answer is not a network hiccup
+            raise TTSError(
+                ErrorCode.PROVIDER_UNAVAILABLE,
+                "ElevenLabs returned no audio.",
+                retryable=True,
+                provider_request_id=made.request_id,
+            ).with_attempts(attempt)
+        return _Generation(made.audio, attempt, made.request_id, made.characters_billed)
 
-    def _attempt(self, job: _Job, spoken: str, voice_id: str, settings: dict, attempt: int) -> _Generation:
+    def _attempt(self, job: _Job, spoken: str, voice_id: str, settings: dict, attempt: int) -> ProviderAudio:
+        """One request to ElevenLabs; its audio goes into the job as it arrives."""
         open_stream = getattr(self._provider, "open_stream", None)
         if open_stream is None:  # a provider that cannot stream: the audio comes in one piece
             made = self._provider.generate(spoken, voice_id, settings)
             job.attempt_started(attempt, made.request_id, made.characters_billed)
             if made.audio:
                 job.add(made.audio)
-        else:
-            stream = open_stream(spoken, voice_id, settings)
-            job.attempt_started(attempt, stream.request_id, stream.characters_billed)
-            try:
-                for chunk in stream.chunks:
-                    job.add(chunk)
-            finally:
-                _close(stream.chunks)  # releases the connection, on errors too
-            made = ProviderAudio(job.audio(), stream.request_id, stream.characters_billed)
-        if not made.audio:
-            raise TTSError(
-                ErrorCode.PROVIDER_UNAVAILABLE,
-                "ElevenLabs returned no audio.",
-                retryable=True,
-                provider_request_id=made.request_id,
-            )
-        return _Generation(made.audio, attempt, made.request_id, made.characters_billed)
+            return made
+        stream = open_stream(spoken, voice_id, settings)
+        job.attempt_started(attempt, stream.request_id, stream.characters_billed)
+        try:
+            for chunk in stream.chunks:
+                job.add(chunk)
+        finally:
+            _close(stream.chunks)  # releases the connection, on errors too
+        return ProviderAudio(job.audio(), stream.request_id, stream.characters_billed)
 
     def _in_flight_wait_seconds(self) -> float:
         """At least as long as the request we are waiting for can take, so we never give up early.
@@ -644,11 +677,20 @@ class _Stats:
             if not result.ok:
                 self._failures[result.error_code] += 1
 
+    def record_after_first_audio(self, extra_attempts: int, extra_characters: int, failure_code: str | None) -> None:
+        """What a streamed generation did after its result went out: retries, or a failure part-way."""
+        with self._lock:
+            self._counts["provider_attempts"] += extra_attempts
+            self._counts["characters_sent"] += extra_characters
+            if failure_code:
+                self._counts["streams_cut_short"] += 1
+                self._failures[failure_code] += 1
+
     def snapshot(self) -> dict:
         with self._lock:
             keys = (
                 "requests", "succeeded", "failed", "cache_hits", "shared_in_flight",
-                "provider_attempts", "characters_sent", "characters_billed",
+                "provider_attempts", "characters_sent", "characters_billed", "streams_cut_short",
             )
             data = {key: self._counts[key] for key in keys}
             data["failures_by_code"] = dict(self._failures)

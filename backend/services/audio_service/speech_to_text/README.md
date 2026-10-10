@@ -111,7 +111,7 @@ app.include_router(voice_router)
 | `message_id` | no | Your ID for this message; one is made if missing |
 | `speak_reply` | no (`true`) | Also turn `spoken_summary` into audio |
 | `voice` | no (default voice) | The reply voice the user chose: a key from `GET /api/v1/voice/voices`, e.g. `bunty` |
-| `stream_reply` | no (`false`) | `true`: answer as soon as the first reply audio exists, and stream the rest. Faster; works on Android and in Chrome, Edge and Firefox, but test on an iPhone before using it there |
+| `stream_reply` | no (`false`) | `true`: answer as soon as the first reply audio exists, and stream the rest. Faster. Tested in Chrome; expected to work on Android, may not on iPhones, so test on both phones first. Needs the backend to run as one process |
 
 A successful answer (from the end-to-end run on 2026-10-09, shortened):
 
@@ -163,9 +163,11 @@ medical bill explanations out loud.", so users can hear a voice before choosing 
 is made once (about 30 credits) and then served from the cache. Send the chosen `key` as `voice`
 with `/analyze`.
 
-**Tested:** `../tests/test_voice_routes.py` (24 cases with a stand-in for Gemini), and an
-end-to-end run on 2026-10-09: the team's `main.py` plus the two lines above, real ElevenLabs
-speech-to-text and text-to-speech, and the team's `gemini_service` in `MOCK=true` mode.
+**Tested:** `../tests/test_voice_routes.py` (with stand-ins for Gemini and the price check), and
+end-to-end runs on 2026-10-09: the team's `main.py` plus the two lines above, real ElevenLabs
+speech-to-text and text-to-speech, and the team's `gemini_service` in `MOCK=true` mode. The second
+run, after merging `backend-gemini` and `Tiger-data`, also checked that a spoken question gets the
+same Snowflake price check (from the local CSV) as a typed one.
 
 ## 4. Using speech-to-text on its own
 

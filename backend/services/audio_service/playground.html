@@ -176,7 +176,8 @@ function creditsPerCharacter() {
   return model && model.credits_per_character != null ? model.credits_per_character : DEFAULT_CREDITS_PER_CHARACTER;
 }
 function estimateCredits(text) { return Math.max(1, Math.round(text.length * creditsPerCharacter())); }
-function costLabel(result) { return result.cached ? "from the cache, 0 credits" : `${result.characters_billed ?? "?"} credits`; }
+// cached: made before, or shared with an identical request already being made. Either way, free.
+function costLabel(result) { return result.cached ? "no extra credits" : `${result.characters_billed ?? "?"} credits`; }
 function timeLabel(result) {
   const seconds = (result.elapsed_ms / 1000).toFixed(1);
   return result.streaming ? `first audio in ${seconds} s` : `${seconds} s`;
@@ -499,11 +500,22 @@ function endCompare() {
 // --- Clips made this session ---------------------------------------------------------------
 
 function keepClip(result, voice, text) {
+  if (state.model == null) state.model = result.model;   // the models list did not load: use the server's
   const key = clipKey(result.voice, result.model, text);
   const earlier = state.clips.get(key);
   state.clips.delete(key);   // making the same clip again moves it to the top
-  state.clips.set(key, { name: voice ? voice.name : result.voice, model: result.model, text, url: result.audio_url,
-                         cost: earlier ? earlier.cost : costLabel(result) });
+  // Keep the cost of the answer that paid for the clip, whichever answer arrives first.
+  const cost = !result.cached || !earlier ? costLabel(result) : earlier.cost;
+  state.clips.set(key, { name: voice ? voice.name : result.voice, model: result.model, text, url: result.audio_url, cost });
+  renderHistory();
+  updateCosts();
+}
+
+// A clip that broke off part-way was not saved by the server: it is not free to play again.
+function forgetClip(src) {
+  for (const [key, clip] of state.clips) {
+    if (new URL(clip.url, location.href).href === src) state.clips.delete(key);
+  }
   renderHistory();
   updateCosts();
 }
@@ -532,6 +544,12 @@ function renderHistory() {
 
 // --- Wiring --------------------------------------------------------------------------------
 
+// The server breaks the connection when a clip fails part-way, and the player reports an error.
+player.addEventListener("error", () => {
+  if (!player.src || player.src.startsWith("blob:")) return;   // samples are fetched separately
+  forgetClip(player.src);
+  if (!state.compare) setStatus("The audio broke off before the end. Press Speak to make it again.", "error");
+});
 textBox.addEventListener("input", updateCosts);
 textBox.addEventListener("keydown", (event) => {
   if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) { event.preventDefault(); speak(); }

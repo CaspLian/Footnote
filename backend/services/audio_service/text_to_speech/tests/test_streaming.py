@@ -10,7 +10,7 @@ import pytest
 import text_to_speech.service as service_module
 from text_to_speech.cache import AudioCache
 from text_to_speech.config import TTSConfig
-from text_to_speech.contract import ErrorCode, TTSRequest
+from text_to_speech.contract import AudioCutShort, ErrorCode, TTSRequest
 from text_to_speech.elevenlabs_provider import ProviderStream
 from text_to_speech.errors import TTSError
 from text_to_speech.service import TTSService
@@ -163,7 +163,7 @@ def test_finished_audio_is_served_in_one_piece_with_its_size():
     stream.send(b"ID3-all")
     stream.end()
     result = call.join()
-    wait_until(lambda: service.get_audio(result.audio_id) is not None)
+    wait_until(lambda: not service._in_flight)  # finished and handed over to the cache
 
     finished = service.open_audio(result.audio_id)
     assert finished.complete and finished.size == len(b"ID3-all")
@@ -217,14 +217,16 @@ def test_synthesize_waits_for_a_running_stream_and_gets_all_the_audio():
     streaming = in_thread(service.synthesize_streaming, req(request_id="stream"))
     stream = provider.next_stream()
     stream.send(b"ID3")
-    streaming.join()
+    job = service._in_flight[streaming.join().audio_id]
 
     whole = in_thread(service.synthesize, req(request_id="whole"))
+    wait_until(lambda: job._changed._waiters)  # synthesize() is waiting on the running job
     stream.send(b"-rest")
     stream.end()
     result = whole.join()
     assert result.ok and result.audio == b"ID3-rest" and result.cached
     assert len(provider.calls) == 1
+    assert service.stats()["shared_in_flight"] == 1  # it joined the stream, not a later cache hit
 
 
 def test_a_stream_can_join_audio_that_synthesize_is_making():
@@ -252,7 +254,8 @@ def test_a_failure_before_any_audio_is_reported_like_synthesize():
     result = service.synthesize_streaming(req())
     assert not result.ok and result.error_code == ErrorCode.AUTH_FAILED
     assert result.attempts == 1 and sleeps == []
-    assert service.open_audio(result.audio_id or "0" * 32) is None
+    key = service._cache_key("Hello there.", "en", "voice-1", CONFIG.audio_settings())
+    assert service.open_audio(key) is None  # nothing is served for the failed clip
     assert service._in_flight == {}
 
 
@@ -296,7 +299,8 @@ def test_a_drop_after_a_listener_heard_part_of_the_clip_fails_and_caches_nothing
     assert next(live.chunks) == b"ID3"
 
     stream.send(temporary_failure())
-    assert list(live.chunks) == []  # the clip is cut short; starting over would replay the start
+    with pytest.raises(AudioCutShort, match="PROVIDER_UNAVAILABLE"):  # so the player sees an error
+        next(live.chunks)  # no retry: starting over would replay the start the listener already heard
     wait_until(lambda: not service._in_flight)
     assert service.get_audio(result.audio_id) is None
     assert sleeps == [] and len(provider.calls) == 1
@@ -400,3 +404,92 @@ def test_module_streaming_reports_a_malformed_setting(monkeypatch, tmp_path):
     result = service_module.synthesize_streaming(req())
     assert result.error_code == ErrorCode.NOT_CONFIGURED and "ELEVENLABS_TEXT_NORMALIZATION" in result.error_message
     assert service_module.open_audio("a" * 32) is None
+
+
+# --- Review fixes ---------------------------------------------------------------------------------
+
+
+def test_if_the_background_thread_cannot_start_nothing_is_left_behind(monkeypatch):
+    provider = FakeStreamingProvider()
+    service, _ = make_service(provider)
+    real_start = threading.Thread.start
+
+    def failing_start(thread):
+        if thread.name == "tts-stream":
+            raise RuntimeError("cannot start new thread")
+        return real_start(thread)
+
+    monkeypatch.setattr(threading.Thread, "start", failing_start)
+    assert service.synthesize_streaming(req()).error_code == ErrorCode.INTERNAL_ERROR
+    assert service._in_flight == {}  # no dead job for the next request to wait on
+    monkeypatch.setattr(threading.Thread, "start", real_start)
+
+    retry = in_thread(service.synthesize_streaming, req(request_id="again"))
+    stream = provider.next_stream()  # a new generation
+    stream.send(b"ID3")
+    stream.end()
+    assert retry.join().ok
+
+
+def test_an_empty_answer_is_reported_without_a_retry():
+    provider = FakeStreamingProvider()
+    service, sleeps = make_service(provider)
+    call = in_thread(service.synthesize, req())
+    provider.next_stream().end()  # 200 OK, but no audio
+    result = call.join()
+    assert result.error_code == ErrorCode.PROVIDER_UNAVAILABLE and "no audio" in result.error_message
+    assert result.attempts == 1 and sleeps == [] and len(provider.calls) == 1
+
+
+def test_stats_count_a_retry_made_after_the_streamed_result_went_out():
+    provider = FakeStreamingProvider()
+    service, _ = make_service(provider)
+    call = in_thread(service.synthesize_streaming, req())
+    first = provider.next_stream()
+    first.send(b"ID3-half")
+    result = call.join()
+    first.send(temporary_failure())  # nobody listened yet, so it starts over: a second paid attempt
+    second = provider.next_stream()
+    second.send(b"ID3-whole")
+    second.end()
+    wait_until(lambda: not service._in_flight)
+
+    stats = service.stats()
+    assert result.attempts == 1  # what was known when the result went out
+    assert stats["provider_attempts"] == 2 and stats["characters_sent"] == 2 * len("Hello there.")
+    assert stats["streams_cut_short"] == 0
+
+
+def test_stats_count_a_stream_that_was_cut_short():
+    provider = FakeStreamingProvider()
+    service, _ = make_service(provider)
+    call = in_thread(service.synthesize_streaming, req())
+    stream = provider.next_stream()
+    stream.send(b"ID3")
+    result = call.join()
+    live = service.open_audio(result.audio_id)
+    next(live.chunks)
+    stream.send(temporary_failure())
+    with pytest.raises(AudioCutShort):
+        next(live.chunks)
+    wait_until(lambda: not service._in_flight)
+
+    stats = service.stats()
+    assert stats["succeeded"] == 1  # the result went out fine...
+    assert stats["streams_cut_short"] == 1  # ...but the audio stopped part-way
+    assert stats["failures_by_code"] == {ErrorCode.PROVIDER_UNAVAILABLE: 1}
+
+
+def test_a_listener_waiting_on_a_stalled_stream_gets_an_error():
+    provider = FakeStreamingProvider()
+    service, _ = make_service(provider)
+    call = in_thread(service.synthesize_streaming, req())
+    stream = provider.next_stream()
+    stream.send(b"ID3")
+    result = call.join()
+    job = service._in_flight[result.audio_id]
+    chunks = job.read(timeout=0.05)
+    assert next(chunks) == b"ID3"
+    with pytest.raises(AudioCutShort, match="No more audio"):
+        next(chunks)
+    stream.end()

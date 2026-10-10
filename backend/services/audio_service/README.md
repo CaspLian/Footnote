@@ -127,7 +127,7 @@ To compare voices, switch voice and the page speaks the same text in the new one
 - Filter by gender or accent. Previous / Next then step through the voices shown.
 - "Play this text in every shown voice" plays them one after another and shows the credit
   estimate first (about 0.44 credits per character per voice). It asks before anything over
-  2,000 credits. Stop, or any click, ends it.
+  2,000 credits. Stop ends it, and so does choosing a voice or model or pressing any play button.
 - The newest click always wins: an answer that arrives after you moved on is not played, but
   it is kept in the replay list.
 - The Model buttons switch between Multilingual v2 (today's default), Flash v2.5, v4 Turbo and v4,
@@ -166,11 +166,14 @@ What this module now does:
    each piece on as ElevenLabs sends it (its `/stream` endpoint), so playback starts at
    "First audio". Identical requests still share one generation, and the finished clip is cached.
    It helps most with long answers and the v4 models; Multilingual v2 sends its first audio late.
+   If a clip fails part-way, the connection is cut so the player reports an error (reading the
+   stream raises `AudioCutShort`), and nothing is cached.
 2. **Model choice per request** (`TTSRequest.model`), used by the playground's Model buttons.
    Flash gets ElevenLabs' number reading turned on automatically (`apply_text_normalization: "on"`),
-   because without it Flash misread money and codes in our test.
-3. **Byte ranges for finished clips** (`Range: bytes=0-1` → `206 Partial Content`), which Safari
-   and iPhones ask for before they play anything.
+   because without it Flash misread money and codes in our test. So do the deprecated Turbo v2/v2.5
+   models, which ElevenLabs calls functionally equivalent to Flash (not measured).
+3. **Byte ranges for finished clips and voice samples** (`Range: bytes=0-1` → `206 Partial
+   Content`), which Safari and iPhones ask for before they play anything.
 
 Choices for the team, fastest first:
 
@@ -179,10 +182,14 @@ Choices for the team, fastest first:
   ElevenLabs says its quality is slightly lower than Multilingual v2. One ElevenLabs page still
   calls number reading on Flash an Enterprise feature; it worked on our Creator plan, so recheck it
   before the demo (playground, Flash v2.5, a text with money and codes).
-- **Stream replies to the app**: send `stream_reply=true` to `/api/v1/voice/analyze`. Fine in
-  Chrome, Edge, Firefox and on Android. iPhones (Safari, and AVPlayer under expo-audio) may not
-  play audio that is still arriving, so test on a real iPhone first; the default waits for the
-  finished clip, which every phone plays.
+- **Stream replies to the app**: send `stream_reply=true` to `/api/v1/voice/analyze`. Tested in
+  Chrome. Android is expected to play it (its player reads streams of unknown length); iPhones
+  (Safari, and AVPlayer under expo-audio) may not. Test on both phones first; the default waits
+  for the finished clip, which every phone plays. Streaming also needs the backend to run as one
+  process (no `--workers 2`): audio that is still being made exists only in the process making it.
+- **Long texts on v4**: they take about 1.7 times as long to finish as on Multilingual v2, so a
+  2,500-character text can pass the 60 s `TTS_TIMEOUT_SECONDS`. Raise it to 90 if you use v4 for
+  long texts (Gemini's spoken summaries are under 90 words, far below this).
 - **Voice Library voices on Multilingual v2**: ElevenLabs' `use_pvc_as_ivc` option made Bunty's
   first audio 0.5-1.2 s faster (no difference on Flash). It uses the voice's "instant clone"
   version, which may sound a little different. Not switched on.
@@ -250,7 +257,7 @@ $1 until October 18).
 
 | You see | Likely cause | Fix |
 |---|---|---|
-| `NOT_CONFIGURED` | Key or voice ID missing, or a bad value in `backend/.env` | Read the message; compare with `.env.example` |
+| `NOT_CONFIGURED` | API key missing, or a bad value in `backend/.env` | Read the message; compare with `.env.example` |
 | `AUTH_FAILED` | Wrong key, key lacks the *Text to Speech* or *Speech to Text* permission, or a free account was blocked | Re-create the key with the right permissions |
 | `NO_SPEECH` / `EMPTY_AUDIO` | The recording was silent or too short | Ask the user to hold the button while speaking |
 | `UNSUPPORTED_AUDIO` | The upload was not an audio file | Check the app sends the recording (`recorder.uri`) |
@@ -276,7 +283,8 @@ $1 until October 18).
 - **Streaming shares the generation, not the connection.** Every listener of a clip reads the same
   buffer from its first byte, so a player that reconnects (iPhones do) never pays for a second
   generation. A failed generation is retried only before anyone has heard part of it, because a
-  retry starts the clip again from the beginning.
+  retry starts the clip again from the beginning. Each listener holds one server worker thread
+  while its stream plays (the server has 40), which is plenty for a demo.
 - **Cleanup never deletes meaning.** Only formatting is removed. Words like "not", "may" and
   "about" always survive, a ❌ is spoken as "No", and "~5 days" becomes "about 5 days". Pauses come
   from punctuation, never from extra spaces. Tests check all of this.

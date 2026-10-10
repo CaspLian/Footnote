@@ -32,7 +32,7 @@ def client(monkeypatch):
         TTSConfig(api_key="k", cache_dir=None), fake, AudioCache(None), pronunciations={}, sleep=lambda s: None
     )
     monkeypatch.setattr(tts_service, "_default_service", service)
-    test_client = TestClient(playground.app)
+    test_client = TestClient(playground.app, base_url="http://127.0.0.1")  # the only hosts it answers
     test_client.fake = fake
     return test_client
 
@@ -129,3 +129,17 @@ def test_finished_audio_answers_byte_range_requests(client):
     assert probe.status_code == 206 and probe.content == b"ID"
     whole = client.get(url)
     assert whole.status_code == 200 and whole.headers["accept-ranges"] == "bytes"
+
+
+def test_requests_for_other_host_names_are_refused(client):
+    # A web page that points its own name at 127.0.0.1 ("DNS rebinding") must not spend credits here.
+    attack = client.post("/api/speak", json={"text": "Spend my credits"}, headers={"Host": "attacker.example:8765"})
+    assert attack.status_code == 400 and client.fake.calls == []
+    assert client.get("/", headers={"Host": "localhost:8765"}).status_code == 200
+
+
+def test_each_answer_gets_its_own_audio_link(client):
+    first, again = speak(client, "Hello", "george"), speak(client, "Hello", "george")
+    assert first["audio_id"] == again["audio_id"]  # the same clip, made once...
+    assert first["audio_url"] != again["audio_url"]  # ...but a fresh link, so no stale browser copy plays
+    assert client.get(again["audio_url"]).content == client.get(first["audio_url"]).content

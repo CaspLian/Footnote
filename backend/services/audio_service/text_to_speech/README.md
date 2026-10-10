@@ -47,10 +47,12 @@ result = await synthesize_streaming_async(TTSRequest(request_id=message_id, text
 ```
 
 `open_audio(audio_id)` gives an `AudioStream`: finished audio in one piece (`complete=True`), or
-audio still being made, piece by piece as it arrives (`complete=False`). `audio_http.audio_response()`
-turns it into the right HTTP response (byte ranges for finished clips, a stream for the rest).
-Streaming plays in Chrome, Edge, Firefox and on Android; iPhones may wait or fail, so test there
-first (see "Speed" in [the main README](../README.md)).
+audio still being made, piece by piece as it arrives (`complete=False`; reading it raises
+`AudioCutShort` if the clip fails part-way). `audio_http.audio_response()` turns it into the right
+HTTP response: byte ranges for finished clips, a stream for the rest, and a broken-off connection
+(so the player shows an error) if a stream fails. Streaming was tested in Chrome; Android is
+expected to work and iPhones may not, so test on phones first (see "Speed" in
+[the main README](../README.md)).
 
 ## 2. The contract
 
@@ -139,7 +141,7 @@ team's account on 2026-10-09): 10 female, 9 male, 1 neutral, 11 accents.
 | `INVALID_REQUEST` | no | Our integration bug: wrong types, empty `request_id`, non-English. Read `error_message`. |
 | `EMPTY_TEXT` | no | Nothing speakable after cleanup (e.g. only formatting). Hide the play button. |
 | `TEXT_TOO_LONG` | no | Over `TTS_MAX_CHARS` after cleanup. Ask Gemini for shorter answers, or raise the limit. |
-| `NOT_CONFIGURED` | no | `ELEVENLABS_API_KEY` / `ELEVENLABS_VOICE_ID` missing or a bad value in `backend/.env`. |
+| `NOT_CONFIGURED` | no | `ELEVENLABS_API_KEY` missing, or a bad value in `backend/.env`. |
 | `AUTH_FAILED` | no | Key rejected, missing the *Text to Speech* permission, or a free account blocked for unusual activity. |
 | `QUOTA_EXCEEDED` | no | Out of ElevenLabs credits (or the key's credit limit). |
 | `PROVIDER_REJECTED` | no | ElevenLabs refused the request: unknown voice, voice not allowed on the plan, bad model or format. |
@@ -157,10 +159,10 @@ This was run against the team's real `backend/main.py` with a fake ElevenLabs on
 Add it to `backend/main.py`, below `app = FastAPI(...)`, and adapt the names:
 
 ```python
-from fastapi import APIRouter, HTTPException
-from fastapi.responses import Response
+from fastapi import APIRouter, HTTPException, Request
 
-from services.audio_service.text_to_speech import TTSRequest, get_audio, synthesize_async
+from services.audio_service.audio_http import audio_response
+from services.audio_service.text_to_speech import TTSRequest, open_audio, synthesize_async
 
 tts_router = APIRouter(prefix="/api/tts", tags=["audio"])
 
@@ -184,13 +186,15 @@ async def speak(message_id: str):
 
 
 @tts_router.get("/audio/{audio_id}")
-def audio(audio_id: str):
-    found = get_audio(audio_id)  # validates the ID, so "../secret" style paths are refused
-    if found is None:
+def audio(audio_id: str, request: Request):
+    stream = open_audio(audio_id)  # validates the ID, so "../secret" style paths are refused
+    if stream is None:
         raise HTTPException(status_code=404)
-    data, mime_type = found
-    # The same audio_id always means the same audio, so it may be cached for good.
-    return Response(content=data, media_type=mime_type, headers={"Cache-Control": "public, max-age=31536000, immutable"})
+    # Byte ranges for iPhones; the same audio_id always means the same audio, so finished clips may
+    # be cached for good (audio still being made, from synthesize_streaming, is never cached).
+    return audio_response(
+        stream, request.headers.get("range"), finished_headers={"Cache-Control": "public, max-age=31536000, immutable"}
+    )
 
 
 app.include_router(tts_router)
