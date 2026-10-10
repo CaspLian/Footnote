@@ -1,0 +1,58 @@
+{
+  "document_type": "eob",
+  "provider_name": "Metropolitan Medical Center",
+  "provider_billing_address": null,
+  "provider_zip_code": "10001",
+  "account_number": "MC-2026-4815",
+  "service_date": "2026-09-02",
+  "total_billed": 4400.0,
+  "amount_patient_owes": 850.0,
+  "due_date": null,
+  "line_items": [
+    {
+      "cpt_code": "70450",
+      "diagnosis_codes": ["R51.9"],
+      "original_description": "CT HEAD/BRAIN W/O CONTRAST",
+      "plain_description": "CT scan of the head without contrast",
+      "billed_amount": 3200.0,
+      "date_of_service": "2026-09-02",
+      "remark_codes": ["N362"],
+      "denial_reasons": ["Authorization was not obtained"],
+      "possible_issues": ["The EOB says authorization was not obtained."]
+    }
+  ],
+  "remark_code_details": [
+    {
+      "code": "N362",
+      "explanation": "The plan does not cover this service because prior authorization was not obtained.",
+      "related_cpt_codes": ["70450"]
+    }
+  ],
+  "denial_reasons": [
+    {
+      "reason": "Authorization was not obtained.",
+      "denial_code": "CO-197",
+      "related_cpt_codes": ["70450"],
+      "related_line_item_descriptions": ["CT HEAD/BRAIN W/O CONTRAST"]
+    }
+  ],
+  "balance_billing_notices": [
+    "You may have protections from certain types of balance billing."
+  ],
+  "appeal_deadlines": [
+    {
+      "deadline_type": "First-level appeal",
+      "deadline_text": "You may appeal within 180 days of the date of this notice.",
+      "deadline_date": null,
+      "days_allowed": 180,
+      "applies_to": "The denied CT scan charge"
+    }
+  ],
+  "plain_summary": "The EOB says the CT scan was denied because the plan did not receive prior authorization. It lists remark code N362 and denial code CO-197 for this service. The notice says you may appeal within 180 days. Ask the plan how to file an appeal and confirm when the deadline starts.",
+  "spoken_summary": "The insurance notice says the CT scan was denied because prior approval was not received. It says you may appeal within one hundred eighty days. Contact your plan to ask how to appeal and when the deadline starts.",
+  "questions_to_ask": [
+    "Can you explain why authorization was not on file for this service?",
+    "What documents should I include with an appeal?",
+    "What date does the 180-day appeal period begin?"
+  ]
+}

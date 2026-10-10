@@ -10,26 +10,91 @@ from pydantic import BaseModel, Field
 
 class LineItem(BaseModel):
     cpt_code: Optional[str] = Field(None, description="5-character CPT/HCPCS code if printed on the bill, else null")
+    diagnosis_codes: list[str] = Field(
+        default_factory=list,
+        description="ICD diagnosis codes explicitly associated with this line item",
+    )
     original_description: str = Field(description="Line item text exactly as printed on the bill")
     plain_description: str = Field(description="What this charge is, in simple words, in the target language")
     billed_amount: Optional[float] = Field(None, description="Amount charged for this line, as a number, else null")
     date_of_service: Optional[str] = Field(None, description="YYYY-MM-DD if shown, else null")
+    remark_codes: list[str] = Field(
+        default_factory=list,
+        description="Remark codes explicitly associated with this line item, including explanations on other pages",
+    )
+    denial_reasons: list[str] = Field(
+        default_factory=list,
+        description="Denial reasons explicitly associated with this line item",
+    )
     possible_issues: list[str] = Field(
         default_factory=list,
         description="Short notes in the target language on anything that looks off: duplicate, vague fee, unclear charge. Empty if nothing.",
     )
 
 
+class RemarkCodeDetail(BaseModel):
+    code: str = Field(description="Remark or adjustment code exactly as printed")
+    explanation: str = Field(description="Explanation printed in the document")
+    related_cpt_codes: list[str] = Field(
+        default_factory=list,
+        description="CPT/HCPCS codes the document links to this remark code",
+    )
+
+
+class DenialReason(BaseModel):
+    reason: str = Field(description="Denial reason stated in the document")
+    denial_code: Optional[str] = Field(None, description="Denial code exactly as printed, if present")
+    related_cpt_codes: list[str] = Field(
+        default_factory=list,
+        description="CPT/HCPCS codes the document links to this denial reason",
+    )
+    related_line_item_descriptions: list[str] = Field(
+        default_factory=list,
+        description="Line-item descriptions the document links to this denial reason",
+    )
+
+
+class AppealDeadline(BaseModel):
+    deadline_type: str = Field(description="Type or level of appeal described")
+    deadline_text: str = Field(description="Deadline wording exactly as printed in the document")
+    deadline_date: Optional[str] = Field(
+        None, description="Explicit calendar deadline in YYYY-MM-DD format, if printed"
+    )
+    days_allowed: Optional[int] = Field(
+        None, description="Number of days allowed only if explicitly stated in the document"
+    )
+    applies_to: str = Field(description="Claim, service, or appeal right the deadline applies to")
+
+
 class GeminiResult(BaseModel):
     document_type: str = Field(description="One of: hospital_bill, eob, insurance_policy, pharmacy_receipt, other")
     provider_name: Optional[str] = Field(None, description="Hospital, clinic or insurer name if shown")
     provider_billing_address: Optional[str] = Field(None, description="Billing or mailing address of the provider/insurer if shown")
+    provider_zip_code: Optional[str] = Field(
+        None, description="Provider or facility ZIP/postal code if explicitly shown"
+    )
     account_number: Optional[str] = Field(None, description="Patient account, claim or statement number if shown")
     service_date: Optional[str] = Field(None, description="Main date of service YYYY-MM-DD if shown")
     total_billed: Optional[float] = Field(None, description="Total amount billed, if shown")
     amount_patient_owes: Optional[float] = Field(None, description="Amount the patient is asked to pay, if shown")
     due_date: Optional[str] = Field(None, description="Payment due date YYYY-MM-DD, if shown")
     line_items: list[LineItem] = Field(default_factory=list)
+    remark_code_details: list[RemarkCodeDetail] = Field(
+        default_factory=list,
+        description="Remark-code explanations and their line-item associations, including information on later pages",
+    )
+    denial_reasons: list[DenialReason] = Field(
+        default_factory=list,
+        description="Denial reasons stated anywhere in the document and the line items they apply to",
+    )
+    balance_billing_notices: list[str] = Field(
+        default_factory=list,
+        description="Balance-billing notices or clauses stated in the document; do not make legal conclusions",
+    )
+    appeal_deadlines: list[AppealDeadline] = Field(
+        default_factory=list,
+        description="Appeal deadlines found in the document; do not infer or calculate unstated deadlines",
+    )
     plain_summary: str = Field(description="3-6 sentence explanation of the document in the target language, written for a 5th-grade reading level")
     spoken_summary: str = Field(
         description="Same idea as plain_summary but written to be READ ALOUD in the target language: under 90 words, no bullet points, "

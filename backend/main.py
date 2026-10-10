@@ -40,20 +40,33 @@ def languages():
 @app.post("/api/v1/analyze", response_model=AnalyzeResponse)
 async def analyze_endpoint(
     file: Optional[UploadFile] = File(None, description="Photo or PDF of the bill/EOB"),
+    files: Optional[list[UploadFile]] = File(
+        None, description="Additional bill/EOB pages in order; repeat this field for each page"
+    ),
     text: Optional[str] = Form(None, description="Typed text or a question (optional if a file is sent)"),
     target_language: str = Form("en", description="Language code, e.g. en, es, zh, ar"),
 ):
-    """User input -> Gemini -> Snowflake price check. result.spoken_summary is the text for ElevenLabs."""
-    file_bytes, mime = None, None
-    if file is not None and file.filename:
-        file_bytes = await file.read()
-        mime = file.content_type
-        if len(file_bytes) > MAX_UPLOAD_MB * 1024 * 1024:
-            raise HTTPException(413, f"File is larger than {MAX_UPLOAD_MB} MB.")
+    """Analyze one PDF/image or ordered `files` uploads, then check extracted CPT prices."""
+    uploads = ([file] if file is not None else []) + (files or [])
+    page_files: list[tuple[bytes, str]] = []
+    total_bytes = 0
+    for upload in uploads:
+        if not upload.filename:
+            continue
+        remaining_bytes = MAX_UPLOAD_MB * 1024 * 1024 - total_bytes
+        upload_bytes = await upload.read(remaining_bytes + 1)
+        total_bytes += len(upload_bytes)
+        if total_bytes > MAX_UPLOAD_MB * 1024 * 1024:
+            raise HTTPException(
+                413, f"Combined upload is larger than {MAX_UPLOAD_MB} MB."
+            )
+        if not upload_bytes:
+            raise HTTPException(400, f"Uploaded file {upload.filename!r} is empty.")
+        page_files.append((upload_bytes, upload.content_type or ""))
 
     try:
         result = await asyncio.wait_for(
-            analyze(file_bytes=file_bytes, mime_type=mime, text=text, target_language=target_language),
+            analyze(files=page_files, text=text, target_language=target_language),
             timeout=GEMINI_TIMEOUT_S,
         )
     except ValueError as e:
