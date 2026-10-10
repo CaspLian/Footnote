@@ -5,7 +5,17 @@ forced to answer in exactly this structure.
 """
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+# Texts Gemini sometimes writes instead of a JSON null (seen live on 2026-10-10: "null" as the code of a line
+# without one). Left as text, the app would show "null" as a code and the price check would look it up.
+_MISSING_TEXTS = {"", "null", "none", "n/a"}
+
+
+def _missing_to_none(value):
+    if isinstance(value, str) and value.strip().lower() in _MISSING_TEXTS:
+        return None
+    return value
 
 
 class LineItem(BaseModel):
@@ -18,6 +28,11 @@ class LineItem(BaseModel):
         default_factory=list,
         description="Short notes in the target language on anything that looks off: duplicate, vague fee, unclear charge. Empty if nothing.",
     )
+
+    @field_validator("cpt_code", "date_of_service", mode="before")
+    @classmethod
+    def _missing_is_null(cls, value):
+        return _missing_to_none(value)
 
 
 class GeminiResult(BaseModel):
@@ -36,6 +51,11 @@ class GeminiResult(BaseModel):
         default_factory=list,
         description="2-4 questions the patient could ask the billing office or insurer, in the target language",
     )
+
+    @field_validator("provider_name", "due_date", mode="before")
+    @classmethod
+    def _missing_is_null(cls, value):
+        return _missing_to_none(value)
 
 
 class PriceCheck(BaseModel):
