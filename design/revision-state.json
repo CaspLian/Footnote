@@ -1,0 +1,35 @@
+{
+  "pageId": "51:934",
+  "screens": {
+    "Welcome": "51:935",
+    "Onboarding · You": "51:969",
+    "Onboarding · Coverage": "51:989",
+    "Onboarding · Preferences": "51:1012",
+    "Home": "51:1032",
+    "Bills": "51:1094",
+    "Intake": "51:1140",
+    "Document": "51:1181",
+    "Verification": "51:1213",
+    "Processing": "51:1248",
+    "Review": "51:1271",
+    "Finding": "51:1315",
+    "Draft": "51:1338",
+    "Call script": "51:1367",
+    "Timeline": "51:1387",
+    "Profiles": "51:1423",
+    "Profile editor": "51:1443",
+    "Settings": "51:1470",
+    "Guide": "51:1504",
+    "Web Welcome": "51:1556",
+    "Web Home": "51:1602",
+    "Web Verification": "51:1648",
+    "Web Review": "51:1702",
+    "Web Draft": "51:1755",
+    "Web Profiles": "51:1795"
+  },
+  "linkedControls": 97,
+  "fonts": [
+    "Geist"
+  ],
+  "flattenedImageNodes": 0
+}

@@ -1,0 +1,26 @@
+import { useState } from 'react';
+import { Platform, Pressable } from 'react-native';
+import { router, Stack } from 'expo-router';
+import { languageOption, workingLanguages } from '@/domain/languages';
+import { useUnfoldStore } from '@/store';
+import { radius, space, useTheme } from '@/theme';
+import { Button, Group, Screen, Txt } from '@/components/ui';
+import { LanguageFlag } from '@/components/language-picker';
+import { SearchControl } from '@/components/search-control';
+import { SearchTransition } from '@/components/search-transition';
+import { Icon } from '@/components/icon';
+import { GlassCloseButton } from '@/components/sheet';
+import { toolbarIcons } from '@/components/toolbar-icons';
+export function Languages() {
+  const { colors } = useTheme(); const value = useUnfoldStore(s => s.preferences.workingLanguage); const current = languageOption(value);
+  const [search,setSearch]=useState(''); const [focused,setFocused]=useState(false); const searching=focused||!!search.trim();
+  const options=workingLanguages.filter(l=>`${l.name} ${l.native}`.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()));
+  const close=()=>router.canGoBack()?router.back():router.replace('/settings');
+  return <><Stack.Screen options={{ title:'Working language', headerShown:Platform.OS==='ios'||!searching, headerLeft:()=>null, headerRight:Platform.OS==='ios'?undefined:()=>searching?null:<GlassCloseButton onPress={close} label="Close language selection"/> }} />{Platform.OS==='ios'?<Stack.Toolbar placement="right"><Stack.Toolbar.Button icon={toolbarIcons.close} accessibilityLabel="Close language selection" tintColor={colors.ink} iconRenderingMode="template" onPress={close}>Close</Stack.Toolbar.Button></Stack.Toolbar>:null}
+    <Screen contentWidth={720} testID="language-selection" searchMode={searching} footer={<Button title={`Use ${current.native}`} onPress={close}/>}>
+      <SearchControl label="Search languages" placeholder="Language or native name" value={search} onChange={setSearch} active={searching} onActiveChange={setFocused}/>
+      {!searching?<SearchTransition reveal><Txt muted>Choose the language for document explanations and your voice agent. App screens remain in English in this prototype.</Txt></SearchTransition>:null}
+      <SearchTransition><Group gap={space.xs}>{options.map(l=><Pressable key={l.code} accessibilityRole="radio" accessibilityLabel={l.name} accessibilityState={{selected:l.code===value}} onPress={()=>useUnfoldStore.getState().setPreferences({workingLanguage:l.code})} style={({pressed})=>({flexDirection:'row',alignItems:'center',gap:space.lg,padding:space.md,borderRadius:radius.small,minHeight:64,backgroundColor:l.code===value||pressed?colors.accentSoft:'transparent'})}><LanguageFlag country={l.country}/><Group style={{flex:1}} gap={space.xs}><Txt variant="label">{l.native}</Txt><Txt variant="caption" muted>{l.name}</Txt></Group>{l.code===value?<Icon name="check" color={colors.accent}/>:null}</Pressable>)}</Group></SearchTransition>
+      {!options.length?<Txt muted>No language matches. Try its English or native name.</Txt>:null}
+    </Screen></>;
+}

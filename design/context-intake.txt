@@ -1,0 +1,121 @@
+const assetPathPrefix = "https://www.figma.com/api/mcp/asset/8d9e98af-d2e8-468f-9a1f-1d260ed8226e";
+const imgFrame = `${assetPathPrefix}/b2c77.svg`;
+const imgFrame1 = `${assetPathPrefix}/73715.svg`;
+const imgFrame2 = `${assetPathPrefix}/ca722.svg`;
+const imgFrame3 = `${assetPathPrefix}/eaf4f.svg`;
+const imgFrame4 = `${assetPathPrefix}/e10b3.svg`;
+const imgFrame5 = `${assetPathPrefix}/903df.svg`;
+
+export default function Intake() {
+  return (
+    <div className="bg-[var(--colors.background,#f7f8f5)] content-stretch flex flex-col items-start relative size-full" data-node-id="3:1102" data-name="Intake">
+      <div className="h-[52px] relative shrink-0 w-[390px]" data-node-id="3:1103" data-name="Safe area" />
+      <div className="content-stretch flex gap-[var(--space.s8,8px)] h-[56px] items-center overflow-clip px-[24px] relative shrink-0 w-[390px]" data-node-id="3:1104" data-name="Header">
+        <button className="content-stretch cursor-pointer flex items-start overflow-clip p-[12px] relative shrink-0 size-[48px]" data-node-id="3:1105" data-name="Back">
+          <div className="relative shrink-0 size-[24px]" data-node-id="3:1106" data-name="Phosphor/caret-left">
+            <div className="absolute left-0 size-[24px] top-0" data-node-id="I3:1106;2:111" data-name="Frame">
+              <img alt="" className="absolute block inset-0 max-w-none size-full" src={imgFrame} />
+            </div>
+          </div>
+        </button>
+        <p className="[word-break:break-word] flex-[1_0_0] font-['Geist:SemiBold'] font-semibold leading-[26px] min-w-px relative text-[20px] text-[color:var(--colors.ink,#182522)]" data-node-id="3:1109">
+          Add documents
+        </p>
+        <a className="content-stretch cursor-pointer flex items-start overflow-clip p-[12px] relative shrink-0 size-[48px]" data-node-id="3:1110" data-name="Language">
+          <div className="relative shrink-0 size-[24px]" data-node-id="3:1111" data-name="Phosphor/globe">
+            <div className="absolute left-0 size-[24px] top-0" data-node-id="I3:1111;2:123" data-name="Frame">
+              <img alt="" className="absolute block inset-0 max-w-none size-full" src={imgFrame1} />
+            </div>
+          </div>
+        </a>
+        <a className="content-stretch cursor-pointer flex items-start overflow-clip p-[12px] relative shrink-0 size-[48px]" data-node-id="3:1114" data-name="Settings">
+          <div className="relative shrink-0 size-[24px]" data-node-id="3:1115" data-name="Phosphor/gear-six">
+            <div className="absolute left-0 size-[24px] top-0" data-node-id="I3:1115;2:126" data-name="Frame">
+              <img alt="" className="absolute block inset-0 max-w-none size-full" src={imgFrame2} />
+            </div>
+          </div>
+        </a>
+      </div>
+      <div className="content-stretch flex flex-[1_0_0] flex-col gap-[var(--space.s24,24px)] items-start min-h-px overflow-x-clip overflow-y-auto p-[24px] relative w-[390px]" data-node-id="3:1118" data-name="Scrollable content">
+        <p className="[word-break:break-word] font-['Geist:SemiBold'] font-semibold leading-[32px] relative shrink-0 text-[26px] text-[color:var(--colors.ink,#182522)] w-[342px]" data-node-id="3:1122">
+          Start with what you have.
+        </p>
+        <p className="[word-break:break-word] font-['Geist:Regular'] font-normal leading-[24px] relative shrink-0 text-[16px] text-[color:var(--colors.muted,#56635f)] w-[342px]" data-node-id="3:1123">
+          An itemized bill and EOB give you the clearest picture. You can add the other document later.
+        </p>
+        <a className="bg-[var(--colors.surface,white)] content-stretch cursor-pointer flex flex-col gap-[var(--space.s12,12px)] items-start overflow-clip p-[16px] relative rounded-[var(--radius.r20,20px)] shrink-0 w-[342px]" data-node-id="3:1124" data-name="Take a photo">
+          <div className="content-stretch flex gap-[var(--space.s12,12px)] items-start overflow-clip relative shrink-0 w-[310px]" data-node-id="3:1125" data-name="Take a photo">
+            <div className="relative shrink-0 size-[24px]" data-node-id="3:1126" data-name="Phosphor/camera">
+              <div className="absolute left-0 size-[24px] top-0" data-node-id="I3:1126;2:102" data-name="Frame">
+                <img alt="" className="absolute block inset-0 max-w-none size-full" src={imgFrame3} />
+              </div>
+            </div>
+            <p className="[word-break:break-word] font-['Geist:Regular'] font-normal leading-[24px] relative shrink-0 text-[16px] text-[color:var(--colors.ink,#182522)] text-left w-[274px]" data-node-id="3:1129">
+              Take a photo
+            </p>
+          </div>
+        </a>
+        <a className="bg-[var(--colors.surface,white)] content-stretch cursor-pointer flex flex-col gap-[var(--space.s12,12px)] items-start overflow-clip p-[16px] relative rounded-[var(--radius.r20,20px)] shrink-0 w-[342px]" data-node-id="3:1130" data-name="Choose photos">
+          <div className="content-stretch flex gap-[var(--space.s12,12px)] items-start overflow-clip relative shrink-0 w-[310px]" data-node-id="3:1131" data-name="Choose photos">
+            <div className="relative shrink-0 size-[24px]" data-node-id="3:1132" data-name="Phosphor/images">
+              <div className="absolute left-0 size-[24px] top-0" data-node-id="I3:1132;2:105" data-name="Frame">
+                <img alt="" className="absolute block inset-0 max-w-none size-full" src={imgFrame4} />
+              </div>
+            </div>
+            <p className="[word-break:break-word] font-['Geist:Regular'] font-normal leading-[24px] relative shrink-0 text-[16px] text-[color:var(--colors.ink,#182522)] text-left w-[274px]" data-node-id="3:1135">
+              Choose photos
+            </p>
+          </div>
+        </a>
+        <a className="bg-[var(--colors.surface,white)] content-stretch cursor-pointer flex flex-col gap-[var(--space.s12,12px)] items-start overflow-clip p-[16px] relative rounded-[var(--radius.r20,20px)] shrink-0 w-[342px]" data-node-id="3:1136" data-name="Choose a PDF">
+          <div className="content-stretch flex gap-[var(--space.s12,12px)] items-start overflow-clip relative shrink-0 w-[310px]" data-node-id="3:1137" data-name="Choose a PDF">
+            <div className="relative shrink-0 size-[24px]" data-node-id="3:1138" data-name="Phosphor/file-pdf">
+              <div className="absolute left-0 size-[24px] top-0" data-node-id="I3:1138;2:108" data-name="Frame">
+                <img alt="" className="absolute block inset-0 max-w-none size-full" src={imgFrame5} />
+              </div>
+            </div>
+            <p className="[word-break:break-word] font-['Geist:Regular'] font-normal leading-[24px] relative shrink-0 text-[16px] text-[color:var(--colors.ink,#182522)] text-left w-[274px]" data-node-id="3:1141">
+              Choose a PDF
+            </p>
+          </div>
+        </a>
+        <p className="[word-break:break-word] font-['Geist:Regular'] font-normal leading-[18px] relative shrink-0 text-[12px] text-[color:var(--colors.muted,#56635f)] w-[342px]" data-node-id="3:1142">
+          Imported documents are reviewed manually in this prototype.
+        </p>
+        <a className="bg-[var(--colors.accentSoft,#eaf3ef)] content-stretch cursor-pointer flex h-[56px] items-center justify-center px-[24px] py-[16px] relative rounded-[var(--radius.r16,16px)] shrink-0 w-[342px]" data-node-id="3:1143" data-name="Button">
+          <p className="[word-break:break-word] font-['Geist:Regular'] font-normal leading-[24px] relative shrink-0 text-[16px] text-[color:var(--colors.accent,#176b5b)] text-center w-[280px]" data-node-id="I3:1143;2:86">
+            Use sample bill + EOB
+          </p>
+        </a>
+      </div>
+      <div className="bg-[var(--colors.background,#f7f8f5)] content-stretch flex flex-col gap-[var(--space.s8,8px)] items-start overflow-clip pb-[24px] pt-[12px] px-[24px] relative shrink-0 w-[390px]" data-node-id="3:1119" data-name="Action bar">
+        <a className="bg-[var(--colors.accent,#176b5b)] content-stretch cursor-pointer flex h-[56px] items-center justify-center px-[24px] py-[16px] relative rounded-[var(--radius.r16,16px)] shrink-0 w-[342px]" data-node-id="3:1120" data-name="Button">
+          <p className="[word-break:break-word] font-['Geist:Regular'] font-normal leading-[24px] relative shrink-0 text-[16px] text-[color:var(--colors.surface,white)] text-center w-[280px]" data-node-id="I3:1120;2:82">
+            Verify details
+          </p>
+        </a>
+      </div>
+    </div>
+  );
+}
+SUPER CRITICAL: The generated React+Tailwind code MUST be converted to match the target project's technology stack and styling system.
+1. Analyze the target codebase to identify: technology stack, styling approach, component patterns, and design tokens
+2. Convert React syntax to the target framework/library
+3. Transform all Tailwind classes to the target styling system while preserving exact visual design
+4. Follow the project's existing patterns and conventions
+DO NOT install any Tailwind as a dependency unless the user instructs you to do so.
+
+Node ids have been added to the code as data attributes, e.g. `data-node-id="1:2"`.
+These styles are contained in the design: Unfold/section: Font(family: "Geist", style: SemiBold, size: 20, weight: 600, lineHeight: 26, letterSpacing: 0), Unfold/title: Font(family: "Geist", style: SemiBold, size: 26, weight: 600, lineHeight: 32, letterSpacing: 0), Unfold/body: Font(family: "Geist", style: Regular, size: 16, weight: 400, lineHeight: 24, letterSpacing: 0), Unfold/caption: Font(family: "Geist", style: Regular, size: 12, weight: 400, lineHeight: 18, letterSpacing: 0).
+Component descriptions: The following components have usage descriptions or documentation links defined in Figma. These descriptions provide important context about the intended usage, best practices, and any constraints for each component. Follow these guidelines when implementing or using these components.
+
+## Variant=secondary, State=default
+**Node ID:** 2:85
+
+48px minimum target. Haptic selection, pressed opacity, disabled and loading semantics in native code.
+
+## Variant=primary, State=default
+**Node ID:** 2:81
+
+48px minimum target. Haptic selection, pressed opacity, disabled and loading semantics in native code.
+Images and SVGs will be stored as constants, e.g. const image = `${assetPathPrefix}/<asset file name>`, where assetPathPrefix is declared once at the top of the code and every asset URL interpolates it. These constants will be used in the code as the source for the image, ex: <img src={image} />. Image assets are stored on a remote server for 7 days and can be fetched using the provided URLs until they expire.
