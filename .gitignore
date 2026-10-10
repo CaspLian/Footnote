@@ -1,5 +1,10 @@
 mobile/node_modules/
 mobile/.expo/
+mobile/dist/
+mobile/ios/build/
+mobile/ios/Pods/
+web/node_modules/
+web/dist/
 backend/venv/
 backend/.env
 backend/__pycache__/
@@ -8,3 +13,4 @@ __pycache__/
 *.py[cod]
 .DS_Store
 backend/api.env
+*.log
