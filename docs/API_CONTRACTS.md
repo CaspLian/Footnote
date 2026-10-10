@@ -135,7 +135,9 @@ Form fields:
 - `voice`: optional, as above
 - `stream_reply`: optional, as above
 
-Returns `Speech`, with HTTP 200 even when the voice failed: check `speech.ok`. It speaks only saved analyses,
+Returns `Speech`, with HTTP 200 even when the voice failed: check `speech.ok`. Asking early and again later is safe:
+an identical request joins the generation under way, and a finished clip comes back from the cache in about 0.25 s.
+The app prepares each reading this way (`docs/decisions/2026-10-10-voice-prepared-early.md`). It speaks only saved analyses,
 never text sent to it. Each voice is its own paid clip; the same
 text in the same voice comes from the cache, free.
 

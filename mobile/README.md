@@ -45,7 +45,7 @@ Document processing, benchmark lookup, draft preparation, and narration have asy
 
 - **Reading documents:** a newly imported bill or EOB is read by Gemini (`POST /api/v1/analyze`). Its provider, dates, amounts and line items fill the verify screen, where the user checks every value. The analysis is saved in Tiger Data.
 - **Prices:** the review compares each confirmed code with Medicare's national rate (`GET /api/v1/benchmarks/{code}`, from Snowflake) and adds Gemini's notes. Findings are questions, never proof of an error.
-- **Voice:** the review can play the saved analysis in an ElevenLabs voice (`POST /api/v1/voice/speak`, played with `expo-audio`).
+- **Voice:** the review can play the saved analysis in an ElevenLabs voice (`POST /api/v1/voice/speak`, played with `expo-audio`). The reading is prepared as soon as the document is read, so Listen plays at once. That costs one clip per analyzed document (`docs/decisions/2026-10-10-voice-prepared-early.md`).
 
 Without the variable, everything stays local, as before: the synthetic sample, manual entry, and device narration. The sample and the drafts stay local either way. `expo-audio` is a native module, so rebuild the development build once (`npm run ios` or `npm run android`).
 
