@@ -87,13 +87,22 @@ async def analyze(
         instruction += f"\n\nUser's text or question:\n{text.strip()}"
     parts.append(instruction)
 
-    config = types.GenerateContentConfig(
-        system_instruction=SYSTEM_PROMPT.format(language=language),
-        response_mime_type="application/json",
-        response_schema=GeminiResult,
-        temperature=0.2,
+    return await generate_structured(
+        parts, system_instruction=SYSTEM_PROMPT.format(language=language), schema=GeminiResult
     )
 
+
+async def generate_structured(parts: list, *, system_instruction: str, schema, temperature: float = 0.2):
+    """Ask Gemini for JSON matching `schema` (a Pydantic model), with retries and the fallback model.
+
+    Shared by analyze() and the letter writer so both survive a busy or slow Gemini.
+    """
+    config = types.GenerateContentConfig(
+        system_instruction=system_instruction,
+        response_mime_type="application/json",
+        response_schema=schema,
+        temperature=temperature,
+    )
     client = _get_client()
     models = [model_name()]
     fallback = os.getenv("GEMINI_FALLBACK_MODEL", "").strip()
@@ -121,9 +130,9 @@ async def analyze(
                     continue
                 raise
             try:
-                if isinstance(response.parsed, GeminiResult):
+                if isinstance(response.parsed, schema):
                     return response.parsed
-                return GeminiResult.model_validate(json.loads(response.text or ""))
+                return schema.model_validate(json.loads(response.text or ""))
             except (ValidationError, json.JSONDecodeError) as e:
                 last_error = e  # output didn't fit the schema: ask again
     raise RuntimeError(f"Gemini is unavailable right now, try again shortly. Last error: {last_error}")

@@ -116,7 +116,8 @@ def _compare(i: int, item: LineItem, bench: Optional[dict]) -> PriceCheck:
                           note="No Medicare reference price for this code (common for lab tests and supplies).")
 
     rate = bench["rate"]
-    base.update(medicare_rate=rate, medicare_description=bench["description"])
+    base.update(medicare_rate=rate, medicare_description=bench["description"],
+                medicare_covers="physician_only" if bench.get("setting") == "facility" else "full_service")
     if billed is None or billed <= 0 or rate <= 0:
         return PriceCheck(**base, flag="no_amount", note=f"Medicare's national rate for this service is ${rate:,.2f}.")
 

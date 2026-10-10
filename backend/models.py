@@ -23,6 +23,9 @@ class LineItem(BaseModel):
 class GeminiResult(BaseModel):
     document_type: str = Field(description="One of: hospital_bill, eob, insurance_policy, pharmacy_receipt, other")
     provider_name: Optional[str] = Field(None, description="Hospital, clinic or insurer name if shown")
+    provider_billing_address: Optional[str] = Field(None, description="Billing or mailing address of the provider/insurer if shown")
+    account_number: Optional[str] = Field(None, description="Patient account, claim or statement number if shown")
+    service_date: Optional[str] = Field(None, description="Main date of service YYYY-MM-DD if shown")
     total_billed: Optional[float] = Field(None, description="Total amount billed, if shown")
     amount_patient_owes: Optional[float] = Field(None, description="Amount the patient is asked to pay, if shown")
     due_date: Optional[str] = Field(None, description="Payment due date YYYY-MM-DD, if shown")
@@ -46,6 +49,7 @@ class PriceCheck(BaseModel):
     medicare_rate: Optional[float] = None
     medicare_description: Optional[str] = None
     times_medicare: Optional[float] = Field(None, description="billed_amount / medicare_rate, rounded to 1 decimal")
+    medicare_covers: Optional[str] = Field(None, description="full_service, or physician_only when the hospital bills a separate facility fee")
     flag: str = Field(description="no_code | no_benchmark | no_amount | typical | above_typical | far_above_typical")
     note: str = Field(description="Short plain-English explanation of the comparison")
 
@@ -66,3 +70,41 @@ class AnalyzeResponse(BaseModel):
     result: GeminiResult
     price_checks: list[PriceCheck] = Field(default_factory=list)
     price_summary: Optional[PriceSummary] = None
+    letter_suggested: bool = Field(False, description="True when there is something worth disputing; show the 'Draft a letter' button")
+    letter_reasons: list[str] = Field(default_factory=list, description="Letter types that apply: itemized_request, billing_error, price_review, insurance_appeal")
+
+
+# ---------- Dispute / request letter ----------
+
+class LetterRequest(BaseModel):
+    """Sent by the app when the user taps 'Draft a letter'. `analysis` is the /analyze response, sent back unchanged."""
+    analysis: AnalyzeResponse
+    patient_name: Optional[str] = None
+    patient_address: Optional[str] = None
+    patient_phone: Optional[str] = None
+    patient_email: Optional[str] = None
+    account_number: Optional[str] = Field(None, description="Overrides the account number Gemini found, if any")
+    user_notes: Optional[str] = Field(None, description="Anything the patient wants included, e.g. 'I only had one EKG'")
+    target_language: Optional[str] = Field(None, description="Language for the explanation and next steps; defaults to the analysis language")
+
+
+class LetterDraft(BaseModel):
+    """What Gemini writes. Also used as Gemini's response schema."""
+    subject: str = Field(description="Letter subject line in English, including the account number if known")
+    body: str = Field(description="Full letter in English, from greeting to signature. Use [BRACKETED PLACEHOLDERS] for anything unknown.")
+    key_points: list[str] = Field(description="3-5 short English bullets summarizing what the letter asks for")
+    explanation: str = Field(description="2-4 sentences in the target language explaining what the letter says and why")
+    next_steps: list[str] = Field(description="3-5 short, practical next steps in the target language (how to send it, what to keep, when to follow up)")
+
+
+class LetterResponse(BaseModel):
+    letter_types: list[str]
+    recipient: str
+    subject: str
+    body: str
+    key_points: list[str]
+    explanation: str
+    next_steps: list[str]
+    placeholders: list[str] = Field(default_factory=list, description="Bracketed fields the user still needs to fill in")
+    disclaimer: str
+    mock: bool = False
