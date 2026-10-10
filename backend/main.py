@@ -41,20 +41,26 @@ def languages():
 @app.post("/api/v1/analyze", response_model=AnalyzeResponse)
 async def analyze_endpoint(
     file: Optional[UploadFile] = File(None, description="Photo or PDF of the bill/EOB"),
+    files: list[UploadFile] = File(default=[], description="One or more bill pages captured as photos"),
     text: Optional[str] = Form(None, description="Typed text or a question (optional if a file is sent)"),
     target_language: str = Form("en", description="Language code, e.g. en, es, zh, ar"),
 ):
     """User input -> Gemini -> Snowflake price check. result.spoken_summary is the text for ElevenLabs."""
-    file_bytes, mime = None, None
-    if file is not None and file.filename:
-        file_bytes = await file.read()
-        mime = file.content_type
-        if len(file_bytes) > MAX_UPLOAD_MB * 1024 * 1024:
-            raise HTTPException(413, f"File is larger than {MAX_UPLOAD_MB} MB.")
+    uploads = [item for item in ([file] if file is not None else []) + files if item.filename]
+    image_inputs = []
+    total_size = 0
+    if len(uploads) > 10:
+        raise HTTPException(400, "Send no more than 10 document pages at a time.")
+    for upload in uploads:
+        data = await upload.read(MAX_UPLOAD_MB * 1024 * 1024 + 1)
+        total_size += len(data)
+        if total_size > MAX_UPLOAD_MB * 1024 * 1024:
+            raise HTTPException(413, f"Combined upload is larger than {MAX_UPLOAD_MB} MB.")
+        image_inputs.append((data, upload.content_type or "application/octet-stream"))
 
     try:
         result = await asyncio.wait_for(
-            analyze(file_bytes=file_bytes, mime_type=mime, text=text, target_language=target_language),
+            analyze(image_inputs=image_inputs, text=text, target_language=target_language),
             timeout=GEMINI_TIMEOUT_S,
         )
     except ValueError as e:
@@ -76,7 +82,7 @@ async def analyze_endpoint(
         price_summary=price_summary,
     )
     # Step 3: save it to Tiger Data (never fails the request); response.audit says whether it worked
-    response.audit = await save_analysis(response, source="file" if file_bytes else "text")
+    response.audit = await save_analysis(response, source="file" if image_inputs else "text")
     return response
 
 

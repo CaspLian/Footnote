@@ -59,9 +59,13 @@ export const documentService: DocumentService = {
     // Only our explicitly marked paired fixture receives local seeded findings.
     const mode = hasOriginalSampleSources(billCase) ? 'synthetic' : 'manual';
     const reviewed = { ...billCase, reviewMode: mode as 'synthetic' | 'manual', entriesEdited: billCase.source === 'sample' && sampleEntriesChanged(billCase) };
+    const extractedFindings: Finding[] = billCase.extraction?.issues.map((issue, index) => ({
+      id: `extracted-question-${index + 1}`, title: localized('Ask about this detail', 'Pregunta sobre este detalle'),
+      explanation: issue, question: issue, label: 'worth_asking', evidence: [], action: 'billing_correction',
+    })) ?? [];
     return {
-      mode, findings: mode === 'synthetic' ? buildSampleFindings(reviewed) : [],
-      summary: localized(getCaseSummary(reviewed, 'en'), getCaseSummary(reviewed, 'es')),
+      mode, findings: mode === 'synthetic' ? buildSampleFindings(reviewed) : extractedFindings,
+      summary: billCase.extraction?.summary ?? localized(getCaseSummary(reviewed, 'en'), getCaseSummary(reviewed, 'es')),
     };
   },
 };

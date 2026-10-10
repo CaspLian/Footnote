@@ -68,6 +68,24 @@ export interface Financials {
   coinsuranceCents?: Money;
   copaymentCents?: Money;
 }
+/** What the ClaimPulse backend read from the imported pages (POST /api/v1/analyze), kept for verification and review. */
+export interface ExtractedAnalysis {
+  model: string;
+  /** True when the backend ran in MOCK mode: the result is a fixed sample, not this document. */
+  mock: boolean;
+  /** The saved analysis in Tiger Data, used for the ElevenLabs reading; absent when the backend could not save it. */
+  auditId?: string;
+  /** Gemini's notes on lines that look off, by line id; the review turns them into questions with their evidence. */
+  notes?: Record<string, string[]>;
+  documentType: string;
+  summary: LocalizedText;
+  questions: LocalizedText[];
+  issues: LocalizedText[];
+  totalBilledCents?: Money;
+  patientOwesCents?: Money;
+  dueDate?: string;
+  parsedAt: string;
+}
 export interface Comparison {
   source: string;
   url: string;
@@ -85,20 +103,6 @@ export interface Finding {
   comparison?: Comparison;
   action: DraftKind;
 }
-/** What the ClaimPulse backend read from the first imported document (POST /api/v1/analyze). */
-export interface CaseAnalysis {
-  /** The saved analysis in Tiger Data; absent when the backend could not save it. */
-  auditId?: string;
-  /** The language Gemini answered in; the texts below are in it. */
-  language: Language;
-  summary: string;
-  questions: string[];
-  /** Gemini's notes on lines that look off, by line id. */
-  notes: Record<string, string[]>;
-  /** True when the backend ran in MOCK mode: the result is a fixed sample, not this document. */
-  mock: boolean;
-  analyzedAt: string;
-}
 export interface BillCase {
   id: string;
   profileId?: string;
@@ -110,6 +114,7 @@ export interface BillCase {
   attachments: DocumentAttachment[];
   lineItems: LineItem[];
   financials: Financials;
+  extraction?: ExtractedAnalysis;
   findings: Finding[];
   createdAt: string;
   updatedAt: string;
@@ -119,7 +124,6 @@ export interface BillCase {
   /** True when confirmed values differ from the original synthetic documents. */
   entriesEdited?: boolean;
   reviewMode?: 'synthetic' | 'manual';
-  analysis?: CaseAnalysis;
 }
 export interface AppealDraft {
   id: string;

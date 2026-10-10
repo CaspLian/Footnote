@@ -14,6 +14,10 @@ export type ImportResult =
 
 type PickedFile = { uri: string; name: string; mimeType?: string; size?: number };
 
+export function appendAttachmentToForm(form: FormData, attachment: DocumentAttachment): void {
+  form.append('files', { uri: attachment.uri, name: attachment.name, type: attachment.mimeType } as unknown as Blob);
+}
+
 function storageDirectory() {
   return new Directory(Paths.document, 'unfold', 'attachments');
 }

@@ -66,6 +66,17 @@ test('manual imports and missing/reclassified sample EOBs cannot receive seeded 
   assert.deepEqual((await documentService.processBill(sample)).findings, []);
 });
 
+test('Gemini extraction summary remains the review summary for imported cases', () => {
+  const manual = createManualCase();
+  manual.extraction = {
+    model: 'gemini-test', mock: false, documentType: 'hospital bill',
+    summary: { en: 'The bill asks for $125.00.', es: 'La factura solicita $125.00.' },
+    questions: [], issues: [], parsedAt: new Date().toISOString(),
+  };
+  assert.equal(getCaseSummary(manual, 'en'), 'The bill asks for $125.00.');
+  assert.match(getCaseSummary(manual, 'es'), /La factura solicita/);
+});
+
 test('billing correction and insurer appeal templates do not invent a denial', async () => {
   const c = createSampleCase(); c.findings = (await documentService.processBill(c)).findings;
   const correction = buildDraft(c, 'billing_correction', 'en');

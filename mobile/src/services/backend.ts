@@ -1,9 +1,7 @@
-import type { DocumentAttachment, Language } from '../domain/types';
-import { uploadPart } from './backend-upload';
-
 /**
  * The ClaimPulse backend, from EXPO_PUBLIC_API_URL (for example http://192.168.1.23:8000; see mobile/.env.example).
  * When it is unset, the app stays fully local, as before. The routes are in docs/API_CONTRACTS.md.
+ * Documents are sent by services/gemini-api.ts (every page in one request); this file holds the rest.
  */
 const API_URL = (process.env.EXPO_PUBLIC_API_URL ?? '').trim().replace(/\/+$/, '');
 
@@ -16,31 +14,6 @@ export function backendUrl(path: string): string {
   return `${API_URL}${path.startsWith('/') ? '' : '/'}${path}`;
 }
 
-export interface BackendLineItem {
-  cpt_code: string | null;
-  original_description: string;
-  plain_description: string;
-  billed_amount: number | null;
-  date_of_service: string | null;
-  possible_issues: string[];
-}
-export interface BackendAnalysis {
-  target_language: string;
-  model: string;
-  mock: boolean;
-  result: {
-    document_type: string;
-    provider_name: string | null;
-    total_billed: number | null;
-    amount_patient_owes: number | null;
-    due_date: string | null;
-    line_items: BackendLineItem[];
-    plain_summary: string;
-    spoken_summary: string;
-    questions_to_ask: string[];
-  };
-  audit: { saved: boolean; audit_id: string | null; error: string | null } | null;
-}
 export interface BackendBenchmark {
   cpt_code: string;
   medicare_rate: number | null;
@@ -65,8 +38,6 @@ export class BackendError extends Error {
   }
 }
 
-// Gemini usually answers in 6–13 s; the backend gives it up to 150 s before answering 504.
-const ANALYZE_TIMEOUT_MS = 155_000;
 const LOOKUP_TIMEOUT_MS = 20_000;
 const SPEAK_TIMEOUT_MS = 60_000;
 
@@ -93,18 +64,6 @@ async function call<T>(path: string, init: RequestInit, timeoutMs: number): Prom
   } finally {
     clearTimeout(timer);
   }
-}
-
-/** POST /api/v1/analyze with one file: Gemini's reading, the Medicare price check, and the saved record. */
-export async function analyzeUpload(file: Blob, name: string, language: Language): Promise<BackendAnalysis> {
-  const form = new FormData();
-  form.append('file', file, name);
-  form.append('target_language', language);
-  return call('/api/v1/analyze', { method: 'POST', body: form }, ANALYZE_TIMEOUT_MS);
-}
-
-export async function analyzeDocument(attachment: DocumentAttachment, language: Language): Promise<BackendAnalysis> {
-  return analyzeUpload(await uploadPart(attachment), attachment.name, language);
 }
 
 /** GET /api/v1/benchmarks/{code}: Medicare's national rate for one code (free; no Gemini call). */

@@ -1,14 +1,11 @@
-import { isISODate } from '../domain/money';
-import type { BillCase, Comparison, DocumentAttachment, Financials, Finding, Language, LineItem, LocalizedText } from '../domain/types';
-import type { BackendAnalysis, BackendBenchmark } from './backend';
+import type { BillCase, Comparison, Finding, Language, LineItem, LocalizedText } from '../domain/types';
+import type { BackendBenchmark } from './backend';
 
 /** The backend's price data: CMS 2026 Physician Fee Schedule, national rates (not regional, not what you owe). */
 export const MEDICARE_SOURCE = 'Medicare national rate (CMS 2026 Physician Fee Schedule)';
 export const MEDICARE_URL = 'https://www.cms.gov/medicare/payment/fee-schedules/physician';
 /** Above this many times Medicare's rate a line becomes a question worth asking (the backend's "above typical"). */
 export const WORTH_ASKING_RATIO = 3;
-
-export type CasePatch = Pick<BillCase, 'provider' | 'serviceDate' | 'lineItems' | 'financials' | 'analysis'>;
 
 // Gemini answers in one language; the app writes manual entries to both languages the same way.
 const same = (value: string): LocalizedText => ({ en: value, es: value });
@@ -23,61 +20,6 @@ export function dollarsToCents(value: number | null | undefined): number | undef
 export function normalizeCode(code?: string): string | undefined {
   const cleaned = (code ?? '').replace(/[^A-Za-z0-9]/g, '').toUpperCase();
   return cleaned.length >= 5 ? cleaned.slice(0, 5) : undefined;
-}
-
-/** What the backend read from a newly imported document, as entries the user then checks on the verify screen. */
-export function casePatchFromAnalysis(billCase: BillCase, attachment: DocumentAttachment, analysis: BackendAnalysis, language: Language, at: string): CasePatch {
-  const result = analysis.result;
-  const dates = result.line_items.map(line => line.date_of_service).filter((date): date is string => !!date && isISODate(date));
-  const serviceDate = dates[0] ?? billCase.serviceDate;
-  const notes: Record<string, string[]> = {};
-  const lineItems: LineItem[] = result.line_items.map((line, index) => {
-    const id = `${attachment.id}-line-${index + 1}`;
-    const issues = line.possible_issues.filter(note => note.trim());
-    if (issues.length) notes[id] = issues;
-    return {
-      id,
-      description: same(line.plain_description || line.original_description),
-      code: line.cpt_code ?? undefined,
-      date: line.date_of_service && isISODate(line.date_of_service) ? line.date_of_service : serviceDate,
-      units: 1,
-      // A missing amount stays visible as 0.00 for the user to fill in; it is never compared.
-      billedCents: dollarsToCents(line.billed_amount) ?? 0,
-      evidence: {
-        attachmentId: attachment.id,
-        page: 1,
-        // Unique per line: the finding screen finds a finding's line by this label.
-        label: { en: `Line ${index + 1} · read from your document`, es: `Línea ${index + 1} · leída de tu documento` },
-        excerpt: same(line.original_description),
-      },
-    };
-  });
-  const billed = dollarsToCents(result.total_billed) ?? lineItems.reduce((sum, line) => sum + line.billedCents, 0);
-  const owes = dollarsToCents(result.amount_patient_owes);
-  const eob = attachment.kind === 'eob' || result.document_type === 'eob';
-  const financials: Financials = { ...billCase.financials };
-  if (eob) {
-    financials.eobBilledCents = billed;
-    if (owes !== undefined) financials.eobResponsibilityCents = owes;
-  } else {
-    financials.billedCents = billed;
-    if (owes !== undefined) financials.remainingCents = owes;
-  }
-  return {
-    provider: result.provider_name ?? billCase.provider,
-    serviceDate,
-    lineItems,
-    financials,
-    analysis: {
-      auditId: analysis.audit?.saved && analysis.audit.audit_id ? analysis.audit.audit_id : undefined,
-      language,
-      summary: result.plain_summary,
-      questions: result.questions_to_ask,
-      notes,
-      mock: analysis.mock,
-      analyzedAt: at,
-    },
-  };
 }
 
 function rateContext(setting: string | null, units: number): LocalizedText {
@@ -152,7 +94,7 @@ export function noteFinding(line: LineItem, notes: string[]): Finding {
 export function reviewFindings(billCase: BillCase, benchmarks: Map<string, BackendBenchmark>, retrievedAt: string): Finding[] {
   const findings: Finding[] = [];
   for (const line of billCase.lineItems) {
-    const notes = billCase.analysis?.notes[line.id];
+    const notes = billCase.extraction?.notes?.[line.id];
     if (notes?.length) findings.push(noteFinding(line, notes));
     const code = normalizeCode(line.code);
     const comparison = code ? comparisonFor(line, benchmarks.get(code), retrievedAt) : null;

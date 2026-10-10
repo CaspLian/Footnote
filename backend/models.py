@@ -24,6 +24,7 @@ class LineItem(BaseModel):
     plain_description: str = Field(description="What this charge is, in simple words, in the target language")
     billed_amount: Optional[float] = Field(None, description="Amount charged for this line, as a number, else null")
     date_of_service: Optional[str] = Field(None, description="YYYY-MM-DD if shown, else null")
+    source_page: Optional[int] = Field(None, description="1-based page number in the provided document, if clearly identifiable; else null")
     possible_issues: list[str] = Field(
         default_factory=list,
         description="Short notes in the target language on anything that looks off: duplicate, vague fee, unclear charge. Empty if nothing.",

@@ -40,6 +40,7 @@ export default function RootLayout() {
     <Stack.Screen name="profile" options={{ title: 'Profile', presentation: 'card' }} />
     <Stack.Screen name="processing" options={{ title: 'Reviewing your bill', headerBackButtonMenuEnabled: false }} />
     <Stack.Screen name="intake" options={{ title: copy('Add documents','Agregar documentos') }} />
+    <Stack.Screen name="camera" options={{ title: copy('Take a photo','Tomar una foto'), presentation: 'fullScreenModal', headerRight: () => null }} />
     <Stack.Screen name="verify" options={{ title: copy('Verify details','Verificar datos') }} />
     <Stack.Screen name="review" options={{ title: copy('Bill review','Revisar factura') }} />
     <Stack.Screen name="finding" options={{ title: copy('Question & evidence','Pregunta y evidencia') }} />

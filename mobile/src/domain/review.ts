@@ -21,6 +21,14 @@ export function getCaseSummary(billCase: BillCase, language: Language): string {
   const f = billCase.financials;
   const balance = formatMoney(f.remainingCents, language);
   const derived = expectedRemaining(f);
+  if (billCase.extraction) {
+    const extractedSummary = billCase.extraction.summary[language];
+    return billCase.entriesEdited
+      ? language === 'en'
+        ? `Based on your confirmed entries: ${extractedSummary}`
+        : `SegÃºn los datos que confirmaste: ${extractedSummary}`
+      : extractedSummary;
+  }
   if (billCase.source === 'manual' || billCase.reviewMode === 'manual') {
     return language === 'en'
       ? `Your confirmed statement balance is ${balance}. These details were entered manually. Document extraction and comparison services are not connected yet; review the original documents and contact the billing office with any questions.`

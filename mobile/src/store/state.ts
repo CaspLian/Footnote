@@ -48,7 +48,7 @@ export interface UnfoldState {
   addAttachment(caseId: string, attachment: DocumentAttachment): void;
   updateAttachment(caseId: string, attachmentId: string, kind: DocumentAttachment['kind']): void;
   removeAttachment(caseId: string, attachmentId: string): Promise<void>;
-  updateCase(caseId: string, patch: Partial<Pick<BillCase, 'provider' | 'serviceDate' | 'description' | 'financials' | 'lineItems' | 'analysis'>>): void;
+  updateCase(caseId: string, patch: Partial<Pick<BillCase, 'provider' | 'serviceDate' | 'description' | 'financials' | 'lineItems' | 'extraction' | 'findings'>>): void;
   verifyCase(caseId: string): Promise<void>;
   prepareDraft(caseId: string, kind: DraftKind): Promise<string>;
   saveDraft(caseId: string, kind: DraftKind, body: string, locale: Language): string;
@@ -241,7 +241,7 @@ export function createUnfoldStore(storage: LocalStorage, options: StoreOptions =
         const original = caseById(caseId);
         if (patch.financials && Object.values(patch.financials).some(value => value !== undefined && !isMoney(value))) throw new Error('invalid_money');
         if (patch.lineItems && patch.lineItems.some(line => !isMoney(line.billedCents) || !Number.isSafeInteger(line.units) || line.units < 1)) throw new Error('invalid_line_item');
-        const updated = { ...original, ...patch, status: 'needs_details' as const, findings: [], verifiedAt: undefined, updatedAt: now() };
+        const updated = { ...original, ...patch, status: 'needs_details' as const, findings: patch.findings ?? [], verifiedAt: undefined, updatedAt: now() };
         updated.entriesEdited = updated.source === 'sample' && sampleEntriesChanged(updated);
         change({ cases: get().cases.map(item => item.id === caseId ? updated : item) });
       },

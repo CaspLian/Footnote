@@ -4,15 +4,20 @@ This is an Expo/React Native mobile application. Prioritize mobile-first pattern
 
 The guidance below is Expo's generated template.
 
-- The app is the Unfold frontend from `frontend-aarush` (merged 2026-10-10): Expo Router in `src/app/`, TypeScript,
+- The app is the Unfold frontend (from `frontend-aarush`, merged 2026-10-10): Expo Router in `src/app/`, TypeScript,
   React Native Web, and a development build (`expo start --dev-client`). Follow its structure. `README.md` explains
   how to run it.
-- It talks to the backend only through `src/services/backend.ts`, when `EXPO_PUBLIC_API_URL` is set (`.env.example`).
-  The backend-aware services are in `src/services/connected-services.ts`; the mapping from backend responses to the
-  app's types is in `src/services/backend-mapping.ts`, with tests. Unset, the app stays fully local.
-- The ElevenLabs reply plays with `expo-audio` (`src/native/backend-voice.tsx`); device narration still uses
-  `expo-speech`. Adding a native module means rebuilding the development build.
-- The backend contract the app calls, including how a phone reaches the backend, is in `docs/API_CONTRACTS.md`.
+- Reading documents (from `Camera-capture`, merged 2026-10-10): "Take a photo" uses `expo-camera` to keep ordered JPEG
+  pages. Photos and PDFs go together to `POST /api/v1/analyze` (`src/services/gemini-api.ts`), and
+  `src/domain/extraction.ts` turns the answer into entries the user verifies. Physical Android capture still needs
+  device testing.
+- Everything else from the backend goes through `src/services/backend.ts` when `EXPO_PUBLIC_API_URL` is set
+  (`.env.example`). That covers the review's Medicare comparisons and Gemini's notes (`src/services/connected-services.ts`
+  and `backend-mapping.ts`, with tests), and the ElevenLabs reading (`src/native/backend-voice.tsx`, `expo-audio`).
+  Unset, the app stays fully local. Device narration still uses `expo-speech`.
+- Adding a native module means rebuilding the development build.
+- The backend contract the app calls, including multi-file uploads and how a phone reaches the backend, is in
+  `docs/API_CONTRACTS.md`.
   Shared rules are in the repository's root `AGENTS.md`.
 
 ## Expo has changed — do not trust your training data

@@ -16,11 +16,25 @@
     "android": {
       "package": "org.hackknights.unfold",
       "permissions": [
-        "CAMERA"
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.DOWNLOAD_WITHOUT_NOTIFICATION",
+        "android.permission.ACCESS_NETWORK_STATE",
+        "android.permission.USE_BIOMETRIC",
+        "android.permission.USE_FINGERPRINT"
       ]
     },
     "plugins": [
       "expo-router",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow Unfold to use the camera.",
+          "microphonePermission": false,
+          "recordAudioAndroid": false
+        }
+      ],
       [
         "expo-build-properties",
         {
@@ -61,6 +75,12 @@
       "bundler": "metro",
       "output": "single",
       "name": "Unfold"
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "4690d017-8cb2-47b9-9e3d-856aae34bcd4"
+      }
     }
   }
 }

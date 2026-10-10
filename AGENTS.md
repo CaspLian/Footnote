@@ -41,7 +41,7 @@ live in `docs/`. **`docs/` is the team's shared memory: never delete or rename i
 | `backend/dev_console.py` | Local test page for every route (http://127.0.0.1:8770/console) |
 | `backend/tests/`, `backend/services/audio_service/**/tests/` | Backend and audio tests |
 | `backend/samples/` | Sample bills for tests and demos |
-| `mobile/` | Expo (React Native) app: still the starter template |
+| `mobile/` | Unfold Expo Router/TypeScript app; `Camera-capture` sends imported bill pages to the analysis API |
 | `docs/` | Shared project context (this system) |
 | `BACKEND_VERIFICATION_REPORT.md` | Dated verification evidence and open bugs (2026-10-10) |
 

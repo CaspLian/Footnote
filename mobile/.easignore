@@ -1,0 +1,18 @@
+node_modules/
+.expo/
+dist/
+ios/
+android/
+*.tsbuildinfo
+.env
+.env.*
+expo-env.d.ts
+
+# This is an Expo app in a monorepo; exclude Python caches and backend secrets.
+**/.pytest_cache/
+**/__pycache__/
+**/venv/
+**/.venv/
+**/.env
+**/.env.*
+**/api.env

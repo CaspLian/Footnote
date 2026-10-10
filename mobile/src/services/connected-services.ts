@@ -5,7 +5,7 @@ import { benchmarkService as localBenchmarks, documentService as localDocuments 
 
 /**
  * With EXPO_PUBLIC_API_URL set, imported and manually entered cases are reviewed with the backend's Medicare rates
- * and Gemini's notes. The synthetic sample, and every case when no backend is set, keep the local review.
+ * (for the codes the user confirmed) and Gemini's notes (extraction.notes). The synthetic sample, and every case when no backend is set, keep the local review.
  */
 export const documentService: DocumentService = {
   async processBill(billCase) {
@@ -15,8 +15,8 @@ export const documentService: DocumentService = {
     const benchmarks = new Map<string, BackendBenchmark>();
     // A backend that cannot be reached fails the review, so the processing screen offers to try again.
     await Promise.all(codes.map(async code => { benchmarks.set(code, await lookupBenchmark(code)); }));
-    const summary = billCase.analysis?.summary ? { en: billCase.analysis.summary, es: billCase.analysis.summary } : local.summary;
-    return { mode: local.mode, findings: reviewFindings(billCase, benchmarks, new Date().toISOString()), summary };
+    // local.summary already prefers Gemini's summary (domain/review.ts).
+    return { mode: local.mode, findings: reviewFindings(billCase, benchmarks, new Date().toISOString()), summary: local.summary };
   },
 };
 
