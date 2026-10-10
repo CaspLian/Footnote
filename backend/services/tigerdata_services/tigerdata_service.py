@@ -1,6 +1,6 @@
 import os
 from collections.abc import Mapping, Sequence
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
@@ -13,6 +13,7 @@ from psycopg2.extensions import connection
 
 
 _SCHEMA = """
+-- Regional reference prices are optional; audits keep an explicit no-benchmark result.
 CREATE TABLE IF NOT EXISTS cpt_benchmarks (
     code TEXT NOT NULL,
     region TEXT NOT NULL,
@@ -22,6 +23,7 @@ CREATE TABLE IF NOT EXISTS cpt_benchmarks (
     PRIMARY KEY (code, region)
 );
 
+-- Each claim stores its current workflow state, operational deadlines, and settlement.
 CREATE TABLE IF NOT EXISTS audit_records (
     audit_id UUID PRIMARY KEY,
     claim_id TEXT,
@@ -32,9 +34,30 @@ CREATE TABLE IF NOT EXISTS audit_records (
     currency TEXT NOT NULL,
     region TEXT,
     overcharge_total NUMERIC(12, 2) NOT NULL,
+    status TEXT NOT NULL DEFAULT 'scanned',
+    collection_deadline DATE,
+    credit_warning_date DATE,
+    final_settled_amount NUMERIC(12, 2),
+    savings_amount NUMERIC(12, 2),
+    resolved_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Append-only workflow events provide an auditable chronological claim timeline.
+CREATE TABLE IF NOT EXISTS audit_events (
+    event_id BIGSERIAL PRIMARY KEY,
+    audit_id UUID NOT NULL REFERENCES audit_records (audit_id) ON DELETE CASCADE,
+    event_type TEXT NOT NULL,
+    previous_status TEXT,
+    new_status TEXT,
+    details JSONB NOT NULL DEFAULT '{}'::jsonb,
+    occurred_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS audit_events_audit_time_idx
+    ON audit_events (audit_id, occurred_at, event_id);
+
+-- Preserve each billed line and the benchmark result used during its audit.
 CREATE TABLE IF NOT EXISTS audit_line_items (
     line_item_id BIGSERIAL PRIMARY KEY,
     audit_id UUID NOT NULL REFERENCES audit_records (audit_id) ON DELETE CASCADE,
@@ -48,6 +71,39 @@ CREATE TABLE IF NOT EXISTS audit_line_items (
     flagged BOOLEAN NOT NULL,
     UNIQUE (audit_id, position)
 );
+
+ALTER TABLE audit_records
+    ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'scanned',
+    ADD COLUMN IF NOT EXISTS collection_deadline DATE,
+    ADD COLUMN IF NOT EXISTS credit_warning_date DATE,
+    ADD COLUMN IF NOT EXISTS final_settled_amount NUMERIC(12, 2),
+    ADD COLUMN IF NOT EXISTS savings_amount NUMERIC(12, 2),
+    ADD COLUMN IF NOT EXISTS resolved_at TIMESTAMPTZ;
+
+-- Upgrade older completed audits with one migration marker, not invented past events.
+INSERT INTO audit_events (
+    audit_id, event_type, previous_status, new_status, details
+)
+SELECT a.audit_id, 'legacy_audit_migrated', 'scanned', 'audit_complete',
+       '{"note":"Detailed timeline predates this schema version."}'::jsonb
+FROM audit_records AS a
+WHERE a.status = 'scanned'
+  AND EXISTS (
+      SELECT 1 FROM audit_line_items AS li WHERE li.audit_id = a.audit_id
+  )
+  AND NOT EXISTS (
+      SELECT 1 FROM audit_events AS e WHERE e.audit_id = a.audit_id
+  );
+
+UPDATE audit_records AS a
+SET status = 'audit_complete'
+WHERE a.status = 'scanned'
+  AND EXISTS (
+      SELECT 1
+      FROM audit_events AS e
+      WHERE e.audit_id = a.audit_id
+        AND e.event_type = 'legacy_audit_migrated'
+  );
 """
 
 
@@ -63,7 +119,7 @@ def connect_tiger_data() -> connection:
 
 
 def initialize_tiger_data() -> None:
-    """Create the audit and benchmark tables if they do not exist."""
+    """Create audit, line-item, benchmark, and timeline tables if missing."""
     conn = connect_tiger_data()
     try:
         with conn:
@@ -108,7 +164,7 @@ def upsert_cpt_benchmark(
 def record_bill_audit(
     claim: Mapping[str, Any], region: str | None = None
 ) -> dict[str, Any]:
-    """Benchmark and persist an extracted bill, returning its audit results."""
+    """Persist an extracted bill, benchmark available rates, and start its timeline."""
     items = claim.get("items")
     if not isinstance(items, Sequence) or isinstance(items, (str, bytes)) or not items:
         raise ValueError("claim.items must be a non-empty list.")
@@ -176,8 +232,8 @@ def record_bill_audit(
                     """
                     INSERT INTO audit_records (
                         audit_id, claim_id, provider_name, provider_npi, service_date,
-                        total_billed, currency, region, overcharge_total
-                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        total_billed, currency, region, overcharge_total, status
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, 'scanned')
                     """,
                     (
                         audit_id,
@@ -189,6 +245,22 @@ def record_bill_audit(
                         claim.get("currency", "USD"),
                         normalized_region,
                         overcharge_total,
+                    ),
+                )
+                cursor.execute(
+                    """
+                    INSERT INTO audit_events (
+                        audit_id, event_type, previous_status, new_status, details
+                    ) VALUES (%s, 'bill_scanned', NULL, 'scanned', %s)
+                    """,
+                    (
+                        audit_id,
+                        psycopg2.extras.Json(
+                            {
+                                "claim_id": claim.get("claim_id"),
+                                "line_item_count": len(results),
+                            }
+                        ),
                     ),
                 )
                 execute_values(
@@ -214,6 +286,35 @@ def record_bill_audit(
                         for index, item in enumerate(results)
                     ],
                 )
+                cursor.execute(
+                    """
+                    UPDATE audit_records
+                    SET status = 'audit_complete'
+                    WHERE audit_id = %s
+                    """,
+                    (audit_id,),
+                )
+                cursor.execute(
+                    """
+                    INSERT INTO audit_events (
+                        audit_id, event_type, previous_status, new_status, details
+                    ) VALUES (%s, 'audit_completed', 'scanned', 'audit_complete', %s)
+                    """,
+                    (
+                        audit_id,
+                        psycopg2.extras.Json(
+                            {
+                                "benchmark_found_count": sum(
+                                    item["benchmark_found"] for item in results
+                                ),
+                                "unbenchmarked_count": sum(
+                                    not item["benchmark_found"] for item in results
+                                ),
+                                "overcharge_total": str(overcharge_total),
+                            }
+                        ),
+                    ),
+                )
 
         return {
             "audit_id": audit_id,
@@ -230,18 +331,29 @@ def record_bill_audit(
 
 def get_bill_audit(audit_id: str | UUID) -> dict[str, Any] | None:
     """Fetch a persisted audit and its line-item results by audit ID."""
-    try:
-        parsed_audit_id = UUID(str(audit_id))
-    except ValueError as exc:
-        raise ValueError("audit_id must be a valid UUID.") from exc
+    parsed_audit_id = _parse_audit_id(audit_id)
 
     conn = connect_tiger_data()
     try:
         with conn.cursor() as cursor:
+            # The database clock is authoritative for countdowns, and resolved claims
+            # return no active countdown while retaining their original deadline dates.
             cursor.execute(
                 """
                 SELECT claim_id, provider_name, provider_npi, service_date,
-                       total_billed, currency, region, overcharge_total, created_at
+                       total_billed, currency, region, overcharge_total, created_at,
+                       status, collection_deadline, credit_warning_date,
+                       final_settled_amount, savings_amount, resolved_at,
+                       CASE
+                           WHEN status = 'resolved' OR collection_deadline IS NULL
+                               THEN NULL
+                           ELSE collection_deadline - CURRENT_DATE
+                       END,
+                       CASE
+                           WHEN status = 'resolved' OR credit_warning_date IS NULL
+                               THEN NULL
+                           ELSE credit_warning_date - CURRENT_DATE
+                       END
                 FROM audit_records
                 WHERE audit_id = %s
                 """,
@@ -273,6 +385,17 @@ def get_bill_audit(audit_id: str | UUID) -> dict[str, Any] | None:
             "region": record[6],
             "overcharge_total": record[7],
             "created_at": record[8].isoformat(),
+            "status": record[9],
+            "collection_deadline": (
+                record[10].isoformat() if record[10] else None
+            ),
+            "credit_warning_date": record[11].isoformat() if record[11] else None,
+            "final_settled_amount": record[12],
+            "savings_amount": record[13],
+            "resolved_at": record[14].isoformat() if record[14] else None,
+            "collection_days_remaining": record[15],
+            "credit_warning_days_remaining": record[16],
+            "events": _event_records(conn, str(parsed_audit_id)),
             "items": [
                 {
                     "code": item[0],
@@ -288,6 +411,469 @@ def get_bill_audit(audit_id: str | UUID) -> dict[str, Any] | None:
         }
     finally:
         conn.close()
+
+
+def update_claim_status(
+    audit_id: str | UUID,
+    new_status: str,
+    details: Mapping[str, Any] | None = None,
+) -> dict[str, str]:
+    """Change an audit's workflow status and append a timestamped timeline event."""
+    parsed_audit_id = _parse_audit_id(audit_id)
+    normalized_status = _required_text(new_status, "new_status").lower()
+    if normalized_status not in {"audit_complete", "dispute_in_progress"}:
+        raise ValueError(
+            "new_status must be 'audit_complete' or 'dispute_in_progress'."
+        )
+    if details is not None and not isinstance(details, Mapping):
+        raise ValueError("details must be an object.")
+
+    conn = connect_tiger_data()
+    try:
+        with conn:
+            with conn.cursor() as cursor:
+                # Lock the claim so concurrent updates cannot create a false event order.
+                cursor.execute(
+                    """
+                    SELECT status
+                    FROM audit_records
+                    WHERE audit_id = %s
+                    FOR UPDATE
+                    """,
+                    (str(parsed_audit_id),),
+                )
+                row = cursor.fetchone()
+                if row is None:
+                    raise LookupError(f"No audit found for audit_id {parsed_audit_id}.")
+                previous_status = row[0]
+                if previous_status == "resolved":
+                    raise ValueError("A resolved claim cannot change status.")
+
+                cursor.execute(
+                    """
+                    UPDATE audit_records
+                    SET status = %s
+                    WHERE audit_id = %s
+                    """,
+                    (normalized_status, str(parsed_audit_id)),
+                )
+                cursor.execute(
+                    """
+                    INSERT INTO audit_events (
+                        audit_id, event_type, previous_status, new_status, details
+                    ) VALUES (%s, %s, %s, %s, %s)
+                    """,
+                    (
+                        str(parsed_audit_id),
+                        normalized_status,
+                        previous_status,
+                        normalized_status,
+                        psycopg2.extras.Json(dict(details or {})),
+                    ),
+                )
+        return {
+            "audit_id": str(parsed_audit_id),
+            "previous_status": previous_status,
+            "status": normalized_status,
+        }
+    finally:
+        conn.close()
+
+
+def set_claim_deadlines(
+    audit_id: str | UUID,
+    collection_deadline: date | str | None = None,
+    credit_warning_date: date | str | None = None,
+) -> dict[str, str | None]:
+    """Store the supplied deadline dates and append their change to the timeline."""
+    parsed_audit_id = _parse_audit_id(audit_id)
+    collection_date = _optional_date(collection_deadline, "collection_deadline")
+    credit_date = _optional_date(credit_warning_date, "credit_warning_date")
+    if collection_date is None and credit_date is None:
+        raise ValueError("At least one deadline date must be provided.")
+
+    conn = connect_tiger_data()
+    try:
+        with conn:
+            with conn.cursor() as cursor:
+                # Lock the record so the timeline records the exact old and new dates.
+                cursor.execute(
+                    """
+                    SELECT collection_deadline, credit_warning_date
+                    FROM audit_records
+                    WHERE audit_id = %s
+                    FOR UPDATE
+                    """,
+                    (str(parsed_audit_id),),
+                )
+                previous_dates = cursor.fetchone()
+                if previous_dates is None:
+                    raise LookupError(f"No audit found for audit_id {parsed_audit_id}.")
+
+                stored_collection = (
+                    collection_date
+                    if collection_date is not None
+                    else previous_dates[0]
+                )
+                stored_credit = (
+                    credit_date if credit_date is not None else previous_dates[1]
+                )
+                cursor.execute(
+                    """
+                    UPDATE audit_records
+                    SET collection_deadline = %s, credit_warning_date = %s
+                    WHERE audit_id = %s
+                    """,
+                    (
+                        stored_collection,
+                        stored_credit,
+                        str(parsed_audit_id),
+                    ),
+                )
+                cursor.execute(
+                    """
+                    INSERT INTO audit_events (
+                        audit_id, event_type, details
+                    ) VALUES (%s, 'deadlines_set', %s)
+                    """,
+                    (
+                        str(parsed_audit_id),
+                        psycopg2.extras.Json(
+                            {
+                                "previous_collection_deadline": (
+                                    previous_dates[0].isoformat()
+                                    if previous_dates[0]
+                                    else None
+                                ),
+                                "collection_deadline": (
+                                    stored_collection.isoformat()
+                                    if stored_collection
+                                    else None
+                                ),
+                                "previous_credit_warning_date": (
+                                    previous_dates[1].isoformat()
+                                    if previous_dates[1]
+                                    else None
+                                ),
+                                "credit_warning_date": (
+                                    stored_credit.isoformat()
+                                    if stored_credit
+                                    else None
+                                ),
+                            }
+                        ),
+                    ),
+                )
+
+        return {
+            "audit_id": str(parsed_audit_id),
+            "collection_deadline": (
+                stored_collection.isoformat() if stored_collection else None
+            ),
+            "credit_warning_date": (
+                stored_credit.isoformat() if stored_credit else None
+            ),
+        }
+    finally:
+        conn.close()
+
+
+def resolve_claim(
+    audit_id: str | UUID, final_amount: int | float | str | Decimal
+) -> dict[str, Any]:
+    """Save the final settlement, compute net savings, and stop active countdowns."""
+    parsed_audit_id = _parse_audit_id(audit_id)
+    settled_amount = _money(final_amount, "final_amount")
+
+    conn = connect_tiger_data()
+    try:
+        with conn:
+            with conn.cursor() as cursor:
+                # Lock the audit so duplicate/concurrent resolutions cannot overwrite each other.
+                cursor.execute(
+                    """
+                    SELECT status, total_billed
+                    FROM audit_records
+                    WHERE audit_id = %s
+                    FOR UPDATE
+                    """,
+                    (str(parsed_audit_id),),
+                )
+                row = cursor.fetchone()
+                if row is None:
+                    raise LookupError(f"No audit found for audit_id {parsed_audit_id}.")
+                previous_status, original_amount = row
+                if previous_status == "resolved":
+                    raise ValueError("Claim is already resolved.")
+                if previous_status not in {"audit_complete", "dispute_in_progress"}:
+                    raise ValueError(
+                        "Only completed audits can be resolved."
+                    )
+                # Savings are the original billed total minus the patient's final amount.
+                savings_amount = original_amount - settled_amount
+
+                cursor.execute(
+                    """
+                    UPDATE audit_records
+                    SET status = 'resolved',
+                        final_settled_amount = %s,
+                        savings_amount = %s,
+                        resolved_at = CURRENT_TIMESTAMP
+                    WHERE audit_id = %s
+                    RETURNING resolved_at
+                    """,
+                    (
+                        settled_amount,
+                        savings_amount,
+                        str(parsed_audit_id),
+                    ),
+                )
+                resolved_at = cursor.fetchone()[0]
+                cursor.execute(
+                    """
+                    INSERT INTO audit_events (
+                        audit_id, event_type, previous_status, new_status, details
+                    ) VALUES (%s, 'resolved', %s, 'resolved', %s)
+                    """,
+                    (
+                        str(parsed_audit_id),
+                        previous_status,
+                        psycopg2.extras.Json(
+                            {
+                                "original_amount": str(original_amount),
+                                "final_settled_amount": str(settled_amount),
+                                "savings_amount": str(savings_amount),
+                            }
+                        ),
+                    ),
+                )
+
+        return {
+            "audit_id": str(parsed_audit_id),
+            "status": "resolved",
+            "original_amount": original_amount,
+            "final_settled_amount": settled_amount,
+            "savings_amount": savings_amount,
+            "resolved_at": resolved_at.isoformat(),
+        }
+    finally:
+        conn.close()
+
+
+def get_database_snapshot(limit: int = 20) -> dict[str, Any]:
+    """Return a bounded, read-only view of Tiger Data tables for a dashboard."""
+    if not isinstance(limit, int) or isinstance(limit, bool) or limit < 1:
+        raise ValueError("limit must be a positive integer.")
+
+    conn = connect_tiger_data()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT current_schema()")
+            schema_name = cursor.fetchone()[0]
+            cursor.execute(
+                """
+                SELECT table_name
+                FROM information_schema.tables
+                WHERE table_schema = current_schema()
+                  AND table_name IN (
+                      'audit_records', 'audit_line_items', 'audit_events',
+                      'cpt_benchmarks'
+                  )
+                ORDER BY table_name
+                """
+            )
+            tables = [row[0] for row in cursor.fetchall()]
+            required_tables = {
+                "audit_records",
+                "audit_line_items",
+                "audit_events",
+                "cpt_benchmarks",
+            }
+            missing_tables = sorted(required_tables.difference(tables))
+            if missing_tables:
+                raise RuntimeError(
+                    "Tiger Data schema is not initialized; missing tables: "
+                    + ", ".join(missing_tables)
+                )
+
+            # Return the latest audits and their child rows without modifying data.
+            cursor.execute(
+                """
+                SELECT audit_id, claim_id, provider_name, provider_npi,
+                       service_date, total_billed, currency, region,
+                       overcharge_total, status, collection_deadline,
+                       credit_warning_date, final_settled_amount, savings_amount,
+                       resolved_at, created_at,
+                       -- Calculate countdowns against Tiger Data's date to avoid
+                       -- application-server timezone or clock differences.
+                       CASE
+                           WHEN status = 'resolved' OR collection_deadline IS NULL
+                               THEN NULL
+                           ELSE collection_deadline - CURRENT_DATE
+                       END,
+                       CASE
+                           WHEN status = 'resolved' OR credit_warning_date IS NULL
+                               THEN NULL
+                           ELSE credit_warning_date - CURRENT_DATE
+                       END
+                FROM audit_records
+                ORDER BY created_at DESC, audit_id DESC
+                LIMIT %s
+                """,
+                (limit,),
+            )
+            audit_rows = cursor.fetchall()
+            audits = [
+                {
+                    "audit_id": str(row[0]),
+                    "claim_id": row[1],
+                    "provider_name": row[2],
+                    "provider_npi": row[3],
+                    "service_date": row[4].isoformat() if row[4] else None,
+                    "total_billed": row[5],
+                    "currency": row[6],
+                    "region": row[7],
+                    "overcharge_total": row[8],
+                    "status": row[9],
+                    "collection_deadline": row[10].isoformat() if row[10] else None,
+                    "credit_warning_date": (
+                        row[11].isoformat() if row[11] else None
+                    ),
+                    "final_settled_amount": row[12],
+                    "savings_amount": row[13],
+                    "resolved_at": row[14].isoformat() if row[14] else None,
+                    "created_at": row[15].isoformat(),
+                    "collection_days_remaining": row[16],
+                    "credit_warning_days_remaining": row[17],
+                }
+                for row in audit_rows
+            ]
+            audit_ids = [str(row[0]) for row in audit_rows]
+
+            cursor.execute(
+                """
+                SELECT audit_id, position, code, description, amount,
+                       benchmark_amount, overcharge, benchmark_found, flagged
+                FROM audit_line_items
+                WHERE audit_id = ANY(%s::uuid[])
+                ORDER BY audit_id, position
+                LIMIT %s
+                """,
+                (audit_ids, limit),
+            )
+            line_items = [
+                {
+                    "audit_id": str(row[0]),
+                    "position": row[1],
+                    "code": row[2],
+                    "description": row[3],
+                    "amount": row[4],
+                    "benchmark_amount": row[5],
+                    "overcharge": row[6],
+                    "benchmark_found": row[7],
+                    "flagged": row[8],
+                }
+                for row in cursor.fetchall()
+            ]
+
+            cursor.execute(
+                """
+                SELECT audit_id, event_type, previous_status, new_status,
+                       details, occurred_at
+                FROM audit_events
+                WHERE audit_id = ANY(%s::uuid[])
+                ORDER BY occurred_at, event_id
+                LIMIT %s
+                """,
+                (audit_ids, limit),
+            )
+            events = [
+                {
+                    "audit_id": str(row[0]),
+                    "event_type": row[1],
+                    "previous_status": row[2],
+                    "new_status": row[3],
+                    "details": row[4],
+                    "occurred_at": row[5].isoformat(),
+                }
+                for row in cursor.fetchall()
+            ]
+
+            cursor.execute(
+                """
+                SELECT code, region, average_amount, source, updated_at
+                FROM cpt_benchmarks
+                ORDER BY region, code
+                LIMIT %s
+                """,
+                (limit,),
+            )
+            benchmarks = [
+                {
+                    "code": row[0],
+                    "region": row[1],
+                    "average_amount": row[2],
+                    "source": row[3],
+                    "updated_at": row[4].isoformat(),
+                }
+                for row in cursor.fetchall()
+            ]
+
+        return {
+            "database": conn.info.dbname,
+            "schema": schema_name,
+            "tables": tables,
+            "audit_records": audits,
+            "audit_line_items": line_items,
+            "audit_events": events,
+            "cpt_benchmarks": benchmarks,
+        }
+    finally:
+        conn.close()
+
+
+def _event_records(conn: connection, audit_id: str) -> list[dict[str, Any]]:
+    """Load the chronological timeline for an audit using the open connection."""
+    with conn.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT event_type, previous_status, new_status, details, occurred_at
+            FROM audit_events
+            WHERE audit_id = %s
+            ORDER BY occurred_at, event_id
+            """,
+            (audit_id,),
+        )
+        return [
+            {
+                "event_type": row[0],
+                "previous_status": row[1],
+                "new_status": row[2],
+                "details": row[3],
+                "occurred_at": row[4].isoformat(),
+            }
+            for row in cursor.fetchall()
+        ]
+
+
+def _parse_audit_id(audit_id: str | UUID) -> UUID:
+    try:
+        return UUID(str(audit_id))
+    except ValueError as exc:
+        raise ValueError("audit_id must be a valid UUID.") from exc
+
+
+def _optional_date(value: date | str | None, field_name: str) -> date | None:
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        raise ValueError(f"{field_name} must be a date, not a datetime.")
+    if isinstance(value, date):
+        return value
+    try:
+        return date.fromisoformat(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{field_name} must be an ISO date.") from exc
 
 
 def _normalize_line_item(item: Any, index: int) -> dict[str, Any]:
