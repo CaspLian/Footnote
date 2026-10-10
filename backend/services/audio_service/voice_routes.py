@@ -10,9 +10,10 @@ To switch them on, add two lines to backend/main.py, after `app = FastAPI(...)`:
     GET  /api/v1/voice/voices               the voices users can choose for replies (from voices.json)
     GET  /api/v1/voice/voices/{key}/sample  a short sample of one voice (MP3), to hear it before choosing
 
-The Gemini step is the team's services.gemini_service.analyze(), called the same way as
-/api/v1/analyze calls it, with the transcript as the user's text. The response's "analysis" field
-has exactly the shape /api/v1/analyze returns, so the app can show both the same way.
+The Gemini step is the team's services.gemini_service.analyze(), followed by the team's Snowflake
+price check (services.snowflake_service.check_prices), called the same way as /api/v1/analyze calls
+them, with the transcript as the user's text. The response's "analysis" field has exactly what
+/api/v1/analyze returns, price checks included, so the app can show both the same way.
 
 By default /analyze answers once the reply audio is finished. With stream_reply=true it answers as
 soon as the first audio exists and the audio URL plays while the rest is being made: faster, and
@@ -42,9 +43,10 @@ from services.audio_service.text_to_speech import (
     synthesize_streaming_async,
 )
 from services.gemini_service import analyze, is_mock, model_name
+from services.snowflake_service import check_prices
 
 MAX_BILL_MB = 15  # same limits as /api/v1/analyze in main.py
-GEMINI_TIMEOUT_S = 45
+GEMINI_TIMEOUT_S = 150  # same as main.py: covers 2 attempts x 2 models
 SAMPLE_TEXT = "Hi, I'm {name}. I can read your medical bill explanations out loud."
 
 router = APIRouter(prefix="/api/v1/voice", tags=["voice"])
@@ -187,7 +189,7 @@ async def voice_sample(voice_key: str):
 
 
 async def _ask_gemini(file_bytes: Optional[bytes], mime: Optional[str], text: str, target_language: str) -> AnalyzeResponse:
-    """The same call and error handling as /api/v1/analyze in main.py."""
+    """The same calls and error handling as /api/v1/analyze in main.py: Gemini, then the price check."""
     try:
         result = await asyncio.wait_for(
             analyze(file_bytes=file_bytes, mime_type=mime, text=text, target_language=target_language),
@@ -199,7 +201,17 @@ async def _ask_gemini(file_bytes: Optional[bytes], mime: Optional[str], text: st
         raise HTTPException(504, detail={"stage": "gemini", "message": "Gemini took too long. Try again."})
     except Exception as e:  # API key problems, quota, network, bad output
         raise HTTPException(502, detail={"stage": "gemini", "message": f"Gemini step failed: {e}"})
-    return AnalyzeResponse(target_language=target_language, model=model_name(), mock=is_mock(), result=result)
+
+    # Compare each line item to Medicare's rate in Snowflake (never fails the request), as main.py does.
+    price_checks, price_summary = await check_prices(result.line_items)
+    return AnalyzeResponse(
+        target_language=target_language,
+        model=model_name(),
+        mock=is_mock(),
+        result=result,
+        price_checks=price_checks,
+        price_summary=price_summary,
+    )
 
 
 async def _speak(request_id: str, text: str, language: str, voice: Optional[str], stream: bool = False) -> Speech:

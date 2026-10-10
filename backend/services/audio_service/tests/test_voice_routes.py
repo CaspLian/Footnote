@@ -43,10 +43,37 @@ class FakeGemini:
             raise self.error
         return self.models.GeminiResult(
             document_type="hospital_bill",
+            line_items=[
+                self.models.LineItem(
+                    cpt_code="70551", original_description="MRI BRAIN W/O DYE", plain_description="Brain MRI",
+                    billed_amount=3200.0,
+                )
+            ],
             plain_summary="Your MRI was billed at $3,200, more than a typical $1,400.",
             spoken_summary="Your MRI was billed at three thousand two hundred dollars.",
             questions_to_ask=["Can you explain the MRI charge?"],
         )
+
+
+class FakePriceCheck:
+    """Stands in for services.snowflake_service.check_prices (the real one queries Snowflake)."""
+
+    def __init__(self, models):
+        self.models = models
+        self.calls = []
+
+    async def check_prices(self, line_items):
+        self.calls.append(line_items)
+        checks = [
+            self.models.PriceCheck(
+                line_index=0, cpt_code="70551", billed_amount=3200.0, medicare_rate=400.0, times_medicare=8.0,
+                flag="far_above_typical", note="About 8 times Medicare's rate.",
+            )
+        ]
+        summary = self.models.PriceSummary(
+            source="local_csv", items_checked=1, items_flagged=1, billed_total_checked=3200.0, medicare_total_checked=400.0
+        )
+        return checks, summary
 
 
 class FakeScribe:
@@ -93,6 +120,10 @@ def voice(monkeypatch):
     fake_module.is_mock = lambda: True
     fake_module.model_name = lambda: "fake-gemini"
     monkeypatch.setitem(sys.modules, "services.gemini_service", fake_module)
+    prices = FakePriceCheck(models)
+    fake_prices = types.ModuleType("services.snowflake_service")
+    fake_prices.check_prices = prices.check_prices
+    monkeypatch.setitem(sys.modules, "services.snowflake_service", fake_prices)
     monkeypatch.delitem(sys.modules, "services.audio_service.voice_routes", raising=False)
     routes = importlib.import_module("services.audio_service.voice_routes")
 
@@ -120,7 +151,8 @@ def voice(monkeypatch):
     app = FastAPI()
     app.include_router(routes.router)
     return types.SimpleNamespace(
-        client=TestClient(app), gemini=gemini, scribe=scribe, speaker=speaker, routes=routes, stt_errors=stt_provider
+        client=TestClient(app), gemini=gemini, prices=prices, scribe=scribe, speaker=speaker, routes=routes,
+        stt_errors=stt_provider,
     )
 
 
@@ -152,6 +184,18 @@ def test_spoken_question_reaches_gemini_and_the_reply_is_spoken(voice):
     audio = voice.client.get(body["speech"]["audio_url"])
     assert audio.status_code == 200 and audio.headers["content-type"] == "audio/mpeg"
     assert audio.content == b"ID3Your MRI was billed at three thousand two hundred dollars."
+
+
+def test_the_bill_gets_the_same_price_check_as_the_analyze_endpoint(voice):
+    analysis = ask(voice).json()["analysis"]
+    # Gemini's line items went to the team's price check, and its answer is in the response.
+    assert [item.cpt_code for item in voice.prices.calls[0]] == ["70551"]
+    assert analysis["price_checks"][0]["flag"] == "far_above_typical"
+    assert analysis["price_summary"]["source"] == "local_csv" and analysis["price_summary"]["items_flagged"] == 1
+
+
+def test_gemini_gets_as_long_as_on_the_analyze_endpoint(voice):
+    assert voice.routes.GEMINI_TIMEOUT_S == 150  # main.py: 2 attempts x 2 models
 
 
 def test_a_bill_photo_can_come_with_the_question(voice):
