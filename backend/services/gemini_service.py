@@ -5,13 +5,14 @@ Use analyze() from anywhere in the backend:
     result = await analyze(file_bytes=..., mime_type="image/jpeg", target_language="es")
     result.spoken_summary   # <- hand this to ElevenLabs
 """
+import asyncio
 import json
 import os
 from pathlib import Path
 from typing import Optional
 
 from google import genai
-from google.genai import types
+from google.genai import errors, types
 from pydantic import ValidationError
 
 from models import GeminiResult
@@ -35,6 +36,9 @@ Rules:
 - Flag things that are worth asking about (duplicate charges, vague "facility" or "miscellaneous" fees,
   charges without a code), but do NOT tell the patient they definitely don't owe money or give legal advice.
 - If the input is not a medical or insurance document, set document_type to "other" and explain that briefly."""
+
+RETRYABLE_CODES = {429, 500, 503}
+ATTEMPT_TIMEOUT_S = int(os.getenv("GEMINI_ATTEMPT_TIMEOUT_S", "40"))
 
 _client: Optional[genai.Client] = None
 MOCK_PATH = Path(__file__).parent / "mock_gemini_response.json"
@@ -91,13 +95,35 @@ async def analyze(
     )
 
     client = _get_client()
+    models = [model_name()]
+    fallback = os.getenv("GEMINI_FALLBACK_MODEL", "").strip()
+    if fallback and fallback not in models:
+        models.append(fallback)
+
     last_error: Exception | None = None
-    for _ in range(2):  # one retry if Gemini returns something that doesn't fit the schema
-        response = await client.aio.models.generate_content(model=model_name(), contents=parts, config=config)
-        try:
-            if isinstance(response.parsed, GeminiResult):
-                return response.parsed
-            return GeminiResult.model_validate(json.loads(response.text or ""))
-        except (ValidationError, json.JSONDecodeError) as e:
-            last_error = e
-    raise RuntimeError(f"Gemini returned output that didn't match the schema: {last_error}")
+    for model in models:
+        # Each attempt gets its own time limit, so one hung call can't eat the whole budget.
+        # Busy/rate-limited/slow responses are retried, then we move on to the fallback model.
+        for wait in (0, 2):
+            if wait:
+                await asyncio.sleep(wait)
+            try:
+                response = await asyncio.wait_for(
+                    client.aio.models.generate_content(model=model, contents=parts, config=config),
+                    timeout=ATTEMPT_TIMEOUT_S,
+                )
+            except asyncio.TimeoutError:
+                last_error = TimeoutError(f"{model} took longer than {ATTEMPT_TIMEOUT_S}s")
+                continue
+            except errors.APIError as e:
+                last_error = e
+                if e.code in RETRYABLE_CODES:
+                    continue
+                raise
+            try:
+                if isinstance(response.parsed, GeminiResult):
+                    return response.parsed
+                return GeminiResult.model_validate(json.loads(response.text or ""))
+            except (ValidationError, json.JSONDecodeError) as e:
+                last_error = e  # output didn't fit the schema: ask again
+    raise RuntimeError(f"Gemini is unavailable right now, try again shortly. Last error: {last_error}")

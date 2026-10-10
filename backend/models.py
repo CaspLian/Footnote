@@ -38,8 +38,31 @@ class GeminiResult(BaseModel):
     )
 
 
+class PriceCheck(BaseModel):
+    """One line item compared against Medicare's national rate (from Snowflake)."""
+    line_index: int
+    cpt_code: Optional[str]
+    billed_amount: Optional[float]
+    medicare_rate: Optional[float] = None
+    medicare_description: Optional[str] = None
+    times_medicare: Optional[float] = Field(None, description="billed_amount / medicare_rate, rounded to 1 decimal")
+    flag: str = Field(description="no_code | no_benchmark | no_amount | typical | above_typical | far_above_typical")
+    note: str = Field(description="Short plain-English explanation of the comparison")
+
+
+class PriceSummary(BaseModel):
+    source: str = Field(description="snowflake | local_csv | unavailable")
+    items_checked: int = 0
+    items_flagged: int = 0
+    billed_total_checked: float = 0.0
+    medicare_total_checked: float = 0.0
+    error: Optional[str] = None
+
+
 class AnalyzeResponse(BaseModel):
     target_language: str
     model: str
     mock: bool
     result: GeminiResult
+    price_checks: list[PriceCheck] = Field(default_factory=list)
+    price_summary: Optional[PriceSummary] = None
