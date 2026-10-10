@@ -77,7 +77,8 @@ def run(config: TTSConfig, session: requests.Session, out=print, catalog: VoiceC
         where = "in your account" if any(v.get("voice_id") == config.voice_id for v in voices) else "not in your account"
         out(f"   ELEVENLABS_VOICE_ID={config.voice_id} replaces the default voice ({catalog.default_key}); {where}.")
 
-    out(f"\nModel {config.model_id}, format {config.output_format}.")
+    number_reading = config.audio_settings().get("apply_text_normalization", "auto")
+    out(f"\nModel {config.model_id}, format {config.output_format}, number reading {number_reading}.")
     if problems:
         out("Fix the items above, then run: python -m text_to_speech.demo")
         return 1

@@ -36,6 +36,22 @@ else:
   `audio_service/.tts_cache/` is shared by all processes and survives restarts.
 - Settings come from `backend/.env`; every setting is explained in `audio_service/.env.example`.
 
+### Faster: start playing before the clip is finished
+
+```python
+from services.audio_service.text_to_speech import open_audio, synthesize_streaming_async
+
+result = await synthesize_streaming_async(TTSRequest(request_id=message_id, text=answer))
+# Returns at the first audio (result.elapsed_ms). If result.streaming is True, result.audio is
+# None: give the app f"/api/v1/voice/audio/{result.audio_id}", which serves open_audio(audio_id).
+```
+
+`open_audio(audio_id)` gives an `AudioStream`: finished audio in one piece (`complete=True`), or
+audio still being made, piece by piece as it arrives (`complete=False`). `audio_http.audio_response()`
+turns it into the right HTTP response (byte ranges for finished clips, a stream for the rest).
+Streaming plays in Chrome, Edge, Firefox and on Android; iPhones may wait or fail, so test there
+first (see "Speed" in [the main README](../README.md)).
+
 ## 2. The contract
 
 ### `TTSRequest` (backend → TTS)
@@ -47,6 +63,7 @@ else:
 | `speech_text` | `str` or `None` | Optional speech-ready version of the answer. Used instead of `text` when given (see section 6). |
 | `language` | `str`, default `"en"` | Only English for now. |
 | `voice` | `str` or `None` | The user's voice choice, a key from `voices.json` (see "Voices" below). `None` = the default voice. |
+| `model` | `str` or `None` | Optional ElevenLabs model for this request: `eleven_multilingual_v2`, `eleven_flash_v2_5`, `eleven_v4_turbo` or `eleven_v4` (`config.MODELS`). `None` = `ELEVENLABS_MODEL_ID`. |
 
 Pass the answer **text**, not Gemini's response object. A non-string `text` returns `INVALID_REQUEST`.
 Streaming (partial) Gemini output is not supported yet: send the finished answer.
@@ -56,15 +73,16 @@ Streaming (partial) Gemini output is not supported yet: send the finished answer
 | Field | Meaning |
 |---|---|
 | `request_id` | Same as in the request |
-| `ok` | `True` if `audio` is present |
-| `audio`, `mime_type` | The audio bytes and their type (`audio/mpeg`) |
+| `ok` | `True` if the audio exists (or, when `streaming`, has started) |
+| `audio`, `mime_type` | The audio bytes and their type (`audio/mpeg`). `audio` is `None` while `streaming`. |
 | `audio_id` | Content-based ID: same text + same voice + same settings → same ID. Use it in audio URLs. |
-| `voice` | Key of the voice used, e.g. `"matilda"` |
+| `voice`, `model` | Key of the voice used, e.g. `"matilda"`, and the ElevenLabs model |
+| `streaming` | `True` from `synthesize_streaming()` when the rest of the audio is still being made |
 | `spoken_text` | Exactly what was sent to ElevenLabs after cleanup (captions, debugging) |
 | `cached` | `True` = no new ElevenLabs generation was needed (no cost) |
 | `characters_sent` | Characters this call sent to ElevenLabs (0 when cached) |
 | `characters_billed` | ElevenLabs' own `character-cost` header, when it sends one |
-| `attempts`, `elapsed_ms` | ElevenLabs attempts made, and total time taken |
+| `attempts`, `elapsed_ms` | ElevenLabs attempts made, and time taken (to the first audio when `streaming`) |
 | `provider_request_id` | ElevenLabs' request ID, useful for their support |
 | `error_code`, `error_message`, `retryable` | Set when `ok` is `False` |
 

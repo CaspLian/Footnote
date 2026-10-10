@@ -1,21 +1,27 @@
 """The only file that talks to ElevenLabs.
 
-One call to generate(text, voice_id) = one HTTPS request:
+One call = one HTTPS request:
 
-    POST {base_url}/v1/text-to-speech/{voice_id}?output_format=mp3_44100_128
+    POST {base_url}/v1/text-to-speech/{voice_id}[/stream]?output_format=mp3_44100_128
     xi-api-key: <your key>
-    {"text": "...", "model_id": "...", "voice_settings": {...}}
+    {"text": "...", "model_id": "...", "voice_settings": {...}, "apply_text_normalization": "on"}
 
     200 -> audio bytes (+ "request-id" and "character-cost" headers)
     4xx/5xx -> JSON {"detail": ...} describing the error
 
+generate()    waits for the whole clip (the plain endpoint sends it in one piece at the end).
+open_stream() returns as soon as ElevenLabs starts sending (the /stream endpoint sends the audio
+              in pieces while it is still being made), so playback can start sooner.
+
 Retries are not done here; service.py decides whether to try again.
 Reference: https://elevenlabs.io/docs/api-reference/text-to-speech/convert
+       and https://elevenlabs.io/docs/api-reference/text-to-speech/stream
 """
 
 from __future__ import annotations
 
 import time
+from collections.abc import Iterator
 from dataclasses import dataclass
 from urllib.parse import quote
 
@@ -50,19 +56,55 @@ class ProviderAudio:
     characters_billed: int | None = None  # ElevenLabs "character-cost" header
 
 
+@dataclass(frozen=True)
+class ProviderStream:
+    """Audio that is still arriving. The headers (and so the cost) are known before the audio."""
+
+    chunks: Iterator[bytes]  # the audio piece by piece; raises TTSError if the connection breaks
+    request_id: str | None = None
+    characters_billed: int | None = None
+
+
 class ElevenLabsProvider:
     def __init__(self, config: TTSConfig, session: requests.Session | None = None, *, clock=time.monotonic) -> None:
         self._config = config
         self._session = session if session is not None else requests.Session()
         self._clock = clock
 
-    def generate(self, text: str, voice_id: str) -> ProviderAudio:
+    def generate(self, text: str, voice_id: str, settings: dict | None = None) -> ProviderAudio:
+        """All the audio at once. settings: from TTSConfig.audio_settings(); None = the config's own."""
+        response, deadline = self._post(text, voice_id, settings, endpoint="")
+        try:
+            audio = self._read_body(response, deadline)
+        finally:
+            response.close()
+        return ProviderAudio(
+            audio=audio,
+            request_id=_request_id(response),
+            characters_billed=_int_header(response, "character-cost"),
+        )
+
+    def open_stream(self, text: str, voice_id: str, settings: dict | None = None) -> ProviderStream:
+        """Returns once ElevenLabs starts answering. Errors that happen before any audio (bad key,
+        no credits, unknown voice...) are raised here; read .chunks for the audio as it arrives,
+        and close it (or read it to the end) to release the connection."""
+        response, deadline = self._post(text, voice_id, settings, endpoint="/stream")
+        return ProviderStream(
+            chunks=self._iter_body(response, deadline),
+            request_id=_request_id(response),
+            characters_billed=_int_header(response, "character-cost"),
+        )
+
+    def _post(self, text: str, voice_id: str, settings: dict | None, *, endpoint: str):
+        """Send the request and check the answer's status. Returns (open response, deadline)."""
         config = self._config
-        settings = config.audio_settings()
-        url = f"{config.base_url}/v1/text-to-speech/{quote(voice_id, safe='')}"
+        settings = settings if settings is not None else config.audio_settings()
+        url = f"{config.base_url}/v1/text-to-speech/{quote(voice_id, safe='')}{endpoint}"
         body: dict = {"text": text, "model_id": settings["model_id"]}
-        if settings["voice_settings"]:
+        if settings.get("voice_settings"):
             body["voice_settings"] = settings["voice_settings"]
+        if settings.get("apply_text_normalization"):
+            body["apply_text_normalization"] = settings["apply_text_normalization"]
 
         # requests' timeouts limit each wait for data, not the whole call, so we also check a
         # total deadline as data arrives (worst case: the deadline plus one stalled read).
@@ -98,15 +140,10 @@ class ElevenLabsProvider:
                     status_code=200,
                     provider_request_id=_request_id(response),
                 )
-            audio = self._read_body(response, deadline)
-        finally:
+        except BaseException:
             response.close()
-
-        return ProviderAudio(
-            audio=audio,
-            request_id=_request_id(response),
-            characters_billed=_int_header(response, "character-cost"),
-        )
+            raise
+        return response, deadline
 
     def _read_body(self, response: requests.Response, deadline: float) -> bytes:
         chunks = []
@@ -116,13 +153,20 @@ class ElevenLabsProvider:
                 if self._clock() > deadline:
                     raise _timeout_error(self._config.timeout_seconds)
         except requests.RequestException:  # connection dropped or stalled mid-download
-            raise TTSError(
-                ErrorCode.PROVIDER_UNAVAILABLE,
-                "The connection to ElevenLabs broke while downloading the audio.",
-                retryable=True,
-                provider_request_id=_request_id(response),
-            ) from None
+            raise _broken_connection_error(response) from None
         return b"".join(chunks)
+
+    def _iter_body(self, response: requests.Response, deadline: float) -> Iterator[bytes]:
+        try:
+            for chunk in response.iter_content(chunk_size=None):  # each piece as soon as it arrives
+                if chunk:
+                    yield chunk
+                if self._clock() > deadline:
+                    raise _timeout_error(self._config.timeout_seconds)
+        except requests.RequestException:
+            raise _broken_connection_error(response) from None
+        finally:
+            response.close()
 
 
 def _timeout_error(timeout_seconds: float) -> TTSError:
@@ -130,6 +174,15 @@ def _timeout_error(timeout_seconds: float) -> TTSError:
         ErrorCode.PROVIDER_TIMEOUT,
         f"ElevenLabs did not finish within {timeout_seconds:g}s (TTS_TIMEOUT_SECONDS).",
         retryable=True,
+    )
+
+
+def _broken_connection_error(response: requests.Response) -> TTSError:
+    return TTSError(
+        ErrorCode.PROVIDER_UNAVAILABLE,
+        "The connection to ElevenLabs broke while downloading the audio.",
+        retryable=True,
+        provider_request_id=_request_id(response),
     )
 
 

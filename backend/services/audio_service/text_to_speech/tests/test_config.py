@@ -12,7 +12,7 @@ def clean_env(monkeypatch, tmp_path):
     for name in [
         "ELEVENLABS_API_KEY", "ELEVENLABS_VOICE_ID", "ELEVENLABS_MODEL_ID", "ELEVENLABS_OUTPUT_FORMAT",
         "ELEVENLABS_SPEED", "TTS_MAX_CHARS", "TTS_TIMEOUT_SECONDS", "TTS_MAX_RETRIES", "TTS_CACHE_DIR",
-        "ELEVENLABS_BASE_URL",
+        "ELEVENLABS_BASE_URL", "ELEVENLABS_TEXT_NORMALIZATION",
     ]:
         monkeypatch.delenv(name, raising=False)
     return monkeypatch
@@ -112,3 +112,43 @@ def test_speed_goes_into_voice_settings_and_audio_settings(clean_env):
     config = TTSConfig.from_env()
     assert config.voice_settings() == {"speed": 1.1}
     assert config.audio_settings()["voice_settings"] == {"speed": 1.1}
+
+
+def test_default_audio_settings_are_unchanged_so_cached_audio_stays_valid(clean_env):
+    # The cache key is built from these. Adding a key here would make every clip already made
+    # (and paid for) unreachable, so new settings are only added when they are not the default.
+    assert TTSConfig.from_env().audio_settings() == {
+        "model_id": "eleven_multilingual_v2",
+        "output_format": "mp3_44100_128",
+        "voice_settings": None,
+    }
+
+
+def test_flash_and_turbo_get_number_reading_on_by_default(clean_env):
+    config = TTSConfig.from_env()
+    for model in ("eleven_flash_v2_5", "eleven_turbo_v2_5"):
+        assert config.audio_settings(model)["apply_text_normalization"] == "on"
+    for model in ("eleven_multilingual_v2", "eleven_v4", "eleven_v4_turbo"):
+        assert "apply_text_normalization" not in config.audio_settings(model)  # ElevenLabs' "auto"
+
+
+@pytest.mark.parametrize("value, flash, multilingual", [("ON", "on", "on"), ("off", "off", "off"), ("auto", None, None)])
+def test_number_reading_setting_applies_to_every_model(clean_env, value, flash, multilingual):
+    clean_env.setenv("ELEVENLABS_TEXT_NORMALIZATION", value)
+    config = TTSConfig.from_env()
+    assert config.audio_settings("eleven_flash_v2_5").get("apply_text_normalization") == flash
+    assert config.audio_settings().get("apply_text_normalization") == multilingual
+
+
+def test_bad_number_reading_setting_fails_at_startup(clean_env):
+    clean_env.setenv("ELEVENLABS_TEXT_NORMALIZATION", "yes")
+    with pytest.raises(ValueError, match="auto, on, off"):
+        TTSConfig.from_env()
+
+
+def test_speed_is_left_out_for_models_without_it(clean_env):
+    clean_env.setenv("ELEVENLABS_SPEED", "1.1")
+    config = TTSConfig.from_env()
+    assert config.audio_settings("eleven_flash_v2_5")["voice_settings"] == {"speed": 1.1}
+    assert config.audio_settings("eleven_v4")["voice_settings"] is None
+    assert config.audio_settings("eleven_v4_turbo")["voice_settings"] is None

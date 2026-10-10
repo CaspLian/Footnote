@@ -29,6 +29,35 @@ DEFAULT_CACHE_DIR = str(SERVICE_DIR / ".tts_cache")
 DEFAULT_TIMEOUT_SECONDS = 60.0
 SPEED_RANGE = (0.7, 1.2)  # documented range for voice_settings.speed
 PLACEHOLDER_API_KEY = "your-elevenlabs-api-key-here"  # the value in .env.example
+TEXT_NORMALIZATION_VALUES = ("auto", "on", "off")  # ElevenLabs' apply_text_normalization
+
+# Models a request may choose (TTSRequest.model), besides ELEVENLABS_MODEL_ID. Measured 2026-10-09
+# on our Creator plan, voice Matilda, a 222-character bill text full of numbers (README, "Speed"):
+#                              first audio   all audio   credits per character   numbers read right
+#   eleven_multilingual_v2     3.6 s         4.0 s       0.44                    yes
+#   eleven_flash_v2_5          1.0 s         1.8 s       0.22                    yes (with number reading on)
+#   eleven_v4_turbo            1.0 s         5.7 s       0.06                    yes
+#   eleven_v4                  1.2 s         6.7 s       0.12                    yes
+MODELS = {
+    "eleven_multilingual_v2": "Multilingual v2",
+    "eleven_flash_v2_5": "Flash v2.5",
+    "eleven_v4_turbo": "v4 Turbo",
+    "eleven_v4": "v4",
+}
+
+
+def default_text_normalization(model_id: str) -> str:
+    """How ElevenLabs should read numbers, money and dates for a model.
+
+    Flash and Turbo models misread money, codes and ranges with ElevenLabs' default ("auto") in
+    our test: "$12,345.67" became "12,340.67", "E11.9" became "11.9". With "on" they read every
+    one correctly. The other models read them correctly with "auto"."""
+    return "on" if model_id.startswith(("eleven_flash_", "eleven_turbo_")) else "auto"
+
+
+def supports_speed(model_id: str) -> bool:
+    """voice_settings.speed is not available on the v3 and v4 models."""
+    return not model_id.startswith(("eleven_v3", "eleven_v4"))
 
 _MIME_TYPES = {
     "mp3": "audio/mpeg",
@@ -48,6 +77,8 @@ class TTSConfig:
     model_id: str = DEFAULT_MODEL_ID
     output_format: str = DEFAULT_OUTPUT_FORMAT
     speed: float | None = None  # None = use the voice's own default speed
+    # ELEVENLABS_TEXT_NORMALIZATION: "auto", "on" or "off". None = default_text_normalization().
+    text_normalization: str | None = None
     max_chars: int = 2500
     # Measured 2026-10-09: 873 characters took 13.9 s on eleven_multilingual_v2, so a full
     # TTS_MAX_CHARS answer (2,500) can take about 40 s. A timeout does not stop the billing.
@@ -74,6 +105,7 @@ class TTSConfig:
             model_id=_env_str("ELEVENLABS_MODEL_ID", DEFAULT_MODEL_ID),
             output_format=_env_str("ELEVENLABS_OUTPUT_FORMAT", DEFAULT_OUTPUT_FORMAT),
             speed=speed,
+            text_normalization=_env_choice("ELEVENLABS_TEXT_NORMALIZATION", TEXT_NORMALIZATION_VALUES),
             max_chars=_env_int("TTS_MAX_CHARS", 2500, minimum=1),
             timeout_seconds=_env_float("TTS_TIMEOUT_SECONDS", DEFAULT_TIMEOUT_SECONDS, minimum=1.0),
             max_retries=_env_int("TTS_MAX_RETRIES", 1, minimum=0, maximum=3),
@@ -93,21 +125,27 @@ class TTSConfig:
     def mime_type(self) -> str:
         return _MIME_TYPES.get(self.file_extension, "application/octet-stream")
 
-    def voice_settings(self) -> dict | None:
+    def voice_settings(self, model_id: str | None = None) -> dict | None:
         """Voice settings sent to ElevenLabs. None = use the voice's saved settings."""
         settings = {}
-        if self.speed is not None:
+        if self.speed is not None and supports_speed(model_id or self.model_id):
             settings["speed"] = self.speed
         return settings or None
 
-    def audio_settings(self) -> dict:
-        """Every setting that changes the sound, apart from the voice (chosen per request). The cache
-        key is built from these plus the voice, so a change can never replay audio made with old settings."""
-        return {
-            "model_id": self.model_id,
+    def audio_settings(self, model_id: str | None = None) -> dict:
+        """Every setting that changes the sound, apart from the voice (chosen per request), for this
+        config's model or the given one. The cache key is built from these plus the voice, so a
+        change can never replay audio made with old settings."""
+        model_id = model_id or self.model_id
+        settings = {
+            "model_id": model_id,
             "output_format": self.output_format,
-            "voice_settings": self.voice_settings(),
+            "voice_settings": self.voice_settings(model_id),
         }
+        normalization = self.text_normalization or default_text_normalization(model_id)
+        if normalization != "auto":  # "auto" is ElevenLabs' default: leaving it out keeps older cache keys
+            settings["apply_text_normalization"] = normalization
+        return settings
 
 
 def find_env_file() -> str | None:
@@ -138,6 +176,15 @@ def _cache_dir_from_env() -> str | None:
 
 def _env_str(name: str, default: str) -> str:
     return os.environ.get(name, default).strip()
+
+
+def _env_choice(name: str, choices: tuple[str, ...]) -> str | None:
+    raw = os.environ.get(name, "").strip().lower()
+    if not raw:
+        return None
+    if raw not in choices:
+        raise ValueError(f"{name} must be one of {', '.join(choices)}, got {raw!r}")
+    return raw
 
 
 def _env_int(name: str, default: int, *, minimum: int | None = None, maximum: int | None = None) -> int:

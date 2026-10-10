@@ -74,7 +74,7 @@ class FakeVoice:
         self.voice_ids = []
         self.error = None
 
-    def generate(self, text, voice_id):
+    def generate(self, text, voice_id, settings=None):
         self.texts.append(text)
         self.voice_ids.append(voice_id)
         if self.error:
@@ -165,8 +165,8 @@ def test_the_spoken_language_goes_to_both_speech_to_text_and_gemini(voice):
     assert voice.scribe.calls[0]["language"] == "es" and voice.gemini.calls[0]["lang"] == "es"
     # The reply voice is English-only for now: the text answer still comes back.
     assert response.json()["speech"] == {
-        "ok": False, "audio_url": None, "mime_type": None, "voice": None, "error_code": "INVALID_REQUEST",
-        "error_message": "Only English is supported for now (language='es').",
+        "ok": False, "audio_url": None, "mime_type": None, "voice": None, "streaming": False,
+        "error_code": "INVALID_REQUEST", "error_message": "Only English is supported for now (language='es').",
     }
 
 
@@ -302,3 +302,74 @@ def test_sample_failure_is_reported(voice):
     voice.speaker.error = RuntimeError("voice down")
     response = voice.client.get("/api/v1/voice/voices/george/sample")
     assert response.status_code == 502 and response.json()["detail"]["stage"] == "text_to_speech"
+
+
+# --- Speed: byte ranges and streaming ------------------------------------------------------------
+
+
+def test_reply_audio_supports_byte_ranges_for_iphones(voice):
+    url = ask(voice).json()["speech"]["audio_url"]
+    probe = voice.client.get(url, headers={"Range": "bytes=0-1"})  # what AVPlayer asks for first
+    assert probe.status_code == 206 and probe.content == b"ID"
+    assert probe.headers["content-range"].startswith("bytes 0-1/")
+    assert probe.headers["cache-control"] == "public, max-age=31536000, immutable"
+    assert voice.client.get(url).headers["accept-ranges"] == "bytes"
+
+
+def test_finished_reply_is_the_default_so_iphones_can_play_it(voice):
+    speech = ask(voice).json()["speech"]
+    assert speech["ok"] is True and speech["streaming"] is False
+
+
+class GatedStreamingVoice:
+    """open_stream() sends the first piece at once and the rest when the test says so."""
+
+    def __init__(self, provider_module):
+        import threading
+
+        self.module = provider_module
+        self.release = threading.Event()
+
+    def generate(self, text, voice_id, settings=None):
+        raise AssertionError("streaming should use open_stream()")
+
+    def open_stream(self, text, voice_id, settings=None):
+        def chunks():
+            yield b"ID3"
+            assert self.release.wait(5), "the test never released the rest of the audio"
+            yield b"-rest of the reply"
+
+        return self.module.ProviderStream(chunks(), request_id="tts-s", characters_billed=len(text))
+
+
+def test_stream_reply_answers_at_the_first_audio_and_streams_the_rest(voice, monkeypatch):
+    import threading
+    import time
+
+    tts_service = importlib.import_module("services.audio_service.text_to_speech.service")
+    tts_config = importlib.import_module("services.audio_service.text_to_speech.config")
+    tts_cache = importlib.import_module("services.audio_service.text_to_speech.cache")
+    tts_provider = importlib.import_module("services.audio_service.text_to_speech.elevenlabs_provider")
+    speaker = GatedStreamingVoice(tts_provider)
+    service = tts_service.TTSService(
+        tts_config.TTSConfig(api_key="k", voice_id="v", cache_dir=None), speaker, tts_cache.AudioCache(None),
+        pronunciations={}, sleep=lambda s: None,
+    )
+    monkeypatch.setattr(tts_service, "_default_service", service)
+
+    speech = ask(voice, stream_reply="true").json()["speech"]  # returns while the rest is held back
+    assert speech["ok"] is True and speech["streaming"] is True
+
+    received = {}
+    listener = threading.Thread(target=lambda: received.update(response=voice.client.get(speech["audio_url"])))
+    listener.start()
+    audio_id = speech["audio_url"].rsplit("/", 1)[1]
+    deadline = time.monotonic() + 5
+    while not getattr(service._in_flight.get(audio_id), "_delivered", True) and time.monotonic() < deadline:
+        time.sleep(0.01)  # until the listener has the first piece
+    speaker.release.set()
+    listener.join(5)
+
+    response = received["response"]
+    assert response.status_code == 200 and response.content == b"ID3-rest of the reply"
+    assert response.headers["cache-control"] == "no-store"  # a stream is never cached for good

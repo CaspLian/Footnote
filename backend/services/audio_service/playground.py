@@ -5,7 +5,11 @@
 
 The page sends your text to POST /api/speak on this small server: the text-to-speech receiver.
 It uses the same text_to_speech module the backend uses, so it costs the same credits (about
-0.44 per character; the same text in the same voice again is free).
+0.44 per character on today's model; the same text in the same voice again is free).
+
+The audio is streamed: /api/speak answers as soon as the first audio exists, and the page plays
+/api/audio/{id} while the rest is still being made. The page can also switch models, to compare
+speed and sound (see MODEL_NOTES).
 
 It only listens on this computer (127.0.0.1), so nobody else on the network can use it to spend
 your credits. Stop it with Ctrl+C.
@@ -22,16 +26,30 @@ import webbrowser
 from pathlib import Path
 from typing import Optional
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, Response
 from pydantic import BaseModel, Field
 
-from text_to_speech import TTSRequest, get_audio, list_voices, synthesize_async
-from text_to_speech.config import TTSConfig
+from audio_http import audio_response
+from text_to_speech import TTSRequest, list_voices, open_audio, synthesize_async, synthesize_streaming_async
+from text_to_speech.config import MODELS, TTSConfig
+from text_to_speech.service import get_service
 
 PAGE_FILE = Path(__file__).with_name("playground.html")
 SAMPLE_TEXT = "Hi, I'm {name}. I can read your medical bill explanations out loud."
 DEFAULT_PORT = 8765
+
+# Measured 2026-10-09 on our Creator plan: first audio for a 95-character / 222-character text full
+# of numbers. Credits per character are what ElevenLabs' character-cost header reported; for v4 and
+# v4 Turbo they are the regular rates, because the 72%-off launch price we measured ends Oct 12, 2026.
+MODEL_NOTES = {
+    "eleven_multilingual_v2": (0.44, "today's default. First audio in about 1.5 s, or 3.6 s for longer text"),
+    "eleven_flash_v2_5": (0.22, "fastest. First audio in about 0.3-1 s; numbers are read right with number "
+                                "reading on (sent automatically); ElevenLabs says the quality is slightly lower"),
+    "eleven_v4_turbo": (0.22, "newest real-time model. First audio in about 0.4-1 s, but slow to finish; "
+                              "ElevenLabs documents it for its dialogue API, it works here too"),
+    "eleven_v4": (0.44, "newest quality model. First audio in about 0.7-1.2 s, slow to finish"),
+}
 
 app = FastAPI(title="ClaimPulse voice playground")
 
@@ -39,6 +57,7 @@ app = FastAPI(title="ClaimPulse voice playground")
 class SpeakRequest(BaseModel):
     text: str = Field(max_length=10_000)  # the module's own limit (TTS_MAX_CHARS) is checked after cleanup
     voice: Optional[str] = None
+    model: Optional[str] = None  # a key of text_to_speech.config.MODELS; None = ELEVENLABS_MODEL_ID
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -55,11 +74,35 @@ def voices():
         raise HTTPException(500, detail=str(e))
 
 
+@app.get("/api/models")
+def models():
+    """The models the page can switch between, with what we measured for each."""
+    try:
+        default = get_service().config.model_id
+    except ValueError as e:
+        raise HTTPException(500, detail=str(e))
+    choices = dict(MODELS)
+    choices.setdefault(default, default)  # an ELEVENLABS_MODEL_ID outside the list is still offered
+    return {
+        "default": default,
+        "models": [
+            {
+                "id": model_id,
+                "label": label,
+                "credits_per_character": MODEL_NOTES.get(model_id, (None, ""))[0],
+                "note": MODEL_NOTES.get(model_id, (None, ""))[1],
+            }
+            for model_id, label in choices.items()
+        ],
+    }
+
+
 @app.post("/api/speak")
 async def speak(body: SpeakRequest):
-    """The text-to-speech receiver: text and a voice in; a link to the audio and the cost out."""
-    result = await synthesize_async(
-        TTSRequest(request_id=f"playground-{uuid.uuid4().hex[:8]}", text=body.text, voice=body.voice)
+    """The text-to-speech receiver: text, a voice and a model in; a link to the audio and the cost out.
+    It answers as soon as the first audio exists; the link plays while the rest is being made."""
+    result = await synthesize_streaming_async(
+        TTSRequest(request_id=f"playground-{uuid.uuid4().hex[:8]}", text=body.text, voice=body.voice, model=body.model)
     )
     data = result.metadata()
     data["audio_url"] = f"/api/audio/{result.audio_id}" if result.ok else None
@@ -67,12 +110,12 @@ async def speak(body: SpeakRequest):
 
 
 @app.get("/api/audio/{audio_id}")
-def audio(audio_id: str):
-    found = get_audio(audio_id)
-    if found is None:
+def audio(audio_id: str, request: Request):
+    """The clip: whole (or a byte range) when finished, piece by piece while it is still being made."""
+    stream = open_audio(audio_id)
+    if stream is None:
         raise HTTPException(404, detail="Audio not found.")
-    data, mime_type = found
-    return Response(content=data, media_type=mime_type)
+    return audio_response(stream, request.headers.get("range"))
 
 
 @app.get("/api/voices/{voice_key}/sample")

@@ -43,6 +43,7 @@ audio_service/
 │   ├── tests/                  automated tests; no network or API key needed
 │   └── README.md               integration guide: the voice endpoints, app recording
 ├── voice_routes.py             the /api/v1/voice endpoints: speech-to-text → Gemini → text-to-speech
+├── audio_http.py               serves audio: byte ranges for finished clips, streaming for the rest
 ├── playground.py, .html        a local page to try the voices: type text, pick a voice, hear it
 ├── tests/                      tests for voice_routes (a stand-in replaces the Gemini module)
 ├── __init__.py                 makes this folder a package (see "Git notes")
@@ -119,9 +120,77 @@ playground's text-to-speech receiver (`POST /api/speak`), which uses the same `t
 module as the backend, and the audio plays on the page. It shows the cost of each clip and keeps
 a replay list for the session. The same text in the same voice again is free.
 
+To compare voices, switch voice and the page speaks the same text in the new one:
+
+- Previous / Next in the bar at the bottom, the arrow keys on the voice list, or `[` and `]`.
+  When you step quickly, only the voice you stop on is made, so skipping costs nothing.
+- Filter by gender or accent. Previous / Next then step through the voices shown.
+- "Play this text in every shown voice" plays them one after another and shows the credit
+  estimate first (about 0.44 credits per character per voice). It asks before anything over
+  2,000 credits. Stop, or any click, ends it.
+- The newest click always wins: an answer that arrives after you moved on is not played, but
+  it is kept in the replay list.
+- The Model buttons switch between Multilingual v2 (today's default), Flash v2.5, v4 Turbo and v4,
+  and speak the same text again, so you can compare speed and sound (see "Speed" below).
+- The audio is streamed: it starts playing at the "first audio" time shown, while the rest is
+  still being made. Use Chrome, Edge or Firefox; Safari may wait for the whole clip.
+
 It only listens on your computer, so nobody else on the network can use it. Stop it with Ctrl+C
 in the terminal. It needs `fastapi` and `uvicorn` (`pip install -r requirements-dev.txt`), and
 finds the key in `backend/.env` or `backend/api.env`.
+
+## Speed (measured 2026-10-09 on the Creator plan)
+
+Almost all of the wait is ElevenLabs making the audio. Our own code takes milliseconds (a cached
+clip comes back in 8 ms) and connecting to ElevenLabs takes about 0.1 s, once (the connection is
+reused). Speech-to-text is quick too: 63 seconds of audio took 4.6 s, so a short spoken question
+should take about a second (estimated, not measured).
+
+A 222-character bill text full of numbers, voice Matilda:
+
+| Model | First audio | All audio | Credits per character | Numbers read right |
+|---|---|---|---|---|
+| `eleven_multilingual_v2` (today's default) | 3.6 s | 4.0 s | 0.44 | yes |
+| `eleven_flash_v2_5`, number reading on | 1.0 s | 1.8 s | 0.22 | yes |
+| `eleven_flash_v2_5`, ElevenLabs' default | 0.2 s | 0.9 s | 0.22 | **no**: "$12,345.67" came out as "12,340.67", "E11.9" as "11.9" |
+| `eleven_v4_turbo` | 1.0 s | 5.7 s | 0.06 now, ~0.22 after Oct 12 | yes |
+| `eleven_v4` | 1.2 s | 6.7 s | 0.12 now, ~0.44 after Oct 12 | yes |
+
+For a short sentence (95 characters) the first audio came after 1.5 s on Multilingual v2, 0.3-0.4 s
+on Flash v2.5 with number reading on, 0.4 s on v4 Turbo and 1.7 s on v4. The v4 prices are a launch
+offer ("72% off until Oct 12"). Before streaming, users always waited for "All audio".
+
+What this module now does:
+
+1. **Streaming.** `synthesize_streaming()` returns at the first audio, and `open_audio()` passes
+   each piece on as ElevenLabs sends it (its `/stream` endpoint), so playback starts at
+   "First audio". Identical requests still share one generation, and the finished clip is cached.
+   It helps most with long answers and the v4 models; Multilingual v2 sends its first audio late.
+2. **Model choice per request** (`TTSRequest.model`), used by the playground's Model buttons.
+   Flash gets ElevenLabs' number reading turned on automatically (`apply_text_normalization: "on"`),
+   because without it Flash misread money and codes in our test.
+3. **Byte ranges for finished clips** (`Range: bytes=0-1` → `206 Partial Content`), which Safari
+   and iPhones ask for before they play anything.
+
+Choices for the team, fastest first:
+
+- **Switch to Flash**: `ELEVENLABS_MODEL_ID=eleven_flash_v2_5` in `backend/.env`. 2-4 times faster
+  and half the credits, with number reading on automatically. Listen in the playground first:
+  ElevenLabs says its quality is slightly lower than Multilingual v2. One ElevenLabs page still
+  calls number reading on Flash an Enterprise feature; it worked on our Creator plan, so recheck it
+  before the demo (playground, Flash v2.5, a text with money and codes).
+- **Stream replies to the app**: send `stream_reply=true` to `/api/v1/voice/analyze`. Fine in
+  Chrome, Edge, Firefox and on Android. iPhones (Safari, and AVPlayer under expo-audio) may not
+  play audio that is still arriving, so test on a real iPhone first; the default waits for the
+  finished clip, which every phone plays.
+- **Voice Library voices on Multilingual v2**: ElevenLabs' `use_pvc_as_ivc` option made Bunty's
+  first audio 0.5-1.2 s faster (no difference on Flash). It uses the voice's "instant clone"
+  version, which may sound a little different. Not switched on.
+
+Not done, and why: `optimize_streaming_latency` is deprecated and its strongest level stops number
+reading; ElevenLabs' WebSockets are for text that arrives bit by bit, while ours is complete before
+we speak it; splitting answers into sentences would need several requests stitched together and
+Flash makes it unnecessary; lower-quality audio formats barely matter for speed, per ElevenLabs.
 
 ## How the backend uses it
 
@@ -201,9 +270,13 @@ $1 until October 18).
   `backend/requirements.txt` is not used by this module; it does no harm.)
 - **Default model `eleven_multilingual_v2`.** It is the API default, documented as the most
   stable, recommended by ElevenLabs where numbers must be read correctly, and it supports the
-  speed setting. `eleven_v4` is newer and worth comparing by ear (`ELEVENLABS_MODEL_ID=eleven_v4`).
-  `eleven_flash_v2_5` is half price, but the docs show it reading "$1,000,000" as "one thousand
-  thousand dollars".
+  speed setting. It is also the slowest (see "Speed"). `eleven_flash_v2_5` misreads numbers with
+  ElevenLabs' default setting, so the module turns number reading on for it; in our test it then
+  read every amount, date and code right. Switching is the team's call after listening.
+- **Streaming shares the generation, not the connection.** Every listener of a clip reads the same
+  buffer from its first byte, so a player that reconnects (iPhones do) never pays for a second
+  generation. A failed generation is retried only before anyone has heard part of it, because a
+  retry starts the clip again from the beginning.
 - **Cleanup never deletes meaning.** Only formatting is removed. Words like "not", "may" and
   "about" always survive, a ❌ is spoken as "No", and "~5 days" becomes "about 5 days". Pauses come
   from punctuation, never from extra spaces. Tests check all of this.
@@ -229,8 +302,14 @@ $1 until October 18).
   `main.py` with the two lines above, real ElevenLabs both ways, and the team's `gemini_service`
   in `MOCK=true` mode (a spoken question came back as text, went through the Gemini step, and the
   reply was spoken: `demo_output/e2e-question.mp3` and `e2e-reply.mp3`).
-- **Not yet tested:** the mobile playback and recording snippets on a phone, a real human voice
-  recorded on a phone (only synthetic speech so far), and Gemini with a real key (only its mock mode).
+- **Streaming and speed (2026-10-09):** automated tests for streaming with a fake ElevenLabs that
+  sends audio piece by piece (first audio, late listeners, shared generations, retries before and
+  after a listener heard audio), byte ranges, and model choice. In headless Chrome, the playground
+  page started playing a streamed 33-second clip 2.7 s before its last piece arrived. With real
+  ElevenLabs: the timings in "Speed", and each model's audio transcribed back to check the numbers.
+- **Not yet tested:** the mobile playback and recording snippets on a phone, streaming on an iPhone,
+  a real human voice recorded on a phone (only synthetic speech so far), and Gemini with a real key
+  (only its mock mode).
 
 ## Git notes
 

@@ -150,3 +150,11 @@ def test_api_key_is_sent_as_header_and_never_printed():
     run(CONFIG, session, out=lines.append)
     assert all(call[1] == {"xi-api-key": "sk-test"} for call in session.calls)
     assert "sk-test" not in "\n".join(lines)
+
+
+def test_the_number_reading_setting_in_use_is_shown():
+    flash = TTSConfig(api_key="sk-test", model_id="eleven_flash_v2_5", cache_dir=None)
+    _, output = check({"/v1/user": [(200, USER_FREE_OLD)], "/v2/voices": [(200, VOICES)]}, config=flash)
+    assert "Model eleven_flash_v2_5, format mp3_44100_128, number reading on." in output
+    _, output = check({"/v1/user": [(200, USER_FREE_OLD)], "/v2/voices": [(200, VOICES)]})
+    assert "number reading auto." in output  # Multilingual v2: ElevenLabs' default

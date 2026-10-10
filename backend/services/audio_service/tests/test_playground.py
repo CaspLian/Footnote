@@ -20,7 +20,7 @@ class FakeVoice:
     def __init__(self):
         self.calls = []
 
-    def generate(self, text, voice_id):
+    def generate(self, text, voice_id, settings=None):
         self.calls.append((text, voice_id))
         return ProviderAudio(audio=b"ID3" + text.encode(), request_id="req-1", characters_billed=len(text) // 2)
 
@@ -103,3 +103,29 @@ def test_unknown_audio_is_404(client):
 def test_port_helpers():
     port = playground._free_port()
     assert playground._port_is_free(port)
+
+
+def test_the_page_can_list_the_models_to_compare(client):
+    data = client.get("/api/models").json()
+    assert data["default"] == "eleven_multilingual_v2"
+    ids = [m["id"] for m in data["models"]]
+    assert ids == ["eleven_multilingual_v2", "eleven_flash_v2_5", "eleven_v4_turbo", "eleven_v4"]
+    flash = next(m for m in data["models"] if m["id"] == "eleven_flash_v2_5")
+    assert flash["label"] == "Flash v2.5" and flash["credits_per_character"] == 0.22 and flash["note"]
+
+
+def test_the_chosen_model_is_used_and_reported(client):
+    flash = client.post("/api/speak", json={"text": "Hello", "voice": "george", "model": "eleven_flash_v2_5"}).json()
+    assert flash["ok"] and flash["model"] == "eleven_flash_v2_5"
+    default = speak(client, "Hello", "george")
+    assert default["model"] == "eleven_multilingual_v2" and default["audio_id"] != flash["audio_id"]
+    unknown = client.post("/api/speak", json={"text": "Hello", "model": "gpt-4"}).json()
+    assert unknown["ok"] is False and unknown["error_code"] == "INVALID_REQUEST"
+
+
+def test_finished_audio_answers_byte_range_requests(client):
+    url = speak(client, "Hello there")["audio_url"]
+    probe = client.get(url, headers={"Range": "bytes=0-1"})
+    assert probe.status_code == 206 and probe.content == b"ID"
+    whole = client.get(url)
+    assert whole.status_code == 200 and whole.headers["accept-ranges"] == "bytes"

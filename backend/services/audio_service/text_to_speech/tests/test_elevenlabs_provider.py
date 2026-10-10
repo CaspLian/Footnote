@@ -230,6 +230,104 @@ def test_connection_drop_during_download_is_retryable():
     assert error.code == ErrorCode.PROVIDER_UNAVAILABLE and error.retryable
 
 
+# --- Streaming (open_stream) ----------------------------------------------------------------
+
+
+class StreamedBody(requests.Response):
+    """A 200 audio response whose body arrives in pieces; an exception in `pieces` is raised there."""
+
+    def __init__(self, pieces, **headers):
+        super().__init__()
+        self.status_code = 200
+        self.headers = CaseInsensitiveDict({"Content-Type": "audio/mpeg", "Transfer-Encoding": "chunked", **headers})
+        self._content_consumed = True  # nothing for requests itself to release
+        self.pieces = list(pieces)
+        self.read_so_far = 0
+        self.closed = False
+
+    def iter_content(self, chunk_size=1, decode_unicode=False):
+        assert chunk_size is None, "stream pieces as they arrive"
+        for piece in self.pieces:
+            if isinstance(piece, Exception):
+                raise piece
+            self.read_so_far += 1
+            yield piece
+
+    def close(self):
+        self.closed = True
+
+
+def open_stream(*outcomes, config=CONFIG, settings=None, clock=None):
+    session = FakeSession(*outcomes)
+    provider = ElevenLabsProvider(config, session, **({"clock": clock} if clock else {}))
+    return provider.open_stream("Hello there.", "voice-1", settings), session
+
+
+def test_stream_uses_the_stream_endpoint_and_knows_the_cost_before_the_audio():
+    body = StreamedBody([b"ID3", b"-more"], **{"request-id": "req-9", "character-cost": "12"})
+    stream, session = open_stream(body)
+    call = session.calls[0]
+    assert call["url"] == "https://api.elevenlabs.io/v1/text-to-speech/voice-1/stream"
+    assert call["params"] == {"output_format": "mp3_44100_128"} and call["stream"] is True
+    assert (stream.request_id, stream.characters_billed) == ("req-9", 12)
+    assert body.read_so_far == 0  # nothing read yet: the caller decides when
+    assert list(stream.chunks) == [b"ID3", b"-more"]
+    assert body.closed  # the connection is released at the end
+
+
+def test_stream_errors_before_any_audio_are_raised_by_open_stream():
+    unauthorized = make_response(401, json_body={"detail": {"code": "invalid_api_key", "message": "Invalid API key"}})
+    with pytest.raises(TTSError) as caught:
+        open_stream(unauthorized)
+    assert caught.value.code == ErrorCode.AUTH_FAILED
+
+
+def test_stream_connection_drop_part_way_is_retryable_and_releases_the_connection():
+    body = StreamedBody([b"ID3", requests.ConnectionError("connection reset")])
+    stream, _ = open_stream(body)
+    received = []
+    with pytest.raises(TTSError) as caught:
+        for chunk in stream.chunks:
+            received.append(chunk)
+    assert received == [b"ID3"]
+    assert caught.value.code == ErrorCode.PROVIDER_UNAVAILABLE and caught.value.retryable
+    assert body.closed
+
+
+def test_stream_total_deadline():
+    times = iter([0.0, 5.0, 65.0])  # start, after piece 1, after piece 2 (> 60 s deadline)
+    stream, _ = open_stream(StreamedBody([b"part1", b"part2"]), clock=lambda: next(times))
+    with pytest.raises(TTSError) as caught:
+        list(stream.chunks)
+    assert caught.value.code == ErrorCode.PROVIDER_TIMEOUT
+
+
+def test_closing_a_stream_early_releases_the_connection():
+    body = StreamedBody([b"ID3", b"-more"])
+    stream, _ = open_stream(body)
+    next(stream.chunks)
+    stream.chunks.close()
+    assert body.closed
+
+
+def test_settings_choose_the_model_and_number_reading():
+    settings = {
+        "model_id": "eleven_flash_v2_5",
+        "output_format": "mp3_22050_32",
+        "voice_settings": None,
+        "apply_text_normalization": "on",
+    }
+    _, session = open_stream(StreamedBody([b"ID3"]), settings=settings)
+    call = session.calls[0]
+    assert call["json"] == {"text": "Hello there.", "model_id": "eleven_flash_v2_5", "apply_text_normalization": "on"}
+    assert call["params"] == {"output_format": "mp3_22050_32"}
+
+
+def test_number_reading_is_not_sent_when_left_to_elevenlabs():
+    _, session = generate(audio_response())
+    assert "apply_text_normalization" not in session.calls[0]["json"]
+
+
 # --- Secrets -----------------------------------------------------------------------------
 
 

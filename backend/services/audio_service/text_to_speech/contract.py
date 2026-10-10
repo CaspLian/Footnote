@@ -4,10 +4,15 @@ The backend builds a TTSRequest and calls synthesize(). It always gets a
 TTSResult back: synthesize() does not raise for expected failures such as
 empty text or an ElevenLabs outage, so the backend can always show the text
 answer and treat audio as optional.
+
+synthesize_streaming() is the faster variant: it returns as soon as the first
+audio exists, and open_audio(audio_id) hands out the audio while the rest is
+still being made, so the user starts hearing the answer sooner.
 """
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from dataclasses import asdict, dataclass
 
 
@@ -53,6 +58,10 @@ class TTSRequest:
     voice: str | None = None
     """The user's voice choice: a key from voices.json, e.g. "bunty". None means the default voice."""
 
+    model: str | None = None
+    """Optional ElevenLabs model for this request, e.g. "eleven_flash_v2_5" (see config.MODELS).
+    None means the configured one (ELEVENLABS_MODEL_ID)."""
+
 
 @dataclass(frozen=True)
 class TTSResult:
@@ -62,10 +71,12 @@ class TTSResult:
     ok: bool
 
     # Present when ok is True.
-    audio: bytes | None = None
+    audio: bytes | None = None  # None while streaming is True: read it with open_audio(audio_id)
     mime_type: str | None = None  # e.g. "audio/mpeg"; use it as the HTTP Content-Type
     audio_id: str | None = None  # same text + same voice settings -> same ID; see get_audio()
     voice: str | None = None  # key of the voice used, e.g. "matilda"
+    model: str | None = None  # ElevenLabs model used, e.g. "eleven_multilingual_v2"
+    streaming: bool = False  # True: the audio is still being made (from synthesize_streaming())
 
     # What was actually spoken, after cleanup. Useful for captions and debugging.
     spoken_text: str = ""
@@ -75,7 +86,7 @@ class TTSResult:
     characters_sent: int = 0  # characters this call sent to ElevenLabs (0 when cached)
     characters_billed: int | None = None  # as reported by ElevenLabs, when it reports it
     attempts: int = 0  # ElevenLabs HTTP attempts made by this call
-    elapsed_ms: int = 0
+    elapsed_ms: int = 0  # until all the audio was ready; until the first audio when streaming
     provider_request_id: str | None = None  # quote this to ElevenLabs support
 
     # Present when ok is False.
@@ -89,3 +100,15 @@ class TTSResult:
         data.pop("audio")
         data["audio_bytes"] = len(self.audio) if self.audio else 0
         return data
+
+
+@dataclass(frozen=True)
+class AudioStream:
+    """Audio to send to a player, from open_audio(). Finished audio comes in one piece
+    (complete=True, safe to cache for good); audio still being made comes piece by piece
+    as it arrives (complete=False: don't let browsers cache it, it may still fail)."""
+
+    chunks: Iterator[bytes]
+    mime_type: str
+    complete: bool
+    size: int | None = None  # bytes, when complete

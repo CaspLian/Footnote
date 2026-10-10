@@ -3,12 +3,17 @@
     TTSRequest
       -> validate          (wrong input fails fast, no cost)
       -> pick the voice    (the user's choice from voices.json, or the default)
+      -> pick the model    (the request's choice from config.MODELS, or ELEVENLABS_MODEL_ID)
       -> prepare text      (text_prep.py: Markdown, links, symbols...)
       -> check limits      (empty / too long fail here, no cost)
       -> cache             (same text + same voice settings = reuse, no cost)
-      -> join in-flight    (an identical request is already generating = wait for it, no extra cost)
+      -> join in-flight    (an identical request is already generating = share it, no extra cost)
       -> ElevenLabs        (bounded retries for temporary failures only)
       -> TTSResult         (never raises: failures come back as ok=False)
+
+Each generation is a _Job whose audio can be read while it is still arriving. synthesize() waits
+for the end of the job; synthesize_streaming() returns at the first audio, and open_audio() hands
+the audio out piece by piece, so playback can start before the clip is finished.
 """
 
 from __future__ import annotations
@@ -21,14 +26,13 @@ import random
 import threading
 import time
 from collections import Counter
-from concurrent.futures import Future
-from concurrent.futures import TimeoutError as FutureTimeout
+from collections.abc import Iterator
 from dataclasses import dataclass
 from typing import Protocol
 
 from .cache import AudioCache, is_valid_key
-from .config import TTSConfig
-from .contract import ErrorCode, TTSRequest, TTSResult
+from .config import MODELS, TTSConfig
+from .contract import AudioStream, ErrorCode, TTSRequest, TTSResult
 from .elevenlabs_provider import ElevenLabsProvider, ProviderAudio
 from .errors import TTSError
 from .text_prep import prepare_for_speech
@@ -43,9 +47,12 @@ MAX_BACKOFF_SECONDS = 5.0
 
 
 class SpeechProvider(Protocol):
-    """Anything that turns text into audio. ElevenLabsProvider in production, a fake in tests."""
+    """Anything that turns text into audio. ElevenLabsProvider in production, a fake in tests.
 
-    def generate(self, text: str, voice_id: str) -> ProviderAudio: ...
+    It may also have open_stream(text, voice_id, settings) -> ProviderStream (see
+    elevenlabs_provider.py); without it, the audio simply arrives in one piece at the end."""
+
+    def generate(self, text: str, voice_id: str, settings: dict | None = None) -> ProviderAudio: ...
 
 
 @dataclass(frozen=True)
@@ -54,6 +61,111 @@ class _Generation:
     attempts: int
     provider_request_id: str | None
     characters_billed: int | None
+
+
+class _Job:
+    """One generation in progress, shared by everyone who asks for the same audio.
+
+    The generating thread adds audio as it arrives and finally finishes the job with a
+    _Generation or an exception. Anyone else can wait for the first audio, wait for the end,
+    or read the audio piece by piece while it is still arriving."""
+
+    def __init__(self, key: str) -> None:
+        self.key = key
+        self._changed = threading.Condition()
+        self._chunks: list[bytes] = []
+        self._delivered = False  # a listener already has some of this audio: no starting over
+        self._outcome: _Generation | BaseException | None = None
+        # From the current attempt's response headers, known before its audio.
+        self.attempts = 0
+        self.provider_request_id: str | None = None
+        self.characters_billed: int | None = None
+
+    # --- The generating thread ---------------------------------------------------------
+
+    def attempt_started(self, attempt: int, provider_request_id: str | None, characters_billed: int | None) -> None:
+        with self._changed:
+            self.attempts = attempt
+            self.provider_request_id = provider_request_id
+            self.characters_billed = characters_billed
+
+    def add(self, chunk: bytes) -> None:
+        with self._changed:
+            self._chunks.append(chunk)
+            self._changed.notify_all()
+
+    def start_over(self) -> bool:
+        """Drop the audio so far before a retry. Refused once a listener has heard some of it,
+        because the retried audio would start from the beginning again."""
+        with self._changed:
+            if self._delivered:
+                return False
+            self._chunks.clear()
+            return True
+
+    def audio(self) -> bytes:
+        with self._changed:
+            return b"".join(self._chunks)
+
+    def finish(self, outcome: _Generation | BaseException) -> None:
+        with self._changed:
+            self._outcome = outcome
+            self._changed.notify_all()
+
+    # --- Everyone else ---------------------------------------------------------------
+
+    def wait_for_audio(self, timeout: float) -> _Generation | None:
+        """Wait for the first audio. Returns the finished _Generation if the job is already done,
+        None if audio is still arriving. Raises the job's error, or TTSError on timeout."""
+        with self._changed:
+            if not self._changed.wait_for(lambda: self._chunks or self._outcome is not None, timeout):
+                raise _waiting_timeout()
+            if isinstance(self._outcome, BaseException):
+                raise self._outcome
+            return self._outcome
+
+    def result(self, timeout: float) -> _Generation:
+        """Wait for the end. Raises the job's error, or TTSError on timeout."""
+        with self._changed:
+            if not self._changed.wait_for(lambda: self._outcome is not None, timeout):
+                raise _waiting_timeout()
+            if isinstance(self._outcome, BaseException):
+                raise self._outcome
+            return self._outcome
+
+    def read(self, timeout: float) -> Iterator[bytes]:
+        """The audio piece by piece: what has arrived so far, then each new piece as it comes.
+        Stops at the end of the job; if the job failed part-way, the audio is cut short."""
+        index = 0
+        while True:
+            with self._changed:
+                if not self._changed.wait_for(lambda: index < len(self._chunks) or self._outcome is not None, timeout):
+                    logger.warning("Gave up waiting for more audio for %s", self.key)
+                    return
+                if index >= len(self._chunks):
+                    return  # finished (or failed) and everything has been read
+                chunk = self._chunks[index]
+                index += 1
+                self._delivered = True
+            yield chunk
+
+
+def _waiting_timeout() -> TTSError:
+    return TTSError(
+        ErrorCode.PROVIDER_TIMEOUT,
+        "Timed out waiting for an identical request that was already generating.",
+        retryable=True,
+    )
+
+
+@dataclass(frozen=True)
+class _Found:
+    """What _get_or_generate found: finished audio, or a job whose audio is still arriving."""
+
+    source: str  # "cache", "provider" (this call made it) or "shared" (another call is making it)
+    audio: bytes | None = None
+    generation: _Generation | None = None  # set when this call made the finished audio
+    job: _Job | None = None  # set when the audio is still arriving
 
 
 class TTSService:
@@ -74,12 +186,21 @@ class TTSService:
         self._pronunciations = pronunciations
         self._sleep = sleep
         self._lock = threading.Lock()
-        self._in_flight: dict[str, Future] = {}
+        self._in_flight: dict[str, _Job] = {}
         self._stats = _Stats()
 
     # --- Public -------------------------------------------------------------------
 
     def synthesize(self, request: TTSRequest) -> TTSResult:
+        """All the audio, once it is ready (result.audio)."""
+        return self._synthesize(request, streaming=False)
+
+    def synthesize_streaming(self, request: TTSRequest) -> TTSResult:
+        """Returns as soon as the first audio exists. If result.streaming is True the rest is still
+        being made: point the player at your audio endpoint, which serves open_audio(audio_id)."""
+        return self._synthesize(request, streaming=True)
+
+    def _synthesize(self, request: TTSRequest, *, streaming: bool) -> TTSResult:
         started = time.monotonic()
         request_id = _request_id_of(request)
         spoken = ""
@@ -87,24 +208,48 @@ class TTSService:
         try:
             _validate(request)
             voice_key, voice_id = self._resolve_voice(request.voice)
+            settings = self._settings_for(request.model)
             spoken = self._prepare(request)
-            key = self._cache_key(spoken, request.language, voice_id)
-            audio, source, generation = self._get_or_generate(key, spoken, voice_id)
-            result = TTSResult(
-                request_id=request_id,
-                ok=True,
-                audio=audio,
-                mime_type=self.config.mime_type,
-                audio_id=key,
-                voice=voice_key,
-                spoken_text=spoken,
-                cached=generation is None,
-                characters_sent=len(spoken) * generation.attempts if generation else 0,
-                characters_billed=generation.characters_billed if generation else None,
-                attempts=generation.attempts if generation else 0,
-                elapsed_ms=_elapsed_ms(started),
-                provider_request_id=generation.provider_request_id if generation else None,
-            )
+            key = self._cache_key(spoken, request.language, voice_id, settings)
+            found = self._get_or_generate(key, spoken, voice_id, settings, streaming=streaming)
+            source = found.source
+            if found.job is not None:  # still arriving: what is known so far
+                made_here = found.source == "provider"
+                job = found.job
+                result = TTSResult(
+                    request_id=request_id,
+                    ok=True,
+                    mime_type=self.config.mime_type,
+                    audio_id=key,
+                    voice=voice_key,
+                    model=settings["model_id"],
+                    streaming=True,
+                    spoken_text=spoken,
+                    cached=not made_here,
+                    characters_sent=len(spoken) * job.attempts if made_here else 0,
+                    characters_billed=job.characters_billed if made_here else None,
+                    attempts=job.attempts if made_here else 0,
+                    elapsed_ms=_elapsed_ms(started),
+                    provider_request_id=job.provider_request_id if made_here else None,
+                )
+            else:
+                generation = found.generation
+                result = TTSResult(
+                    request_id=request_id,
+                    ok=True,
+                    audio=found.audio,
+                    mime_type=self.config.mime_type,
+                    audio_id=key,
+                    voice=voice_key,
+                    model=settings["model_id"],
+                    spoken_text=spoken,
+                    cached=generation is None,
+                    characters_sent=len(spoken) * generation.attempts if generation else 0,
+                    characters_billed=generation.characters_billed if generation else None,
+                    attempts=generation.attempts if generation else 0,
+                    elapsed_ms=_elapsed_ms(started),
+                    provider_request_id=generation.provider_request_id if generation else None,
+                )
         except TTSError as exc:
             result = TTSResult(
                 request_id=request_id,
@@ -133,11 +278,27 @@ class TTSService:
         return result
 
     def get_audio(self, audio_id: str) -> tuple[bytes, str] | None:
-        """Audio generated earlier, by its audio_id, with its MIME type. None if unknown."""
+        """Finished audio, by its audio_id, with its MIME type. None if unknown (or not finished yet)."""
         if not is_valid_key(audio_id):
             return None
         audio = self._cache.get(audio_id)
         return (audio, self.config.mime_type) if audio is not None else None
+
+    def open_audio(self, audio_id: str) -> AudioStream | None:
+        """Audio by its audio_id for an audio endpoint: finished audio in one piece, or audio that
+        is still being made, piece by piece as it arrives. None if unknown."""
+        if not is_valid_key(audio_id):
+            return None
+        with self._lock:
+            job = self._in_flight.get(audio_id)
+        if job is not None:
+            # Finished jobs move to the cache before they leave _in_flight, so checking the
+            # job first and the cache second never misses audio that exists.
+            return AudioStream(job.read(self._in_flight_wait_seconds()), self.config.mime_type, complete=False)
+        audio = self._cache.get(audio_id)
+        if audio is None:
+            return None
+        return AudioStream(iter((audio,)), self.config.mime_type, complete=True, size=len(audio))
 
     def stats(self) -> dict:
         return self._stats.snapshot()
@@ -158,6 +319,18 @@ class TTSService:
             )
         return voice.key, voice.voice_id
 
+    def _settings_for(self, model: str | None) -> dict:
+        """The audio settings for the request's model choice. No choice = ELEVENLABS_MODEL_ID."""
+        if model is None or not model.strip():
+            return self.config.audio_settings()
+        model_id = model.strip()
+        if model_id != self.config.model_id and model_id not in MODELS:
+            raise TTSError(
+                ErrorCode.INVALID_REQUEST,
+                f"Unknown model {model!r}. Choose one of: {', '.join(MODELS)}.",
+            )
+        return self.config.audio_settings(model_id)
+
     def _prepare(self, request: TTSRequest) -> str:
         use_speech_text = request.speech_text is not None and request.speech_text.strip() != ""
         source_text = request.speech_text if use_speech_text else request.text
@@ -176,85 +349,118 @@ class TTSService:
             )
         return spoken
 
-    def _cache_key(self, spoken: str, language: str, voice_id: str) -> str:
+    def _cache_key(self, spoken: str, language: str, voice_id: str, settings: dict) -> str:
         """Same spoken text + same voice + same audio settings -> same key. Any change -> new key."""
         identity = {
             "text": spoken,
             "language": language.strip().lower(),
             "voice_id": voice_id,
-            "settings": self.config.audio_settings(),
+            "settings": settings,
         }
         encoded = json.dumps(identity, sort_keys=True, ensure_ascii=False).encode("utf-8")
         return hashlib.sha256(encoded).hexdigest()[:32]
 
-    def _get_or_generate(self, key: str, spoken: str, voice_id: str) -> tuple[bytes, str, _Generation | None]:
-        """Return (audio, source, generation). generation is None when no new audio was made."""
+    def _get_or_generate(self, key: str, spoken: str, voice_id: str, settings: dict, *, streaming: bool) -> _Found:
         with self._lock:
             audio = self._cache.get(key)
             if audio is not None:
-                return audio, "cache", None
-            future = self._in_flight.get(key)
-            is_owner = future is None
+                return _Found("cache", audio=audio)
+            job = self._in_flight.get(key)
+            is_owner = job is None
             if is_owner:
                 if not self.config.is_configured:
                     raise TTSError(
                         ErrorCode.NOT_CONFIGURED,
                         "ELEVENLABS_API_KEY must be set (see .env.example).",
                     )
-                future = Future()
-                self._in_flight[key] = future
+                job = _Job(key)
+                self._in_flight[key] = job
 
-        if not is_owner:
-            # An identical request is already generating: wait for its result instead of paying twice.
-            try:
-                generation = future.result(timeout=self._in_flight_wait_seconds())
-            except FutureTimeout:
-                raise TTSError(
-                    ErrorCode.PROVIDER_TIMEOUT,
-                    "Timed out waiting for an identical request that was already generating.",
-                    retryable=True,
-                ) from None
-            except TTSError as exc:
-                # Same failure as the request we waited for, but this call made no attempts itself.
-                raise TTSError(exc.code, exc.message, retryable=exc.retryable) from exc
-            return generation.audio, "shared", None
-
+        source = "provider" if is_owner else "shared"
+        wait = self._in_flight_wait_seconds()
         try:
-            generation = self._generate_with_retries(spoken, voice_id)
-            self._cache.put(key, generation.audio)  # before leaving in-flight, so later callers hit the cache
-            future.set_result(generation)
-            return generation.audio, "provider", generation
-        except BaseException as exc:
-            future.set_exception(exc)
-            raise
-        finally:
-            with self._lock:
-                self._in_flight.pop(key, None)
+            if streaming:
+                if is_owner:
+                    threading.Thread(
+                        target=self._run, args=(job, spoken, voice_id, settings, True), daemon=True, name="tts-stream"
+                    ).start()
+                generation = job.wait_for_audio(wait)
+                if generation is None:
+                    return _Found(source, job=job)
+            else:
+                if is_owner:
+                    self._run(job, spoken, voice_id, settings, False)
+                generation = job.result(wait)
+        except TTSError as exc:
+            if is_owner:
+                raise
+            # Same failure as the request we waited for, but this call made no attempts itself.
+            raise TTSError(exc.code, exc.message, retryable=exc.retryable) from exc
+        return _Found(source, audio=generation.audio, generation=generation if is_owner else None)
 
-    def _generate_with_retries(self, spoken: str, voice_id: str) -> _Generation:
+    def _run(self, job: _Job, spoken: str, voice_id: str, settings: dict, in_background: bool) -> None:
+        """Make the audio for a job, then cache it. Never raises: the outcome goes into the job."""
+        outcome: _Generation | BaseException
+        try:
+            outcome = self._generate_into(job, spoken, voice_id, settings)
+            self._cache.put(job.key, outcome.audio)  # before leaving in-flight, so later callers hit the cache
+        except BaseException as exc:
+            outcome = exc
+            if in_background:  # nobody may be waiting for the outcome any more, so log it here
+                if isinstance(exc, TTSError):
+                    logger.warning("Streamed audio %s failed: %s (%s)", job.key, exc.code, exc.message)
+                else:
+                    logger.exception("Unexpected error while streaming audio %s", job.key)
+        # Leave in-flight before telling anyone the outcome: a request that comes after a failure
+        # then starts afresh instead of joining this finished job and getting its old error.
+        with self._lock:
+            self._in_flight.pop(job.key, None)
+        job.finish(outcome)
+        if isinstance(outcome, BaseException) and not isinstance(outcome, Exception):
+            raise outcome  # KeyboardInterrupt and friends
+
+    def _generate_into(self, job: _Job, spoken: str, voice_id: str, settings: dict) -> _Generation:
+        """Fill the job with audio from ElevenLabs, retrying temporary failures. A retry starts the
+        clip again, so there is none once a listener has received part of the audio."""
         attempt = 0
         while True:
             attempt += 1
             try:
-                audio = self._provider.generate(spoken, voice_id)
+                return self._attempt(job, spoken, voice_id, settings, attempt)
             except TTSError as exc:
                 exc.attempts = attempt
-                if not exc.retryable or attempt > self.config.max_retries:
+                if not exc.retryable or attempt > self.config.max_retries or not job.start_over():
                     raise
                 delay = _backoff_seconds(attempt, exc.retry_after)
                 logger.warning(
                     "ElevenLabs attempt %d failed (%s); retrying in %.1fs", attempt, exc.code, delay
                 )
                 self._sleep(delay)
-                continue
-            if not audio.audio:
-                raise TTSError(
-                    ErrorCode.PROVIDER_UNAVAILABLE,
-                    "ElevenLabs returned no audio.",
-                    retryable=True,
-                    provider_request_id=audio.request_id,
-                ).with_attempts(attempt)
-            return _Generation(audio.audio, attempt, audio.request_id, audio.characters_billed)
+
+    def _attempt(self, job: _Job, spoken: str, voice_id: str, settings: dict, attempt: int) -> _Generation:
+        open_stream = getattr(self._provider, "open_stream", None)
+        if open_stream is None:  # a provider that cannot stream: the audio comes in one piece
+            made = self._provider.generate(spoken, voice_id, settings)
+            job.attempt_started(attempt, made.request_id, made.characters_billed)
+            if made.audio:
+                job.add(made.audio)
+        else:
+            stream = open_stream(spoken, voice_id, settings)
+            job.attempt_started(attempt, stream.request_id, stream.characters_billed)
+            try:
+                for chunk in stream.chunks:
+                    job.add(chunk)
+            finally:
+                _close(stream.chunks)  # releases the connection, on errors too
+            made = ProviderAudio(job.audio(), stream.request_id, stream.characters_billed)
+        if not made.audio:
+            raise TTSError(
+                ErrorCode.PROVIDER_UNAVAILABLE,
+                "ElevenLabs returned no audio.",
+                retryable=True,
+                provider_request_id=made.request_id,
+            )
+        return _Generation(made.audio, attempt, made.request_id, made.characters_billed)
 
     def _in_flight_wait_seconds(self) -> float:
         """At least as long as the request we are waiting for can take, so we never give up early.
@@ -297,11 +503,40 @@ async def synthesize_async(request: TTSRequest) -> TTSResult:
     return await asyncio.to_thread(synthesize, request)
 
 
+def synthesize_streaming(request: TTSRequest) -> TTSResult:
+    """Like synthesize(), but returns as soon as the first audio exists, so the user hears the answer
+    sooner. When result.streaming is True, result.audio is None: serve the audio with open_audio()."""
+    try:
+        service = get_service()
+    except ValueError as exc:
+        return TTSResult(
+            request_id=_request_id_of(request),
+            ok=False,
+            error_code=ErrorCode.NOT_CONFIGURED,
+            error_message=str(exc),
+        )
+    return service.synthesize_streaming(request)
+
+
+async def synthesize_streaming_async(request: TTSRequest) -> TTSResult:
+    """synthesize_streaming() for async backends."""
+    return await asyncio.to_thread(synthesize_streaming, request)
+
+
 def get_audio(audio_id: str) -> tuple[bytes, str] | None:
     """(audio bytes, MIME type) for an audio_id returned earlier, or None. Use it in an audio endpoint."""
     try:
         return get_service().get_audio(audio_id)
     except ValueError:  # malformed .env: synthesize() reports it; here there is simply no audio
+        return None
+
+
+def open_audio(audio_id: str) -> AudioStream | None:
+    """For an audio endpoint: finished audio, or audio still being made (piece by piece), or None.
+    Send complete audio with its size; stream the rest, e.g. FastAPI's StreamingResponse(stream.chunks)."""
+    try:
+        return get_service().open_audio(audio_id)
+    except ValueError:
         return None
 
 
@@ -344,6 +579,14 @@ def _validate(request: object) -> None:
         raise invalid(f"Only English is supported for now (language={request.language!r}).")
     if request.voice is not None and not isinstance(request.voice, str):
         raise invalid(f"voice must be a key from voices.json or None, got {type(request.voice).__name__}.")
+    if request.model is not None and not isinstance(request.model, str):
+        raise invalid(f"model must be a model ID string or None, got {type(request.model).__name__}.")
+
+
+def _close(chunks: Iterator[bytes]) -> None:
+    close = getattr(chunks, "close", None)  # generators have close(); a plain iterator has nothing to release
+    if close is not None:
+        close()
 
 
 def _request_id_of(request: object) -> str:

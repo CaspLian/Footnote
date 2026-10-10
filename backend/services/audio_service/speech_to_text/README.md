@@ -111,6 +111,7 @@ app.include_router(voice_router)
 | `message_id` | no | Your ID for this message; one is made if missing |
 | `speak_reply` | no (`true`) | Also turn `spoken_summary` into audio |
 | `voice` | no (default voice) | The reply voice the user chose: a key from `GET /api/v1/voice/voices`, e.g. `bunty` |
+| `stream_reply` | no (`false`) | `true`: answer as soon as the first reply audio exists, and stream the rest. Faster; works on Android and in Chrome, Edge and Firefox, but test on an iPhone before using it there |
 
 A successful answer (from the end-to-end run on 2026-10-09, shortened):
 
@@ -120,13 +121,16 @@ A successful answer (from the end-to-end run on 2026-10-09, shortened):
                  "confidence": 0.991, "needs_confirmation": false, "audio_seconds": 5.43},
   "analysis":   {"target_language": "en", "model": "gemini-3.8-flash", "mock": true, "result": {"...": "..."}},
   "speech":     {"ok": true, "audio_url": "/api/v1/voice/audio/eb271c6235a68884ff2a308e63c5f7a5",
-                 "mime_type": "audio/mpeg", "voice": "matilda", "error_code": null, "error_message": null}
+                 "mime_type": "audio/mpeg", "voice": "matilda", "streaming": false,
+                 "error_code": null, "error_message": null}
 }
 ```
 
 `analysis` is exactly what `/api/v1/analyze` returns, so the app can show both the same way.
 Play `speech.audio_url` (`GET /api/v1/voice/audio/{audio_id}`, an MP3) with the playback code in
 `../text_to_speech/README.md`. Show `transcript.text` when `needs_confirmation` is true.
+`speech.streaming` is `true` only with `stream_reply=true`: the audio URL then plays while the rest
+of the reply is still being made. Finished audio supports byte ranges, which iPhones need.
 
 Errors come back as `{"detail": {"stage": ..., ...}}` so the app knows which step failed:
 

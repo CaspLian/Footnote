@@ -27,7 +27,7 @@ class FakeProvider:
         self._gate = gate
         self._lock = threading.Lock()
 
-    def generate(self, text: str, voice_id: str) -> ProviderAudio:
+    def generate(self, text: str, voice_id: str, settings: dict | None = None) -> ProviderAudio:
         with self._lock:
             self.calls.append(text)
             self.voice_ids.append(voice_id)

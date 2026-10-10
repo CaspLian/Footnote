@@ -6,11 +6,13 @@
 <title>ClaimPulse voice playground</title>
 <style>
   :root {
+    color-scheme: light;   /* the browser's own controls (audio player, radio buttons) follow the page */
     --bg: #f6f7f9; --card: #ffffff; --text: #1d2330; --muted: #5d6779; --line: #dde1e8;
     --accent: #2f5bea; --accent-text: #ffffff; --soft: #eef2fd; --error: #b3261e; --ok: #1f7a3d;
   }
   @media (prefers-color-scheme: dark) {
     :root {
+      color-scheme: dark;
       --bg: #12151b; --card: #1b2029; --text: #e7eaf0; --muted: #9aa3b2; --line: #2c3340;
       --accent: #7c9cff; --accent-text: #0d1220; --soft: #222a3a; --error: #ff8a80; --ok: #7ad19a;
     }
@@ -18,16 +20,25 @@
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--text);
          font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
-  main { max-width: 760px; margin: 0 auto; padding: 28px 16px 48px; }
+  main { max-width: 900px; margin: 0 auto; padding: 28px 16px 210px; }  /* bottom room for the player bar */
   h1 { font-size: 22px; margin: 0 0 4px; }
   .lead { color: var(--muted); margin: 0 0 20px; }
   .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin-bottom: 16px; }
-  label.title { display: block; font-weight: 600; margin-bottom: 8px; }
-  textarea { width: 100%; min-height: 140px; resize: vertical; padding: 12px; border-radius: 8px;
+  .title { font-weight: 600; }
+  label.title { display: block; margin-bottom: 8px; }
+  textarea { width: 100%; min-height: 120px; resize: vertical; padding: 12px; border-radius: 8px;
              border: 1px solid var(--line); background: var(--bg); color: var(--text); font: inherit; }
-  .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 10px; }
+  .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 10px; }
+  .row.head { margin-top: 0; }
+  .spacer { flex: 1; }
   .muted { color: var(--muted); font-size: 13px; }
-  .voices { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px; }
+  .check { display: inline-flex; gap: 6px; align-items: center; font-size: 14px; }
+  .chips { display: inline-flex; gap: 6px; flex-wrap: wrap; }
+  .chip { border-radius: 999px; padding: 4px 12px; }
+  .chip.active { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+  select { font: inherit; padding: 5px 8px; border-radius: 8px; border: 1px solid var(--line);
+           background: var(--card); color: var(--text); }
+  .voices { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; margin-top: 12px; }
   .voice { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; cursor: pointer; display: block; }
   .voice:has(input:checked) { border-color: var(--accent); background: var(--soft); }
   .voice input { margin-right: 6px; }
@@ -37,92 +48,215 @@
            color: var(--text); padding: 6px 12px; cursor: pointer; }
   button.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent);
                    font-weight: 600; padding: 9px 20px; }
-  button:disabled { opacity: .55; cursor: wait; }
-  audio { width: 100%; margin-top: 10px; }
-  #status { min-height: 22px; }
-  #status.error { color: var(--error); }
-  #status.ok { color: var(--ok); }
   #spoken { white-space: pre-wrap; color: var(--muted); font-size: 13px; margin-top: 8px; }
   ul#history { list-style: none; padding: 0; margin: 0; }
   #history li { display: flex; gap: 10px; align-items: baseline; padding: 6px 0; border-top: 1px solid var(--line); }
   #history li:first-child { border-top: 0; }
   #history .what { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  kbd { font: 12px ui-monospace, monospace; border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; }
+
+  /* The player bar stays at the bottom of the window, so switching voices never needs scrolling. */
+  .bar { position: fixed; left: 0; right: 0; bottom: 0; background: var(--card);
+         border-top: 1px solid var(--line); box-shadow: 0 -4px 18px rgba(0, 0, 0, .08); }
+  .bar-inner { max-width: 900px; margin: 0 auto; padding: 10px 16px 12px; }
+  .now { flex: 1; text-align: center; }
+  #status { min-height: 22px; margin-top: 6px; font-size: 14px; color: var(--muted); }
+  #status.error { color: var(--error); }
+  #status.ok { color: var(--ok); }
+  audio { width: 100%; height: 40px; margin-top: 6px; }
 </style>
 </head>
 <body>
 <main>
   <h1>ClaimPulse voice playground</h1>
-  <p class="lead">Type anything, pick a voice, and press Speak. Your text goes to the text-to-speech
-    receiver on this computer, which asks ElevenLabs for the audio.</p>
+  <p class="lead">Type anything, then switch between voices to hear the same text in each one. Your text
+    goes to the text-to-speech receiver running on this computer, which asks ElevenLabs for the audio.
+    Each new clip costs credits; a clip you have already made plays again for free.</p>
 
   <section class="card">
     <label class="title" for="text">What should it say?</label>
     <textarea id="text" maxlength="10000">Hi! I've checked your hospital bill. Your MRI was billed $3,200, which looks higher than usual.</textarea>
     <div class="row">
-      <button id="speak" class="primary">Speak</button>
-      <span class="muted"><span id="count">0</span> characters &middot; Ctrl+Enter to speak &middot; the same text in the same voice again is free</span>
+      <button id="speak" class="primary" type="button">Speak</button>
+      <label class="check"><input type="checkbox" id="auto" checked> Speak again when I switch voice or model</label>
     </div>
-  </section>
-
-  <section class="card">
-    <span class="title" style="display:block;font-weight:600;margin-bottom:8px">Voice</span>
-    <div id="voices" class="voices"><span class="muted">Loading voices&hellip;</span></div>
-  </section>
-
-  <section class="card">
-    <div id="status" class="muted">Ready.</div>
-    <audio id="player" controls></audio>
+    <div class="row muted">
+      <span><span id="count">0</span> characters &middot; a new clip costs about <span id="estimate">0</span> credits
+        &middot; <kbd>Ctrl</kbd>+<kbd>Enter</kbd> speaks</span>
+    </div>
+    <div class="row">
+      <span class="title">Model</span>
+      <div class="chips" id="models" role="group" aria-label="Choose the model"><span class="muted">Loading&hellip;</span></div>
+    </div>
+    <div class="muted" id="model-note" style="margin-top:6px"></div>
     <div id="spoken"></div>
   </section>
 
   <section class="card">
-    <span style="display:block;font-weight:600;margin-bottom:6px">This session</span>
+    <div class="row head">
+      <span class="title">Voices</span>
+      <span class="muted" id="shown"></span>
+      <span class="spacer"></span>
+      <div class="chips" id="genders" role="group" aria-label="Filter by gender">
+        <button type="button" class="chip active" data-gender="" aria-pressed="true">All</button>
+        <button type="button" class="chip" data-gender="female" aria-pressed="false">Female</button>
+        <button type="button" class="chip" data-gender="male" aria-pressed="false">Male</button>
+        <button type="button" class="chip" data-gender="neutral" aria-pressed="false">Neutral</button>
+      </div>
+      <select id="accent" aria-label="Filter by accent"><option value="">All accents</option></select>
+    </div>
+    <div class="muted" style="margin-top:8px">Click a voice to hear it. Then use the arrow keys to step
+      through them, or <kbd>[</kbd> and <kbd>]</kbd> from anywhere. When you step quickly, only the voice you
+      stop on is made.</div>
+    <div id="voices" class="voices"><span class="muted">Loading voices&hellip;</span></div>
+    <div class="row">
+      <button id="compare" type="button">Play this text in every shown voice</button>
+      <button id="stop" type="button" hidden>Stop</button>
+      <span class="muted" id="compare-cost"></span>
+    </div>
+  </section>
+
+  <section class="card">
+    <span class="title" style="display:block;margin-bottom:6px">Clips made this session</span>
     <ul id="history"><li class="muted">Nothing yet.</li></ul>
   </section>
 </main>
 
+<footer class="bar">
+  <div class="bar-inner">
+    <div class="row head">
+      <button id="prev" type="button" title="Previous voice (or press [ )">&#9664; Previous</button>
+      <span class="now">Voice: <strong id="current-voice">loading&hellip;</strong></span>
+      <button id="next" type="button" title="Next voice (or press ] )">Next &#9654;</button>
+    </div>
+    <div id="status" role="status">Ready.</div>
+    <audio id="player" controls></audio>
+  </div>
+</footer>
+
 <script>
-const textBox = document.getElementById("text");
-const speakButton = document.getElementById("speak");
-const statusLine = document.getElementById("status");
-const player = document.getElementById("player");   // one player: a new clip always stops the old one
-const spokenLine = document.getElementById("spoken");
-const historyList = document.getElementById("history");
-const history = [];
-let voices = [];
+// Measured on the team's Creator plan with today's model: 873 characters were billed 384 credits.
+// Each model's own rate comes from /api/models.
+const DEFAULT_CREDITS_PER_CHARACTER = 0.44;
+const SWITCH_DELAY_MS = 400;      // stepping quickly through voices only speaks the one you stop on
+const ASK_ABOVE_CREDITS = 2000;   // a comparison estimated above this asks first
+
+const $ = (selector) => document.querySelector(selector);
+const textBox = $("#text");
+const player = $("#player");      // one player: a new clip always stops the old one
+
+const state = {
+  voices: [], defaultKey: null, selected: null,
+  models: [], model: null,        // the model the next clips are made with
+  gender: "", accent: "",
+  latestAction: 0,    // every click or key press gets a number; answers to older ones are not played
+  compare: null,      // the running "every shown voice" comparison, if any
+  clips: new Map(),   // "voice|model|text" -> a clip made this session (playing it again is free)
+};
+let switchTimer = null;
+let sampleUrl = null;
 
 function setStatus(message, kind = "") {
-  statusLine.textContent = message;
-  statusLine.className = kind || "muted";
+  const line = $("#status");
+  line.textContent = message;
+  line.className = kind;
 }
 
-function selectedVoice() {
-  const checked = document.querySelector('input[name="voice"]:checked');
-  return checked ? checked.value : null;
+function voiceByKey(key) { return state.voices.find((voice) => voice.key === key); }
+function shownVoices() {
+  return state.voices.filter((voice) =>
+    (!state.gender || voice.gender === state.gender) && (!state.accent || voice.accent === state.accent));
+}
+function currentText() { return textBox.value.trim(); }
+function clipKey(voiceKey, model, text) { return `${voiceKey}|${model}|${text}`; }
+function modelById(id) { return state.models.find((model) => model.id === id); }
+function modelLabel(id) { const model = modelById(id); return model ? model.label : id || "default model"; }
+function creditsPerCharacter() {
+  const model = modelById(state.model);
+  return model && model.credits_per_character != null ? model.credits_per_character : DEFAULT_CREDITS_PER_CHARACTER;
+}
+function estimateCredits(text) { return Math.max(1, Math.round(text.length * creditsPerCharacter())); }
+function costLabel(result) { return result.cached ? "from the cache, 0 credits" : `${result.characters_billed ?? "?"} credits`; }
+function timeLabel(result) {
+  const seconds = (result.elapsed_ms / 1000).toFixed(1);
+  return result.streaming ? `first audio in ${seconds} s` : `${seconds} s`;
+}
+function parseJson(text) { try { return JSON.parse(text); } catch { return null; } }
+
+function updateCosts() {
+  const text = currentText();
+  const shown = shownVoices();
+  const notMade = shown.filter((voice) => !state.clips.has(clipKey(voice.key, state.model, text))).length;
+  $("#count").textContent = textBox.value.length;
+  $("#estimate").textContent = text ? estimateCredits(text) : 0;
+  $("#compare-cost").textContent = text
+    ? `${shown.length} voices · up to about ${notMade * estimateCredits(text)} credits (clips already made are free)`
+    : "";
 }
 
-function play(url) {
+// Every click or key press starts here, so the newest action always wins.
+function newAction() {
+  clearTimeout(switchTimer);
+  endCompare();
+  player.pause();
+  return ++state.latestAction;
+}
+
+// Plays a clip. Resolves to "playing", "blocked" (the browser's autoplay rules), "replaced" or "failed".
+async function play(url) {
   player.pause();
   player.src = url;
-  player.play().catch(() => setStatus("Press play to listen (the browser blocked autoplay).", "ok"));
+  try {
+    await player.play();
+    return "playing";
+  } catch (error) {
+    if (error.name === "AbortError") return "replaced";   // something newer started first: nothing is wrong
+    if (error.name === "NotAllowedError") {
+      setStatus("The browser blocked autoplay: press play on the player below.", "error");
+      return "blocked";
+    }
+    setStatus(`Could not play this clip (${error.name}).`, "error");
+    return "failed";
+  }
 }
 
+// --- Voices ------------------------------------------------------------------------------
+
 async function loadVoices() {
-  const response = await fetch("/api/voices");
-  if (!response.ok) { setStatus("Could not load voices: " + (await response.text()), "error"); return; }
-  const data = await response.json();
-  voices = data.voices;
-  const box = document.getElementById("voices");
-  box.textContent = "";
-  for (const voice of voices) {
+  let data;
+  try {
+    const response = await fetch("/api/voices");
+    data = parseJson(await response.text());
+    if (!response.ok || !data) throw new Error(data ? data.detail : `HTTP ${response.status}`);
+  } catch (error) {
+    $("#voices").textContent = `Could not load the voices: ${error.message}`;
+    return;
+  }
+  state.voices = data.voices;
+  state.defaultKey = data.default;
+  state.selected = data.default;
+  for (const accent of [...new Set(state.voices.map((voice) => voice.accent))].sort()) {
+    $("#accent").append(new Option(accent, accent));
+  }
+  renderVoices();
+}
+
+function renderVoices() {
+  const box = $("#voices");
+  const shown = shownVoices();
+  box.textContent = shown.length ? "" : "No voices match these filters.";
+  $("#shown").textContent = `${shown.length} of ${state.voices.length} shown`;
+  for (const voice of shown) {
     const card = document.createElement("label");
     card.className = "voice";
     const radio = document.createElement("input");
-    radio.type = "radio"; radio.name = "voice"; radio.value = voice.key;
-    radio.checked = voice.key === data.default;
+    radio.type = "radio";
+    radio.name = "voice";
+    radio.value = voice.key;
+    radio.addEventListener("change", () => chooseVoice(voice.key));
     const name = document.createElement("span");
     name.className = "name";
-    name.textContent = voice.name + (voice.key === data.default ? " (default)" : "");
+    name.textContent = voice.name + (voice.key === state.defaultKey ? " (default)" : "");
     const desc = document.createElement("div");
     desc.className = "desc";
     desc.textContent = `${voice.description} · ${voice.accent}, ${voice.gender}`;
@@ -133,73 +267,298 @@ async function loadVoices() {
     card.append(radio, name, desc, sample);
     box.append(card);
   }
+  highlightVoice(state.selected);
+  updateCosts();
+}
+
+// Shows which voice is selected, without speaking. The comparison and the filters use this.
+function highlightVoice(key) {
+  state.selected = key;
+  for (const radio of document.querySelectorAll('input[name="voice"]')) radio.checked = radio.value === key;
+  const voice = voiceByKey(key);
+  const hidden = voice && !shownVoices().includes(voice) ? " (hidden by the filter)" : "";
+  $("#current-voice").textContent = voice ? `${voice.name} · ${voice.accent}, ${voice.gender}${hidden}` : "none";
+}
+
+// The user picked a voice: a click, the arrow keys, Previous/Next, or [ and ].
+function chooseVoice(key) {
+  newAction();
+  highlightVoice(key);
+  const name = voiceByKey(key).name;
+  if (!$("#auto").checked) {
+    setStatus(`Selected ${name}. Press Speak to hear it.`);
+  } else if (!currentText()) {
+    setStatus(`Selected ${name}. Type something to hear it.`);
+  } else {
+    setStatus(`Switching to ${name}…`);
+    switchTimer = setTimeout(speak, SWITCH_DELAY_MS);
+  }
+}
+
+function step(direction) {
+  const shown = shownVoices();
+  if (!shown.length) return;
+  const index = shown.findIndex((voice) => voice.key === state.selected);
+  const target = index === -1
+    ? (direction > 0 ? 0 : shown.length - 1)   // the selected voice is hidden by a filter
+    : (index + direction + shown.length) % shown.length;
+  chooseVoice(shown[target].key);
 }
 
 async function playSample(voice) {
+  const action = newAction();
   setStatus(`Loading a sample of ${voice.name}… (made once, then free)`);
-  const response = await fetch(`/api/voices/${encodeURIComponent(voice.key)}/sample`);
-  if (!response.ok) { setStatus(`Sample failed: ${(await response.json()).detail}`, "error"); return; }
-  play(URL.createObjectURL(await response.blob()));
-  setStatus(`Sample: ${voice.name}`, "ok");
+  let response, blob;
+  try {
+    response = await fetch(`/api/voices/${encodeURIComponent(voice.key)}/sample`);
+    blob = await response.blob();
+  } catch {
+    if (action === state.latestAction) setStatus("Could not reach the playground server. Is it still running?", "error");
+    return;
+  }
+  if (action !== state.latestAction) return;
+  if (!response.ok) {
+    const error = parseJson(await blob.text());
+    setStatus(`Sample failed: ${error ? error.detail : `HTTP ${response.status}`}`, "error");
+    return;
+  }
+  const oldUrl = sampleUrl;
+  sampleUrl = URL.createObjectURL(blob);
+  setStatus(`Sample of ${voice.name}.`, "ok");
+  play(sampleUrl);
+  if (oldUrl) URL.revokeObjectURL(oldUrl);
+}
+
+// --- Models ------------------------------------------------------------------------------
+
+async function loadModels() {
+  const response = await fetch("/api/models").catch(() => null);
+  const data = response && response.ok ? parseJson(await response.text()) : null;
+  if (!data) { $("#models").textContent = "Could not load the models; the server's default is used."; return; }
+  state.models = data.models;
+  state.model = data.default;
+  renderModels();
+}
+
+function renderModels() {
+  const box = $("#models");
+  box.textContent = "";
+  for (const model of state.models) {
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "chip" + (model.id === state.model ? " active" : "");
+    chip.setAttribute("aria-pressed", String(model.id === state.model));
+    chip.textContent = model.label;
+    chip.title = model.note;
+    chip.addEventListener("click", () => chooseModel(model.id));
+    box.append(chip);
+  }
+  const model = modelById(state.model);
+  const rate = model && model.credits_per_character != null ? ` · about ${model.credits_per_character} credits per character` : "";
+  $("#model-note").textContent = model && model.note ? `${model.label}: ${model.note}${rate}` : "";
+  updateCosts();
+}
+
+// The user picked a model: like a new voice, the same text is spoken again with it.
+function chooseModel(id) {
+  if (id === state.model) return;
+  newAction();
+  state.model = id;
+  renderModels();
+  if ($("#auto").checked && currentText()) {
+    setStatus(`Switching to ${modelLabel(id)}…`);
+    switchTimer = setTimeout(speak, SWITCH_DELAY_MS);
+  } else {
+    setStatus(`Selected ${modelLabel(id)}. Press Speak to hear it.`);
+  }
+}
+
+// --- Speaking ----------------------------------------------------------------------------
+
+// Asks the text-to-speech receiver for one clip. Every clip made is kept, even if the user moved on.
+// It answers as soon as the first audio exists; the audio link plays while the rest is being made.
+async function generate(text, voice, model) {
+  let response, body;
+  try {
+    response = await fetch("/api/speak", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text, voice: voice ? voice.key : null, model }),
+    });
+    body = await response.text();
+  } catch {
+    return { ok: false, error_code: "NO_SERVER", error_message: "Could not reach the playground server. Is it still running?" };
+  }
+  const result = parseJson(body);
+  if (!response.ok || !result) {
+    return { ok: false, error_code: `HTTP ${response.status}`, error_message: result ? JSON.stringify(result.detail) : body.slice(0, 300) };
+  }
+  if (result.ok) keepClip(result, voice, text);
+  return result;
 }
 
 async function speak() {
-  const text = textBox.value.trim();
+  const action = newAction();
+  const text = currentText();
   if (!text) { setStatus("Type something first.", "error"); return; }
-  const voiceKey = selectedVoice();
-  const voiceName = (voices.find(v => v.key === voiceKey) || {}).name || "default voice";
-  speakButton.disabled = true;
-  setStatus(`Generating with ${voiceName}…`);
-  try {
-    const response = await fetch("/api/speak", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text, voice: voiceKey }),
-    });
-    const result = await response.json();
-    if (!response.ok) { setStatus(`Request failed: ${JSON.stringify(result.detail)}`, "error"); return; }
-    if (!result.ok) {
-      setStatus(`${result.error_code}: ${result.error_message}`, "error");
-      spokenLine.textContent = "";
-      return;
-    }
-    play(result.audio_url);
-    const cost = result.cached ? "from the cache, 0 credits" : `${result.characters_billed ?? "?"} credits`;
-    setStatus(`${voiceName} · ${(result.elapsed_ms / 1000).toFixed(1)} s · ${cost}`, "ok");
-    spokenLine.textContent = "Spoken text: " + result.spoken_text;
-    addToHistory(voiceName, text, result.audio_url);
-  } catch (error) {
-    setStatus("Could not reach the playground server. Is it still running?", "error");
-  } finally {
-    speakButton.disabled = false;
-  }
+  const voice = voiceByKey(state.selected);   // undefined if the voices did not load: the server uses its default
+  const model = state.model;
+  setStatus(`Generating with ${voice ? voice.name : "the default voice"} (${modelLabel(model)})…`);
+  const result = await generate(text, voice, model);
+  if (action !== state.latestAction) return;   // the user moved on: don't play an old answer
+  showResult(result, voice);
+  if (result.ok) play(result.audio_url);
 }
 
-function addToHistory(voiceName, text, url) {
-  history.unshift({ voiceName, text, url });
-  history.length = Math.min(history.length, 10);
-  historyList.textContent = "";
-  for (const item of history) {
+function showResult(result, voice, prefix = "") {
+  if (!result.ok) { setStatus(`${prefix}${result.error_code}: ${result.error_message}`, "error"); return; }
+  const name = voice ? voice.name : result.voice;
+  setStatus(`${prefix}${name} · ${modelLabel(result.model)} · ${timeLabel(result)} · ${costLabel(result)}`, "ok");
+  $("#spoken").textContent = `Spoken text (after cleanup): ${result.spoken_text}`;
+}
+
+// --- Compare: the same text in every shown voice, one after another -----------------------
+
+async function compareAll() {
+  const text = currentText();
+  const voices = shownVoices();
+  if (!text) { setStatus("Type something first.", "error"); return; }
+  if (!voices.length) { setStatus("No voices match the filters.", "error"); return; }
+  const model = state.model;
+  const credits = voices.filter((voice) => !state.clips.has(clipKey(voice.key, model, text))).length * estimateCredits(text);
+  if (credits > ASK_ABOVE_CREDITS
+      && !confirm(`Playing this text in ${voices.length} voices could use about ${credits} credits. Continue?`)) return;
+
+  newAction();
+  const run = { cancelled: false, wake: null };
+  state.compare = run;
+  $("#compare").hidden = true;
+  $("#stop").hidden = false;
+  const failed = [];
+  let firstError = "";
+  let played = 0;
+  let upcoming = generate(text, voices[0], model);
+  for (const [index, voice] of voices.entries()) {
+    const prefix = `Comparing ${index + 1} of ${voices.length}: `;
+    highlightVoice(voice.key);
+    setStatus(`${prefix}${voice.name}…`);
+    const result = await upcoming;
+    if (run.cancelled) return;
+    // Make the next voice's clip while this one plays, so there is little silence between voices.
+    upcoming = index + 1 < voices.length ? generate(text, voices[index + 1], model) : null;
+    showResult(result, voice, prefix);
+    if (!result.ok) {
+      failed.push(`${voice.name} (${result.error_code})`);
+      firstError = firstError || `${result.error_code}: ${result.error_message}`;
+      continue;
+    }
+    const outcome = await playUntilEnd(result.audio_url, run);
+    if (run.cancelled) return;
+    if (outcome === "blocked") { endCompare(); return; }   // play() has told the user what to do
+    if (outcome === "ended") played++;
+    else failed.push(`${voice.name} (could not play)`);
+  }
+  endCompare();
+  const summary = `Played the text in ${played} of ${voices.length} voices.`;
+  if (failed.length) setStatus(`${summary} Failed: ${failed.join(", ")}. ${firstError}`, "error");
+  else setStatus(summary, "ok");
+}
+
+// Plays a clip and waits for it to end, so the comparison can move on to the next voice.
+function playUntilEnd(url, run) {
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = (outcome) => {
+      if (settled) return;
+      settled = true;
+      player.removeEventListener("ended", onEnded);
+      player.removeEventListener("error", onError);
+      run.wake = null;
+      resolve(outcome);
+    };
+    const onEnded = () => finish("ended");
+    const onError = () => finish("failed");
+    player.addEventListener("ended", onEnded);
+    player.addEventListener("error", onError);
+    run.wake = () => finish("stopped");
+    play(url).then((outcome) => { if (outcome === "blocked" || outcome === "failed") finish(outcome); });
+  });
+}
+
+// Stops the running comparison, if any. The comparison checks run.cancelled after every wait.
+function endCompare() {
+  const run = state.compare;
+  if (!run) return;
+  state.compare = null;
+  run.cancelled = true;
+  $("#compare").hidden = false;
+  $("#stop").hidden = true;
+  if (run.wake) run.wake();
+}
+
+// --- Clips made this session ---------------------------------------------------------------
+
+function keepClip(result, voice, text) {
+  const key = clipKey(result.voice, result.model, text);
+  const earlier = state.clips.get(key);
+  state.clips.delete(key);   // making the same clip again moves it to the top
+  state.clips.set(key, { name: voice ? voice.name : result.voice, model: result.model, text, url: result.audio_url,
+                         cost: earlier ? earlier.cost : costLabel(result) });
+  renderHistory();
+  updateCosts();
+}
+
+function renderHistory() {
+  const list = $("#history");
+  list.textContent = "";
+  for (const clip of [...state.clips.values()].reverse().slice(0, 15)) {
     const row = document.createElement("li");
     const what = document.createElement("span");
     what.className = "what";
-    what.textContent = `${item.voiceName}: ${item.text}`;
+    what.textContent = `${clip.name} · ${modelLabel(clip.model)} (${clip.cost}): ${clip.text}`;
+    what.title = clip.text;
     const replay = document.createElement("button");
     replay.type = "button";
     replay.textContent = "▶ Replay";
-    replay.addEventListener("click", () => play(item.url));
+    replay.addEventListener("click", () => {
+      newAction();
+      setStatus(`Replaying ${clip.name} (free).`, "ok");
+      play(clip.url);
+    });
     row.append(what, replay);
-    historyList.append(row);
+    list.append(row);
   }
 }
 
-const updateCount = () => { document.getElementById("count").textContent = textBox.value.length; };
-textBox.addEventListener("input", updateCount);
+// --- Wiring --------------------------------------------------------------------------------
+
+textBox.addEventListener("input", updateCosts);
 textBox.addEventListener("keydown", (event) => {
   if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) { event.preventDefault(); speak(); }
 });
-speakButton.addEventListener("click", speak);
-updateCount();
+document.addEventListener("keydown", (event) => {
+  if (event.target === textBox || event.ctrlKey || event.metaKey || event.altKey) return;
+  if (event.key === "[") step(-1);
+  else if (event.key === "]") step(1);
+});
+$("#speak").addEventListener("click", () => speak());
+$("#prev").addEventListener("click", () => step(-1));
+$("#next").addEventListener("click", () => step(1));
+$("#compare").addEventListener("click", () => compareAll());
+$("#stop").addEventListener("click", () => { newAction(); setStatus("Stopped.", "ok"); });
+for (const chip of document.querySelectorAll("#genders .chip")) {
+  chip.addEventListener("click", () => {
+    state.gender = chip.dataset.gender;
+    for (const other of document.querySelectorAll("#genders .chip")) {
+      other.classList.toggle("active", other === chip);
+      other.setAttribute("aria-pressed", String(other === chip));
+    }
+    renderVoices();
+  });
+}
+$("#accent").addEventListener("change", (event) => { state.accent = event.target.value; renderVoices(); });
+updateCosts();
+loadModels();
 loadVoices();
 </script>
 </body>
