@@ -48,5 +48,6 @@ export default function RootLayout() {
     <Stack.Screen name="timeline" options={{ title: copy('Case timeline','Cronología') }} />
     <Stack.Screen name="document" options={{ title: copy('Document','Documento'), presentation: 'modal' }} />
     <Stack.Screen name="settings" options={{ title: copy('Settings','Ajustes'), presentation: 'modal' }} />
+    <Stack.Screen name="languages" options={{ title: copy('Working language','Idioma de trabajo'), presentation: 'modal' }} />
   </Stack></WebShell></PrivacyProvider></GestureHandlerRootView>;
 }

@@ -10,7 +10,7 @@ export function useCase() {
   const params = useLocalSearchParams<{ caseId?: string }>();
   const active = useUnfoldStore(s => s.activeCaseId);
   const cases = useUnfoldStore(s => s.cases);
-  return cases.find(c => c.id === (params.caseId ?? active));
+  return cases.find(c => c.id === (params.caseId ?? active)) ?? (params.caseId ? undefined : cases[0]);
 }
 export function caseRoute(pathname: '/review'|'/verify'|'/timeline'|'/draft'|'/intake', id: string) { router.push({ pathname, params: { caseId: id } }); }
 export function MissingCase() { const { copy } = useLanguage(); return <Screen><Feedback title={copy('This case is unavailable.','Este caso no está disponible.')} text={copy('It may have been removed. Open Bills to choose a case.','Puede haberse eliminado. Abre Facturas para elegir un caso.')} action={{ title: copy('Open Bills','Abrir Facturas'), onPress: () => router.replace('/(tabs)/bills') }} /></Screen>; }
