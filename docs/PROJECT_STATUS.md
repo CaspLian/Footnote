@@ -3,8 +3,8 @@
 | | |
 |---|---|
 | Checked on | 2026-10-10 |
-| Branch | `Gemini-Tiger-Snow-ElevenLabs-V2`: start frontend work here. It is `Gemini-Tiger-Snow-Integration-V1` (`d1753db`) plus these docs and one fix. `main` is older, at `8c1a321` |
-| Code | `d1753db` plus the null-text fix in `backend/models.py`; the results below apply to this code |
+| Branch | `Gemini-Tiger-Snow-ElevenLabs-V2`: the backend from `Gemini-Tiger-Snow-Integration-V1` (`d1753db`), these docs, the frontend from `frontend-aarush`, and the connection between them. `main` is older, at `8c1a321` |
+| Code | The results below apply to this branch on 2026-10-10 |
 | Last updated by | Nimesh, with Claude Code. Update this file only at integration checkpoints (see `docs/TEAM_WORKFLOW.md`) |
 
 ## What is integrated
@@ -18,10 +18,15 @@
   - A developer console tries every route.
 - **After `d1753db`:** Gemini sometimes writes a missing value as the text "null". Such placeholder texts ("null",
   "none", "n/a", empty) now become real nulls (`backend/models.py`; tests in `backend/tests/test_models.py`).
+- **The frontend, merged and connected (2026-10-10):** `frontend-aarush` (Aarush Kumar) merged without conflicts.
+  With `EXPO_PUBLIC_API_URL` set (`mobile/.env.example`):
+  - a newly imported bill or EOB is read by the backend and fills the verify screen
+  - the review compares the confirmed codes with Medicare's rates (new route `GET /api/v1/benchmarks/{code}`)
+    and adds Gemini's notes
+  - the review can play the saved analysis in an ElevenLabs voice (`expo-audio`)
+
+  Without it, the app stays fully local. See `mobile/README.md`, "Integration boundary".
 - **Not integrated:**
-  - **The mobile app.** On this branch it is still the Expo starter screen. A frontend prototype is on
-    `frontend-aarush` (Aarush Kumar, 2026-10-10): Expo Router and TypeScript in `mobile/src/app/`, with local
-    sample data. It does not call the backend yet.
   - **`Tiger-data` commit `67c4c3a`** (claim audit lifecycle tracking, 2026-10-10). It is still at the old path,
     `services/tigerdata_service.py`.
   - **The teammate's Tiger Data audit tables** (`tigerdata_service.py`): no route calls them.
@@ -40,11 +45,19 @@
 - **A teammate's fresh setup.** A fresh clone installed and passed 528 audio and 59 backend tests on Python 3.11,
   3.12 and 3.14. `uvicorn main:app` served the routes, also with `--reload`. Python 3.9 cannot install the
   requirements, so use 3.10 or newer.
-- **Offline, with the fix:** 528 audio tests and 69 backend tests pass, against a local PostgreSQL 17.
+- **The app's connection code against the live backend:** the ER bill PDF was read in 13.8 s (12 lines, every
+  amount) and passed the app's own validation. The review produced 10 findings (7 price comparisons, 3 Gemini
+  notes, including a possible duplicate). ElevenLabs spoke the saved analysis in 9 s. This ran the app's
+  `src/services` code in Node, not the app on a device.
+- **The app's checks:** `npm run typecheck`, `npm run lint` and `npm test` (42 tests) pass. The web build
+  (`expo export --platform web`) succeeds.
+- **Offline:** 528 audio tests and 73 backend tests pass, against a local PostgreSQL 17.
 - **Earlier the same day, at `d1753db`:** the full live test (15 of 15), the developer console in headless Chrome
   (58 of 58), and both suites in one session (587). Details: `BACKEND_VERIFICATION_REPORT.md`.
 - **Not verified:**
-  - Anything on a phone: reaching the backend over Wi-Fi, recording, playback, streaming on an iPhone.
+  - Anything on a phone or simulator: the screens with the backend, uploads from the camera, playback with
+    `expo-audio` (it needs a rebuilt development build), reaching the backend over Wi-Fi.
+  - The web app's upload from IndexedDB (`backend-upload.web.ts`): it builds, but it was not run in a browser.
   - Live answers in the 10 languages other than English and Spanish.
   - Spoken replies in other languages, which aren't implemented.
   - More than a few requests at a time.
@@ -71,7 +84,7 @@
 
 ## Shared blockers
 
-- **No connected mobile client:** the prototype on `frontend-aarush` uses sample data only.
+- **Not yet tried on a phone:** the connected app has run only as code and as a web build.
 - **No authentication:** keep the backend on a private network. Anyone who can reach it can spend the team's
   Gemini and ElevenLabs credits and read a saved analysis by its ID.
 - **Branches:**
@@ -80,13 +93,9 @@
 
 ## Next three integration priorities
 
-1. **Connect the frontend.** Merge the frontend branch into `Gemini-Tiger-Snow-ElevenLabs-V2`. Then replace its local
-   sample services with the routes in `docs/API_CONTRACTS.md`:
-   - photo or file → `POST /api/v1/analyze`
-   - `POST /api/v1/voice/speak` with `audit.audit_id`
-   - play `speech.audio_url`
-
-   Test on a real phone.
+1. **Run the connected app on a phone.** Rebuild the development build (it now includes `expo-audio`), set
+   `EXPO_PUBLIC_API_URL`, and follow "From a phone" in `docs/API_CONTRACTS.md`. Then try a real bill photo end to
+   end.
 2. **Fix the doctor-only-rate flags and the price-source label**, because the app shows them and the voice reads
    them aloud.
 3. **Agree which branch is the shared base**, and retire the stale ones. Bring in `Tiger-data`'s new commit,

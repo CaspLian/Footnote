@@ -3,7 +3,8 @@ import { createManualCase, createSampleCase, SAMPLE_CASE_ID } from '../domain/fi
 import { isISODate, isMoney } from '../domain/money';
 import { validateCase } from '../domain/review';
 import type { AppealDraft, BillCase, CaseEvent, DocumentAttachment, DraftKind, FamilyProfile, PersonalContext, IconWeight, Language, ReviewResult } from '../domain/types';
-import { documentService, draftService, sampleEntriesChanged } from '../services/local-services';
+import { documentService } from '../services/connected-services';
+import { draftService, sampleEntriesChanged } from '../services/local-services';
 import { parseSnapshot, STORAGE_KEY, type PersistedSnapshot } from './persistence';
 
 export interface LocalStorage {
@@ -47,7 +48,7 @@ export interface UnfoldState {
   addAttachment(caseId: string, attachment: DocumentAttachment): void;
   updateAttachment(caseId: string, attachmentId: string, kind: DocumentAttachment['kind']): void;
   removeAttachment(caseId: string, attachmentId: string): Promise<void>;
-  updateCase(caseId: string, patch: Partial<Pick<BillCase, 'provider' | 'serviceDate' | 'description' | 'financials' | 'lineItems'>>): void;
+  updateCase(caseId: string, patch: Partial<Pick<BillCase, 'provider' | 'serviceDate' | 'description' | 'financials' | 'lineItems' | 'analysis'>>): void;
   verifyCase(caseId: string): Promise<void>;
   prepareDraft(caseId: string, kind: DraftKind): Promise<string>;
   saveDraft(caseId: string, kind: DraftKind, body: string, locale: Language): string;

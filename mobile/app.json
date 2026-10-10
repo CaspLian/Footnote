@@ -46,6 +46,12 @@
         {
           "faceIDPermission": "Use Face ID to unlock your private Unfold workspace."
         }
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": false
+        }
       ]
     ],
     "experiments": {

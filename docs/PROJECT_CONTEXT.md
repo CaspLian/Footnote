@@ -74,7 +74,7 @@ Between checkpoints, record status changes in your handoff.
 | Voice picker and samples; streamed replies; byte ranges for iPhones | Picker and samples: VERIFIED mocked. Streaming: VERIFIED live (first audio after 0.43 s, 2026-10-09). Byte ranges: live on 2026-10-10 just before `d1753db`, mocked at `d1753db`. iPhone playback: UNVERIFIED | `GET /api/v1/voice/voices`, `/audio/{id}` |
 | Spoken replies in languages other than English | PLANNED: text-to-speech accepts English only | `text_to_speech/service.py` |
 | Developer console (every route in a browser) | VERIFIED mocked (headless Chrome, a stand-in for ElevenLabs, 58 checks). Its API also answered live requests (curl, 2026-10-10) | `backend/dev_console.py` |
-| Mobile app | PARTIAL, not merged: a prototype on `frontend-aarush` with local sample data and no backend calls. On this branch: the Expo starter | `mobile/` |
+| Mobile app connected to the backend | IMPLEMENTED: the connection code was VERIFIED live from Node; typecheck, lint, 42 tests and the web build pass; never run on a phone | `mobile/src/services/backend.ts`, `connected-services.ts` |
 | Follow-up questions about a saved bill | PLANNED: no route takes an `audit_id` plus a question | `docs/decisions/2026-10-10-proposal-followup-questions.md` |
 | Authentication, rate limits | PLANNED: none; anyone who can reach the server can spend credits | `main.py` (CORS `*`); `docs/decisions/2026-10-10-proposal-app-key.md` |
 | Tiger Data audit / regional benchmark tables | VERIFIED live by its own 4 tests only (throwaway schema); not connected to any route | `tigerdata_service.py` |
@@ -129,18 +129,16 @@ rows, all from the **CMS 2026 Physician Fee Schedule (RVU26D, October release), 
 
 ## Frontend: evidence and open choices
 
-- **In the repository:** `mobile/` is an Expo (React Native) app, SDK 57 (`expo ~57.0.27`, `react-native 0.86.3`,
-  `react 19.2.3`). `App.js` is the starter screen; `expo-camera`, `expo-document-picker` and `expo-av` are
-  installed but unused. The `web` script exists, but React Native Web is not installed, so there is no web build.
-- **On the branch `frontend-aarush`** (Aarush Kumar, 2026-10-10; not merged): Expo Router in `mobile/src/app/`,
-  TypeScript, React Native Web, a development build (`expo start --dev-client`), `expo-image-picker`,
-  `expo-document-picker` and `expo-speech` (the phone's own voice). It uses local sample data, calls no backend
-  route, and has no player for the backend's MP3 replies.
+- **In the repository:** `mobile/` is an Expo (React Native) app, SDK 57 (`expo 57.0.27`, `react-native 0.86.3`,
+  `react 19.2.3`). Before the merge it was the starter screen; the frontend replaced it.
+- **The app (from `frontend-aarush`, merged 2026-10-10):** Expo Router in `mobile/src/app/`, TypeScript, React
+  Native Web, a development build (`expo start --dev-client`), `expo-image-picker`, `expo-document-picker`,
+  `expo-speech` (the phone's own voice) and now `expo-audio` (the ElevenLabs replies). It calls the backend when
+  `EXPO_PUBLIC_API_URL` is set.
 - **On the whiteboard:** "React Native / Expo or Mobile Web PWA" in the task plan, "React + Tailwind CSS" in the
   tech-stack list, and a diagram of a "React Native/Expo App".
-- **Unresolved:** the prototype uses Expo Router and TypeScript, but no decision is recorded. Also open: the
-  player for the backend's replies (`expo-audio` is recommended in the audio docs), and whether the web build
-  matters.
+- **Unresolved:** the prototype uses Expo Router and TypeScript, but no decision is recorded. Also open:
+  whether the web build matters.
 
 ## Contradictions between plans and code
 

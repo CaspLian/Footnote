@@ -41,7 +41,13 @@ The native workspace uses AsyncStorage and app-local files. The web workspace us
 
 ## Integration boundary
 
-Document processing, benchmark lookup, draft preparation, and narration have asynchronous interfaces in `src/domain/types.ts`, with local implementations in `src/services` and `src/native`. The proposed Gemini, Snowflake, Tiger Data, and ElevenLabs pipeline is not connected. The ClaimPulse repository's main branch at `8c1a321` contains backend scaffolding; this app makes no live backend requests.
+Document processing, benchmark lookup, draft preparation, and narration have asynchronous interfaces in `src/domain/types.ts`. With `EXPO_PUBLIC_API_URL` set (copy `.env.example` to `.env`), the app uses the ClaimPulse backend through `src/services/backend.ts`. The routes are in `docs/API_CONTRACTS.md`.
+
+- **Reading documents:** a newly imported bill or EOB is read by Gemini (`POST /api/v1/analyze`). Its provider, dates, amounts and line items fill the verify screen, where the user checks every value. The analysis is saved in Tiger Data.
+- **Prices:** the review compares each confirmed code with Medicare's national rate (`GET /api/v1/benchmarks/{code}`, from Snowflake) and adds Gemini's notes. Findings are questions, never proof of an error.
+- **Voice:** the review can play the saved analysis in an ElevenLabs voice (`POST /api/v1/voice/speak`, played with `expo-audio`).
+
+Without the variable, everything stays local, as before: the synthetic sample, manual entry, and device narration. The sample and the drafts stay local either way. `expo-audio` is a native module, so rebuild the development build once (`npm run ios` or `npm run android`).
 
 Money is stored in integer cents. Billed charges, allowed amounts, insurer payments, prior patient payments, and remaining responsibility stay separate. Findings are clarification questions, not guaranteed savings or a determination of what is owed.
 

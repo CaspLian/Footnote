@@ -4,13 +4,14 @@ This is an Expo/React Native mobile application. Prioritize mobile-first pattern
 
 The guidance below is Expo's generated template.
 
-- On this branch the app is still the starter `App.js`, and it calls no backend route.
-- The frontend prototype is on the branch `frontend-aarush` (Aarush Kumar, 2026-10-10): Expo Router in `src/app/`,
-  TypeScript, React Native Web and a development build (`expo start --dev-client`). It uses local sample data and
-  does not call the backend yet. Once it is merged, its structure is the app's: follow it, and update this note.
-- Playing the backend's spoken replies (MP3 URLs) needs an audio player, which `frontend-aarush` does not have yet
-  (it uses `expo-speech`, the phone's own voice). The backend's audio docs recommend `expo-audio`: check the Expo
-  SDK 57 docs before choosing.
+- The app is the Unfold frontend from `frontend-aarush` (merged 2026-10-10): Expo Router in `src/app/`, TypeScript,
+  React Native Web, and a development build (`expo start --dev-client`). Follow its structure. `README.md` explains
+  how to run it.
+- It talks to the backend only through `src/services/backend.ts`, when `EXPO_PUBLIC_API_URL` is set (`.env.example`).
+  The backend-aware services are in `src/services/connected-services.ts`; the mapping from backend responses to the
+  app's types is in `src/services/backend-mapping.ts`, with tests. Unset, the app stays fully local.
+- The ElevenLabs reply plays with `expo-audio` (`src/native/backend-voice.tsx`); device narration still uses
+  `expo-speech`. Adding a native module means rebuilding the development build.
 - The backend contract the app calls, including how a phone reaches the backend, is in `docs/API_CONTRACTS.md`.
   Shared rules are in the repository's root `AGENTS.md`.
 

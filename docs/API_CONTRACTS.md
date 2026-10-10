@@ -40,6 +40,7 @@ from the code. The models are defined in `backend/models.py` and `backend/servic
 | `GET /api/v1/languages` | The 12 answer languages: `{"en": "English", "es": "Spanish", ...}` | `main.py`, `LANGUAGES` in `gemini_service.py` |
 | `POST /api/v1/analyze` | A bill and/or text → analysis, price check, saved record | `main.py` |
 | `GET /api/v1/audits/{audit_id}` | A saved analysis, exactly as it was returned | `main.py`, `analysis_store.py` |
+| `GET /api/v1/benchmarks/{cpt_code}` | Medicare's national rate for one code, for the app's price comparison | `main.py`, `snowflake_service.py` |
 | `POST /api/v1/voice/analyze` | A recorded question (+ optional bill) → transcript, analysis, spoken reply | `voice_routes.py` |
 | `POST /api/v1/voice/speak` | Speak a saved analysis again, without calling Gemini | `voice_routes.py` |
 | `GET /api/v1/voice/audio/{audio_id}` | The reply audio (MP3) | `voice_routes.py`, `audio_http.py` |
@@ -81,6 +82,18 @@ Errors, with a text `detail`:
 - 400: not a UUID
 - 404: no such analysis
 - 503: Tiger Data not configured, not reachable, or paused for 30 s after a failed connection
+
+### `GET /api/v1/benchmarks/{cpt_code}`
+
+Free: no Gemini call. The app uses it for the codes the user confirmed or corrected. Returns
+`{"cpt_code", "medicare_rate", "medicare_description", "setting", "source", "error"}`:
+- `cpt_code`: normalised like the price check (the first 5 letters or digits)
+- `medicare_rate`: dollars, or `null` when the code has no rate (never 0)
+- `setting`: `facility` (only the doctor's part of a hospital service) or `non-facility`
+- `source`: `snowflake`, `local_csv` or `unavailable`; after a cached lookup it can wrongly say `snowflake`
+- `error`: `null`, or a short note when Snowflake failed and the CSV answered
+
+Errors: 400 when the text holds fewer than 5 letters or digits.
 
 ### `POST /api/v1/voice/analyze`
 
