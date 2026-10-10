@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { addLocalCase, daysUntil, listLocalCases, recordLocalEvent, refreshLocalNotifications, requestLocalAlertPermission, updateLocalDeadline, updateLocalStatus } from './local-timeline';
+import * as DocumentPicker from 'expo-document-picker';
+import { daysUntil, listBackendAuditIds, refreshLocalNotifications, requestLocalAlertPermission, saveBackendAuditId } from './local-timeline';
+import { createTigerDataApi } from './tigerdata-api.cjs';
+
+const tigerDataApi = createTigerDataApi();
 
 const today = () => {
   const now = new Date();
@@ -15,52 +19,131 @@ function dateIsValid(value) {
   return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
 }
 
-function Countdown({ label, date }) {
-  const days = daysUntil(date);
+function Countdown({ label, date, daysRemaining }) {
+  const days = daysRemaining ?? daysUntil(date);
   const text = days < 0 ? `${Math.abs(days)} days past estimate` : days === 0 ? 'Estimated date is today' : `${days} days remaining`;
   return <View style={styles.countdown}><Text style={styles.countdownLabel}>{label}</Text><Text style={styles.date}>{date}</Text><Text style={styles.countdownText}>{text}</Text></View>;
 }
 
 export default function App() {
-  const [cases, setCases] = useState([]);
+  const [backendAudits, setBackendAudits] = useState([]);
   const [provider, setProvider] = useState('');
   const [serviceDate, setServiceDate] = useState(today());
   const [receivedDate, setReceivedDate] = useState(today());
   const [paymentDueDate, setPaymentDueDate] = useState('');
-  const [busy, setBusy] = useState(true);
+  const [uploading, setUploading] = useState(false);
   const [edit, setEdit] = useState(null);
 
   const reload = useCallback(async () => {
-    setCases(await listLocalCases());
+    const auditIds = await listBackendAuditIds();
+    const audits = await Promise.all(auditIds.map(id => tigerDataApi.getAudit(id)));
+    setBackendAudits(audits);
+    await refreshLocalNotifications(audits);
   }, []);
 
   useEffect(() => {
     (async () => {
       try {
         await reload();
-        await refreshLocalNotifications();
-      } catch {
-        Alert.alert('Could not open local timeline', 'The on-device database could not be initialized.');
-      } finally {
-        setBusy(false);
+      } catch (error) {
+        Alert.alert('Could not load cases', error.message);
       }
     })();
   }, [reload]);
+
+  async function scanBill() {
+    try {
+      const selection = await DocumentPicker.getDocumentAsync({
+        type: ['image/jpeg', 'image/png', 'image/webp'],
+        copyToCacheDirectory: true,
+        multiple: false,
+      });
+      if (selection.canceled) return;
+
+      const image = selection.assets[0];
+      setUploading(true);
+      const mimeType = image.mimeType || (
+        image.name?.toLowerCase().endsWith('.png')
+          ? 'image/png'
+          : image.name?.toLowerCase().endsWith('.webp')
+            ? 'image/webp'
+            : 'image/jpeg'
+      );
+      const response = await tigerDataApi.uploadBill({
+        uri: image.uri,
+        name: image.name || 'bill-image',
+        type: mimeType,
+      });
+      const auditId = response.audit?.audit_id;
+      if (!auditId) throw new Error('The backend response did not include a saved audit ID.');
+      await saveBackendAuditId(auditId);
+      let reminderNotice = '';
+      try {
+        await requestLocalAlertPermission();
+      } catch (error) {
+        reminderNotice = ` Reminders could not be enabled: ${error.message}`;
+      }
+      await reload();
+      Alert.alert('Bill analyzed', `The analysis and audit were saved through the backend. You can now view the audit timeline below.${reminderNotice}`);
+    } catch (error) {
+      Alert.alert('Could not analyze bill', error.message);
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function startDispute(auditId) {
+    try {
+      await tigerDataApi.updateStatus(auditId, 'dispute_in_progress');
+      await reload();
+    } catch (error) {
+      Alert.alert('Could not update audit', error.message);
+    }
+  }
+
+  async function logAuditAction(auditId, action, note) {
+    try {
+      await tigerDataApi.addAction(auditId, action, note);
+      await reload();
+    } catch (error) {
+      Alert.alert('Could not log action', error.message);
+    }
+  }
+
+  async function resolveAudit(auditId) {
+    try {
+      await tigerDataApi.updateStatus(auditId, 'resolved');
+      await reload();
+    } catch (error) {
+      Alert.alert('Could not resolve case', error.message);
+    }
+  }
 
   async function addCase() {
     if (!provider.trim()) return Alert.alert('Add a provider', 'Enter the hospital or billing provider name.');
     if (!dateIsValid(serviceDate) || !dateIsValid(receivedDate)) return Alert.alert('Check the dates', 'Enter dates in YYYY-MM-DD format.');
     try {
       if (paymentDueDate && !dateIsValid(paymentDueDate)) return Alert.alert('Check the payment date', 'Enter a real date in YYYY-MM-DD format, or leave it blank.');
-      await addLocalCase({ provider, serviceDate, receivedDate, paymentDueDate });
+      const audit = await tigerDataApi.createManualCase({
+        provider_name: provider.trim(),
+        service_date: serviceDate,
+        bill_received_date: receivedDate,
+        payment_due_date: paymentDueDate || null,
+      });
+      if (!audit.audit_id) throw new Error('The backend response did not include a saved case ID.');
+      await saveBackendAuditId(audit.audit_id);
       setProvider('');
       setPaymentDueDate('');
-      await requestLocalAlertPermission();
-      await refreshLocalNotifications();
+      let reminderNotice = '';
+      try {
+        await requestLocalAlertPermission();
+      } catch (error) {
+        reminderNotice = ` Reminders could not be enabled: ${error.message}`;
+      }
       await reload();
-      Alert.alert('Saved on this phone', 'Your case and timeline are stored on this device. Tiger Data does not receive these details.');
-    } catch {
-      Alert.alert('Could not save', 'The case could not be saved to this phone.');
+      Alert.alert('Case saved', `Your case, deadlines, and timeline are saved through the backend in Tiger Data.${reminderNotice}`);
+    } catch (error) {
+      Alert.alert('Could not save case', error.message);
     }
   }
 
@@ -69,29 +152,13 @@ export default function App() {
     const clearingOptionalDate = edit.field === 'payment_due_date' && edit.value.trim() === '';
     if (!clearingOptionalDate && !dateIsValid(edit.value)) return Alert.alert('Check the date', 'Enter a real date in YYYY-MM-DD format.');
     try {
-      await updateLocalDeadline(edit.caseId, edit.field, clearingOptionalDate ? null : edit.value);
+      await tigerDataApi.updateDeadlines(edit.auditId, {
+        [edit.field]: clearingOptionalDate ? null : edit.value,
+      });
       setEdit(null);
       await reload();
-    } catch {
-      Alert.alert('Could not update', 'The date could not be saved on this phone.');
-    }
-  }
-
-  async function changeStatus(item, status) {
-    try {
-      await updateLocalStatus(item.id, status);
-      await reload();
-    } catch {
-      Alert.alert('Could not update', 'The timeline could not be updated on this phone.');
-    }
-  }
-
-  async function addEvent(item, eventType, details) {
-    try {
-      await recordLocalEvent(item.id, eventType, details);
-      await reload();
-    } catch {
-      Alert.alert('Could not record action', 'The event could not be saved on this phone.');
+    } catch (error) {
+      Alert.alert('Could not update deadline', error.message);
     }
   }
 
@@ -99,44 +166,63 @@ export default function App() {
     <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <StatusBar style="dark" />
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <Text style={styles.eyebrow}>CLAIMPULSE · PRIVATE ON-DEVICE TRACKING</Text>
+        <Text style={styles.eyebrow}>CLAIMPULSE · BILL AUDIT</Text>
         <Text style={styles.title}>Your bill timeline</Text>
-        <Text style={styles.intro}>Keep bill dates and actions on this phone. Countdown dates are estimates; verify actual deadlines on your bill or notice.</Text>
+        <Text style={styles.intro}>Scanned bills and manually added cases are saved through the backend in Tiger Data. The phone stores audit IDs for rediscovery and can schedule local deadline reminders.</Text>
 
         <View style={styles.panel}>
-          <Text style={styles.heading}>Add a bill</Text>
+          <Text style={styles.heading}>Scan a bill for an audit</Text>
+          <Pressable accessibilityRole="button" style={styles.primaryButton} onPress={scanBill} disabled={uploading}>
+            <Text style={styles.primaryText}>{uploading ? 'Analyzing bill…' : 'Choose bill photo'}</Text>
+          </Pressable>
+          <Text style={styles.privacy}>The selected image is sent to the backend for Gemini analysis. Extracted audit details and timeline events are stored by the backend in Tiger Data.</Text>
+        </View>
+
+        <Text style={styles.heading}>Cases · Tiger Data</Text>
+        <Pressable accessibilityRole="button" onPress={reload}><Text style={styles.link}>Refresh cases</Text></Pressable>
+        {backendAudits.length === 0 ? <Text style={styles.empty}>No cases saved by this phone yet.</Text> : backendAudits.map(audit => (
+          <View key={audit.audit_id} style={styles.card}>
+            <View style={styles.cardHeader}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.provider}>{audit.provider?.name || 'Medical provider'}</Text>
+                <Text style={styles.muted}>Service {audit.service_date || 'date unavailable'} · {audit.audit_id}</Text>
+              </View>
+              <Text style={styles.status}>{audit.status.replaceAll('_', ' ')}</Text>
+            </View>
+            {audit.case_type === 'manual_case'
+              ? <Text style={styles.muted}>Manual tracking case · no bill analysis performed</Text>
+              : <Text style={styles.muted}>Billed {audit.currency} {audit.total_billed} · Potential difference {audit.currency} {audit.overcharge_total}</Text>}
+            {audit.payment_due_date ? <Countdown label="Payment due · from the bill or notice" date={audit.payment_due_date} /> : null}
+            <Pressable accessibilityRole="button" onPress={() => setEdit({ auditId: audit.audit_id, field: 'payment_due_date', value: audit.payment_due_date || '' })}><Text style={styles.link}>{audit.payment_due_date ? 'Edit payment due date' : 'Add payment due date from a notice'}</Text></Pressable>
+            {audit.collection_deadline ? <Countdown label={audit.collection_deadline_is_estimate ? 'Estimated collections date' : 'Collections date'} date={audit.collection_deadline} daysRemaining={audit.collection_days_remaining} /> : null}
+            {audit.collection_deadline ? <Pressable accessibilityRole="button" onPress={() => setEdit({ auditId: audit.audit_id, field: 'collection_deadline', value: audit.collection_deadline })}><Text style={styles.link}>Edit collections date</Text></Pressable> : null}
+            {audit.credit_warning_date ? <Countdown label={audit.credit_warning_date_is_estimate ? 'Estimated credit warning date' : 'Credit warning date'} date={audit.credit_warning_date} daysRemaining={audit.credit_warning_days_remaining} /> : null}
+            {audit.credit_warning_date ? <Pressable accessibilityRole="button" onPress={() => setEdit({ auditId: audit.audit_id, field: 'credit_warning_date', value: audit.credit_warning_date })}><Text style={styles.link}>Edit credit warning date</Text></Pressable> : null}
+            {['open', 'audit_complete'].includes(audit.status) ? <Pressable accessibilityRole="button" onPress={() => startDispute(audit.audit_id)}><Text style={styles.link}>Start dispute · save status to Tiger Data</Text></Pressable> : null}
+            {audit.status !== 'resolved' ? <>
+              <Pressable accessibilityRole="button" onPress={() => logAuditAction(audit.audit_id, 'Called provider', 'Logged from the mobile app.')}><Text style={styles.link}>Log a provider call</Text></Pressable>
+              <Pressable accessibilityRole="button" onPress={() => logAuditAction(audit.audit_id, 'Overcharge flagged', 'Marked for follow-up by the user.')}><Text style={styles.link}>Record charge flagged</Text></Pressable>
+              <Pressable accessibilityRole="button" onPress={() => logAuditAction(audit.audit_id, 'Dispute letter generated', 'Recorded from the mobile app.')}><Text style={styles.link}>Record letter generated</Text></Pressable>
+              <Pressable accessibilityRole="button" onPress={() => resolveAudit(audit.audit_id)}><Text style={styles.link}>Mark resolved · save status to Tiger Data</Text></Pressable>
+            </> : null}
+            <Text style={styles.timelineTitle}>Audit trail · from Tiger Data</Text>
+            {(audit.events || []).map((event, index) => <View key={`${event.event_type}-${event.occurred_at}-${index}`} style={styles.event}><Text style={styles.eventTitle}>{event.event_type.replaceAll('_', ' ')}</Text><Text style={styles.muted}>{event.occurred_at}</Text>{event.details?.action ? <Text style={styles.muted}>{event.details.action}</Text> : null}{event.details?.note ? <Text style={styles.muted}>{event.details.note}</Text> : null}</View>)}
+          </View>
+        ))}
+
+        <View style={styles.panel}>
+          <Text style={styles.heading}>Add a manual case</Text>
           <TextInput style={styles.input} value={provider} onChangeText={setProvider} placeholder="Hospital or provider" accessibilityLabel="Hospital or provider" />
           <TextInput style={styles.input} value={serviceDate} onChangeText={setServiceDate} placeholder="Service date · YYYY-MM-DD" accessibilityLabel="Service date YYYY-MM-DD" />
           <TextInput style={styles.input} value={receivedDate} onChangeText={setReceivedDate} placeholder="Bill received · YYYY-MM-DD" accessibilityLabel="Bill received date YYYY-MM-DD" />
           <TextInput style={styles.input} value={paymentDueDate} onChangeText={setPaymentDueDate} placeholder="Payment due date from bill · optional" accessibilityLabel="Payment due date from bill, optional" />
-          <Pressable accessibilityRole="button" style={styles.primaryButton} onPress={addCase}><Text style={styles.primaryText}>Save on this phone</Text></Pressable>
-          <Text style={styles.privacy}>No provider, service date, bill date, status, or timeline event from this screen is sent to the backend.</Text>
-          <Text style={styles.privacy}>Allow notifications when prompted to receive on-phone reminders. You can also change this in your phone's app notification settings.</Text>
+          <Pressable accessibilityRole="button" style={styles.primaryButton} onPress={addCase}><Text style={styles.primaryText}>Save case to Tiger Data</Text></Pressable>
+          <Text style={styles.privacy}>The backend saves the case, dates, and timeline in Tiger Data. Manual cases are not analyzed for charges.</Text>
+          <Text style={styles.privacy}>Allow notifications to receive reminders on this phone. You can also change this in your phone's app notification settings.</Text>
         </View>
 
-        <Text style={styles.heading}>Tracked bills</Text>
-        {busy ? <Text style={styles.muted}>Loading on-device records…</Text> : cases.length === 0 ? <Text style={styles.empty}>No bills yet. Add one above to start a private timeline.</Text> : cases.map(item => (
-          <View key={item.id} style={styles.card}>
-            <View style={styles.cardHeader}><View style={{ flex: 1 }}><Text style={styles.provider}>{item.provider}</Text><Text style={styles.muted}>Service {item.service_date} · Received {item.received_date}</Text></View><Text style={styles.status}>{item.status.replaceAll('_', ' ')}</Text></View>
-            {item.payment_due_date ? <><Countdown label="Payment due · from your bill or notice" date={item.payment_due_date} /><Pressable accessibilityRole="button" onPress={() => setEdit({ caseId: item.id, field: 'payment_due_date', value: item.payment_due_date })}><Text style={styles.link}>Edit payment due date</Text></Pressable></> : <Pressable accessibilityRole="button" onPress={() => setEdit({ caseId: item.id, field: 'payment_due_date', value: '' })}><Text style={styles.link}>Add payment due date from a notice</Text></Pressable>}
-            <Countdown label="Estimated collections date · 120 days after receipt" date={item.collection_deadline} />
-            <Pressable accessibilityRole="button" onPress={() => setEdit({ caseId: item.id, field: 'collection_deadline', value: item.collection_deadline })}><Text style={styles.link}>Edit collections estimate</Text></Pressable>
-            <Countdown label="Estimated credit warning · 180 days after service" date={item.credit_warning_date} />
-            <Pressable accessibilityRole="button" onPress={() => setEdit({ caseId: item.id, field: 'credit_warning_date', value: item.credit_warning_date })}><Text style={styles.link}>Edit credit warning estimate</Text></Pressable>
-
-            <Text style={styles.timelineTitle}>Audit trail · stored on phone</Text>
-            {item.events.map(event => <View key={event.id} style={styles.event}><Text style={styles.eventTitle}>{event.event_type.replaceAll('_', ' ')}</Text><Text style={styles.muted}>{new Date(event.occurred_at).toLocaleString()}</Text><Text style={styles.muted}>{event.details}</Text></View>)}
-            <View style={styles.actions}>
-              {item.status !== 'resolved' ? <Pressable style={styles.secondaryButton} onPress={() => addEvent(item, 'overcharge_flagged', 'Marked for follow-up by the user')}><Text style={styles.secondaryText}>Record charge flagged</Text></Pressable> : null}
-              {item.status !== 'resolved' ? <Pressable style={styles.secondaryButton} onPress={() => addEvent(item, 'dispute_letter_generated', 'Dispute letter generated')}><Text style={styles.secondaryText}>Record letter generated</Text></Pressable> : null}
-              {item.status === 'open' ? <Pressable style={styles.secondaryButton} onPress={() => changeStatus(item, 'dispute_in_progress')}><Text style={styles.secondaryText}>Mark dispute started</Text></Pressable> : null}
-              {item.status !== 'resolved' ? <Pressable style={styles.secondaryButton} onPress={() => changeStatus(item, 'resolved')}><Text style={styles.secondaryText}>Mark resolved</Text></Pressable> : null}
-            </View>
-          </View>
-        ))}
-
         {edit ? <View style={styles.modal}>
-          <Text style={styles.heading}>Edit estimated date</Text>
+          <Text style={styles.heading}>Edit deadline</Text>
           <TextInput style={styles.input} value={edit.value} onChangeText={value => setEdit({ ...edit, value })} accessibilityLabel="Estimated date YYYY-MM-DD" />
           <View style={styles.actions}><Pressable style={styles.primaryButton} onPress={saveDate}><Text style={styles.primaryText}>Save date</Text></Pressable><Pressable style={styles.secondaryButton} onPress={() => setEdit(null)}><Text style={styles.secondaryText}>Cancel</Text></Pressable></View>
         </View> : null}

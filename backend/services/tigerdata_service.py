@@ -370,6 +370,84 @@ def record_bill_audit(
         conn.close()
 
 
+def create_manual_case(
+    provider_name: str,
+    service_date: date | str,
+    bill_received_date: date | str,
+    payment_due_date: date | str | None = None,
+) -> dict[str, str]:
+    """Persist a manually entered tracking case without inventing bill charges."""
+    normalized_provider = _required_text(provider_name, "provider_name")
+    service = _optional_date(service_date, "service_date")
+    received = _optional_date(bill_received_date, "bill_received_date")
+    payment_due = _optional_date(payment_due_date, "payment_due_date")
+    if service is None or received is None:
+        raise ValueError("service_date and bill_received_date are required.")
+
+    collection_deadline, credit_warning_date = estimate_deadlines(received, service)
+    audit_id = str(uuid4())
+    conn = connect_tiger_data()
+    try:
+        with conn:
+            with conn.cursor() as cursor:
+                cursor.execute(_SCHEMA)
+                cursor.execute(
+                    """
+                    INSERT INTO audit_records (
+                        audit_id, provider_name, service_date,
+                        bill_received_date, payment_due_date, total_billed,
+                        currency, overcharge_total, status, collection_deadline,
+                        credit_warning_date, collection_deadline_is_estimate,
+                        credit_warning_date_is_estimate
+                    ) VALUES (
+                        %s, %s, %s, %s, %s, 0, 'USD', 0,
+                        'open', %s, %s, TRUE, TRUE
+                    )
+                    """,
+                    (
+                        audit_id,
+                        normalized_provider,
+                        service,
+                        received,
+                        payment_due,
+                        collection_deadline,
+                        credit_warning_date,
+                    ),
+                )
+                cursor.execute(
+                    """
+                    INSERT INTO audit_events (
+                        audit_id, event_type, previous_status, new_status, details
+                    ) VALUES (%s, 'manual_case_created', NULL, 'open', %s)
+                    """,
+                    (
+                        audit_id,
+                        psycopg2.extras.Json(
+                            {
+                                "service_date": service.isoformat(),
+                                "bill_received_date": received.isoformat(),
+                                "payment_due_date": (
+                                    payment_due.isoformat() if payment_due else None
+                                ),
+                                "collection_deadline_estimate": (
+                                    collection_deadline.isoformat()
+                                    if collection_deadline
+                                    else None
+                                ),
+                                "credit_warning_date_estimate": (
+                                    credit_warning_date.isoformat()
+                                    if credit_warning_date
+                                    else None
+                                ),
+                            }
+                        ),
+                    ),
+                )
+        return {"audit_id": audit_id, "case_type": "manual_case"}
+    finally:
+        conn.close()
+
+
 def get_bill_audit(audit_id: str | UUID) -> dict[str, Any] | None:
     """Fetch a persisted audit and its line-item results by audit ID."""
     parsed_audit_id = _parse_audit_id(audit_id)
@@ -421,6 +499,7 @@ def get_bill_audit(audit_id: str | UUID) -> dict[str, Any] | None:
 
         return {
             "audit_id": str(parsed_audit_id),
+            "case_type": "manual_case" if not items else "bill_audit",
             "claim_id": record[0],
             "provider": {"name": record[1], "npi": record[2]},
             "service_date": record[3].isoformat() if record[3] else None,
@@ -469,9 +548,15 @@ def update_claim_status(
     """Change an audit's workflow status and append a timestamped timeline event."""
     parsed_audit_id = _parse_audit_id(audit_id)
     normalized_status = _required_text(new_status, "new_status").lower()
-    if normalized_status not in {"audit_complete", "dispute_in_progress"}:
+    if normalized_status not in {
+        "open",
+        "audit_complete",
+        "dispute_in_progress",
+        "resolved",
+    }:
         raise ValueError(
-            "new_status must be 'audit_complete' or 'dispute_in_progress'."
+            "new_status must be 'open', 'audit_complete', "
+            "'dispute_in_progress', or 'resolved'."
         )
     if details is not None and not isinstance(details, Mapping):
         raise ValueError("details must be an object.")
@@ -500,10 +585,12 @@ def update_claim_status(
                 cursor.execute(
                     """
                     UPDATE audit_records
-                    SET status = %s
+                    SET status = %s,
+                        resolved_at = CASE WHEN %s = 'resolved'
+                            THEN CURRENT_TIMESTAMP ELSE resolved_at END
                     WHERE audit_id = %s
                     """,
-                    (normalized_status, str(parsed_audit_id)),
+                    (normalized_status, normalized_status, str(parsed_audit_id)),
                 )
                 cursor.execute(
                     """
@@ -538,6 +625,11 @@ def record_claim_action(
         raise ValueError("action must be 200 characters or fewer.")
     if details is not None and not isinstance(details, Mapping):
         raise ValueError("details must be an object.")
+    event_type = {
+        "overcharge flagged": "overcharge_flagged",
+        "dispute letter generated": "dispute_letter_generated",
+        "called provider": "provider_call_logged",
+    }.get(normalized_action.casefold(), "user_action")
 
     conn = connect_tiger_data()
     try:
@@ -553,10 +645,11 @@ def record_claim_action(
                 cursor.execute(
                     """
                     INSERT INTO audit_events (audit_id, event_type, details)
-                    VALUES (%s, 'user_action', %s)
+                    VALUES (%s, %s, %s)
                     """,
                     (
                         str(parsed_audit_id),
+                        event_type,
                         psycopg2.extras.Json({"action": normalized_action, **dict(details or {})}),
                     ),
                 )
@@ -569,12 +662,20 @@ def set_claim_deadlines(
     audit_id: str | UUID,
     collection_deadline: date | str | None = None,
     credit_warning_date: date | str | None = None,
+    payment_due_date: date | str | None = None,
+    clear_payment_due_date: bool = False,
 ) -> dict[str, str | None]:
     """Store the supplied deadline dates and append their change to the timeline."""
     parsed_audit_id = _parse_audit_id(audit_id)
     collection_date = _optional_date(collection_deadline, "collection_deadline")
     credit_date = _optional_date(credit_warning_date, "credit_warning_date")
-    if collection_date is None and credit_date is None:
+    payment_date = _optional_date(payment_due_date, "payment_due_date")
+    if (
+        collection_date is None
+        and credit_date is None
+        and payment_date is None
+        and not clear_payment_due_date
+    ):
         raise ValueError("At least one deadline date must be provided.")
 
     conn = connect_tiger_data()
@@ -584,7 +685,7 @@ def set_claim_deadlines(
                 # Lock the record so the timeline records the exact old and new dates.
                 cursor.execute(
                     """
-                    SELECT collection_deadline, credit_warning_date
+                    SELECT collection_deadline, credit_warning_date, payment_due_date
                     FROM audit_records
                     WHERE audit_id = %s
                     FOR UPDATE
@@ -603,10 +704,18 @@ def set_claim_deadlines(
                 stored_credit = (
                     credit_date if credit_date is not None else previous_dates[1]
                 )
+                stored_payment = (
+                    None
+                    if clear_payment_due_date
+                    else payment_date
+                    if payment_date is not None
+                    else previous_dates[2]
+                )
                 cursor.execute(
                     """
                     UPDATE audit_records
                     SET collection_deadline = %s, credit_warning_date = %s,
+                        payment_due_date = %s,
                         collection_deadline_is_estimate = CASE WHEN %s
                             THEN collection_deadline_is_estimate ELSE FALSE END,
                         credit_warning_date_is_estimate = CASE WHEN %s
@@ -616,6 +725,7 @@ def set_claim_deadlines(
                     (
                         stored_collection,
                         stored_credit,
+                        stored_payment,
                         collection_date is None,
                         credit_date is None,
                         str(parsed_audit_id),
@@ -651,6 +761,16 @@ def set_claim_deadlines(
                                     if stored_credit
                                     else None
                                 ),
+                                "previous_payment_due_date": (
+                                    previous_dates[2].isoformat()
+                                    if previous_dates[2]
+                                    else None
+                                ),
+                                "payment_due_date": (
+                                    stored_payment.isoformat()
+                                    if stored_payment
+                                    else None
+                                ),
                             }
                         ),
                     ),
@@ -663,6 +783,9 @@ def set_claim_deadlines(
             ),
             "credit_warning_date": (
                 stored_credit.isoformat() if stored_credit else None
+            ),
+            "payment_due_date": (
+                stored_payment.isoformat() if stored_payment else None
             ),
         }
     finally:

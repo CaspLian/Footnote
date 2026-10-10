@@ -43,102 +43,32 @@ export async function initializeLocalTimeline() {
   const db = await databasePromise;
   await db.execAsync(`
     PRAGMA journal_mode = WAL;
-    CREATE TABLE IF NOT EXISTS local_cases (
-      id TEXT PRIMARY KEY NOT NULL,
-      provider TEXT NOT NULL,
-      service_date TEXT NOT NULL,
-      received_date TEXT NOT NULL,
-      payment_due_date TEXT,
-      collection_deadline TEXT NOT NULL,
-      credit_warning_date TEXT NOT NULL,
-      status TEXT NOT NULL DEFAULT 'open',
-      created_at TEXT NOT NULL
-    );
-    CREATE TABLE IF NOT EXISTS local_timeline_events (
-      id TEXT PRIMARY KEY NOT NULL,
-      case_id TEXT NOT NULL REFERENCES local_cases(id) ON DELETE CASCADE,
-      event_type TEXT NOT NULL,
-      details TEXT NOT NULL DEFAULT '',
-      occurred_at TEXT NOT NULL
+    CREATE TABLE IF NOT EXISTS backend_audit_refs (
+      audit_id TEXT PRIMARY KEY NOT NULL,
+      saved_at TEXT NOT NULL
     );
   `);
-  const columns = await db.getAllAsync('PRAGMA table_info(local_cases)');
-  if (!columns.some(column => column.name === 'payment_due_date')) {
-    await db.execAsync('ALTER TABLE local_cases ADD COLUMN payment_due_date TEXT');
-  }
   return db;
 }
 
-export async function listLocalCases() {
+export async function listBackendAuditIds() {
   const db = await initializeLocalTimeline();
-  const cases = await db.getAllAsync('SELECT * FROM local_cases ORDER BY created_at DESC');
-  const events = await db.getAllAsync('SELECT * FROM local_timeline_events ORDER BY occurred_at DESC');
-  return cases.map(item => ({ ...item, events: events.filter(event => event.case_id === item.id) }));
+  const rows = await db.getAllAsync(
+    'SELECT audit_id FROM backend_audit_refs ORDER BY saved_at DESC',
+  );
+  return rows.map(row => row.audit_id);
 }
 
-async function recordEvent(db, caseId, eventType, details = '') {
+export async function saveBackendAuditId(auditId) {
+  if (typeof auditId !== 'string' || !auditId.trim()) {
+    throw new Error('A valid backend audit ID is required.');
+  }
+  const db = await initializeLocalTimeline();
   await db.runAsync(
-    'INSERT INTO local_timeline_events (id, case_id, event_type, details, occurred_at) VALUES (?, ?, ?, ?, ?)',
-    `${Date.now()}-${Math.random().toString(36).slice(2)}`,
-    caseId,
-    eventType,
-    details,
+    'INSERT OR IGNORE INTO backend_audit_refs (audit_id, saved_at) VALUES (?, ?)',
+    auditId.trim(),
     new Date().toISOString(),
   );
-}
-
-export async function addLocalCase({ provider, serviceDate, receivedDate, paymentDueDate }) {
-  const db = await initializeLocalTimeline();
-  const id = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-  await db.withTransactionAsync(async () => {
-    await db.runAsync(
-      'INSERT INTO local_cases (id, provider, service_date, received_date, payment_due_date, collection_deadline, credit_warning_date, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      id,
-      provider.trim(),
-      serviceDate,
-      receivedDate,
-      paymentDueDate || null,
-      datePlusDays(receivedDate, 120),
-      datePlusDays(serviceDate, 180),
-      new Date().toISOString(),
-    );
-    await recordEvent(db, id, 'bill_received', `Bill received ${receivedDate}`);
-    if (paymentDueDate) await recordEvent(db, id, 'payment_due_date_added', `Payment due date from notice: ${paymentDueDate}`);
-    await recordEvent(db, id, 'deadlines_estimated', 'Estimated from the dates entered; confirm against the bill or notice.');
-  });
-  return id;
-}
-
-export async function updateLocalDeadline(caseId, field, date) {
-  if (!['payment_due_date', 'collection_deadline', 'credit_warning_date'].includes(field)) throw new Error('Invalid deadline field.');
-  if (date === null && field !== 'payment_due_date') throw new Error('Only an optional payment date can be cleared.');
-  const db = await initializeLocalTimeline();
-  const current = await db.getFirstAsync('SELECT * FROM local_cases WHERE id = ?', caseId);
-  if (!current) throw new Error('Case not found.');
-  await db.withTransactionAsync(async () => {
-    await db.runAsync(`UPDATE local_cases SET ${field} = ? WHERE id = ?`, date, caseId);
-    const label = field === 'payment_due_date' ? 'Payment due' : field === 'collection_deadline' ? 'Collections estimate' : 'Credit warning estimate';
-    await recordEvent(db, caseId, date === null ? 'payment_due_date_removed' : 'deadline_edited', date === null ? 'Payment due date removed' : `${label} date changed to ${date}`);
-  });
-  await refreshLocalNotifications();
-}
-
-export async function recordLocalEvent(caseId, eventType, details) {
-  if (!['overcharge_flagged', 'dispute_letter_generated'].includes(eventType)) throw new Error('Invalid event type.');
-  const db = await initializeLocalTimeline();
-  await recordEvent(db, caseId, eventType, details);
-}
-
-export async function updateLocalStatus(caseId, status) {
-  if (!['open', 'dispute_in_progress', 'resolved'].includes(status)) throw new Error('Invalid case status.');
-  const db = await initializeLocalTimeline();
-  const current = await db.getFirstAsync('SELECT status FROM local_cases WHERE id = ?', caseId);
-  if (!current) throw new Error('Case not found.');
-  await db.withTransactionAsync(async () => {
-    await db.runAsync('UPDATE local_cases SET status = ? WHERE id = ?', status, caseId);
-    await recordEvent(db, caseId, 'status_changed', `${current.status} → ${status}`);
-  });
-  await refreshLocalNotifications();
 }
 
 export async function requestLocalAlertPermission() {
@@ -155,12 +85,10 @@ export async function requestLocalAlertPermission() {
   return requested.granted;
 }
 
-export async function refreshLocalNotifications() {
+export async function refreshLocalNotifications(audits = []) {
   if (Platform.OS === 'web') return;
   const permission = await Notifications.getPermissionsAsync();
   const permitted = permission.granted;
-  const db = await initializeLocalTimeline();
-  const cases = await db.getAllAsync("SELECT * FROM local_cases WHERE status != 'resolved'");
   const existing = await Notifications.getAllScheduledNotificationsAsync();
   for (const notification of existing) {
     if (notification.content.data?.scope === 'claimpulse-deadline') {
@@ -168,7 +96,8 @@ export async function refreshLocalNotifications() {
     }
   }
   if (!permitted) return;
-  for (const item of cases) {
+  for (const item of audits) {
+    if (item.status === 'resolved') continue;
     for (const [field, label] of [['payment_due_date', 'Payment due date'], ['collection_deadline', 'Estimated collections date'], ['credit_warning_date', 'Estimated credit warning date']]) {
       const deadline = item[field];
       if (!deadline) continue;
@@ -181,7 +110,7 @@ export async function refreshLocalNotifications() {
           content: {
             title: label,
             body: offset === 0 ? `The saved estimate is today (${deadline}). Check the actual notice.` : `${offset} day${offset === 1 ? '' : 's'} remain by this saved estimate. Open the app to review it.`,
-            data: { scope: 'claimpulse-deadline', caseId: item.id, field },
+            data: { scope: 'claimpulse-deadline', auditId: item.audit_id, field },
           },
           trigger: {
             type: Notifications.SchedulableTriggerInputTypes.DATE,

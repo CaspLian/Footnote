@@ -10,6 +10,7 @@ from services.tigerdata_service import (
     get_database_snapshot,
     get_bill_audit,
     initialize_tiger_data,
+    create_manual_case,
     record_bill_audit,
     resolve_claim,
     set_claim_deadlines,
@@ -55,6 +56,7 @@ class TigerDataAuditIntegrationTests(unittest.TestCase):
             self.assertIsNotNone(saved)
             assert saved is not None
             self.assertEqual(saved["audit_id"], audit_id)
+            self.assertEqual(saved["case_type"], "bill_audit")
             self.assertEqual(saved["claim_id"], self.mock_bill["claim_id"])
             self.assertEqual(
                 saved["provider"],
@@ -67,7 +69,7 @@ class TigerDataAuditIntegrationTests(unittest.TestCase):
             self.assertEqual(saved["status"], "audit_complete")
             self.assertEqual(
                 [event["event_type"] for event in saved["events"]],
-                ["bill_scanned", "audit_completed"],
+                ["bill_scanned", "bill_dates_extracted", "audit_completed"],
             )
             self.assertEqual(
                 [item["description"] for item in saved["items"]],
@@ -93,6 +95,57 @@ class TigerDataAuditIntegrationTests(unittest.TestCase):
     def test_missing_audit_returns_none(self) -> None:
         self.assertIsNone(get_bill_audit(uuid4()))
 
+    def test_manual_case_is_persisted_with_deadline_estimates(self) -> None:
+        result = create_manual_case(
+            provider_name="Example Hospital",
+            service_date="2026-09-15",
+            bill_received_date="2026-10-01",
+            payment_due_date="2026-11-01",
+        )
+        audit_id = result["audit_id"]
+
+        try:
+            saved = get_bill_audit(audit_id)
+
+            self.assertIsNotNone(saved)
+            assert saved is not None
+            self.assertEqual(saved["case_type"], "manual_case")
+            self.assertEqual(saved["provider"]["name"], "Example Hospital")
+            self.assertEqual(saved["service_date"], "2026-09-15")
+            self.assertEqual(saved["bill_received_date"], "2026-10-01")
+            self.assertEqual(saved["payment_due_date"], "2026-11-01")
+            self.assertEqual(saved["collection_deadline"], "2027-01-29")
+            self.assertTrue(saved["collection_deadline_is_estimate"])
+            self.assertEqual(saved["credit_warning_date"], "2027-03-14")
+            self.assertTrue(saved["credit_warning_date_is_estimate"])
+            self.assertEqual(saved["status"], "open")
+            self.assertEqual(saved["items"], [])
+            self.assertEqual(saved["events"][0]["event_type"], "manual_case_created")
+
+            set_claim_deadlines(audit_id, payment_due_date="2026-12-01")
+            saved = get_bill_audit(audit_id)
+            self.assertIsNotNone(saved)
+            assert saved is not None
+            self.assertEqual(saved["payment_due_date"], "2026-12-01")
+
+            set_claim_deadlines(audit_id, clear_payment_due_date=True)
+            saved = get_bill_audit(audit_id)
+            self.assertIsNotNone(saved)
+            assert saved is not None
+            self.assertIsNone(saved["payment_due_date"])
+            self.assertEqual(saved["events"][-1]["event_type"], "deadlines_set")
+        finally:
+            conn = connect_tiger_data()
+            try:
+                with conn:
+                    with conn.cursor() as cursor:
+                        cursor.execute(
+                            "DELETE FROM audit_records WHERE audit_id = %s",
+                            (audit_id,),
+                        )
+            finally:
+                conn.close()
+
     def test_status_update_is_saved_with_timeline_event(self) -> None:
         result = record_bill_audit(self.mock_bill)
         audit_id = result["audit_id"]
@@ -110,7 +163,12 @@ class TigerDataAuditIntegrationTests(unittest.TestCase):
             self.assertEqual(saved["status"], "dispute_in_progress")
             self.assertEqual(
                 [event["event_type"] for event in saved["events"]],
-                ["bill_scanned", "audit_completed", "dispute_in_progress"],
+                [
+                    "bill_scanned",
+                    "bill_dates_extracted",
+                    "audit_completed",
+                    "dispute_in_progress",
+                ],
             )
             self.assertEqual(
                 saved["events"][-1]["previous_status"], "audit_complete"
@@ -280,7 +338,12 @@ class TigerDataAuditIntegrationTests(unittest.TestCase):
             ]
             self.assertEqual(
                 [event["event_type"] for event in timeline],
-                ["bill_scanned", "audit_completed", "deadlines_set"],
+                [
+                    "bill_scanned",
+                    "bill_dates_extracted",
+                    "audit_completed",
+                    "deadlines_set",
+                ],
             )
         finally:
             conn = connect_tiger_data()
