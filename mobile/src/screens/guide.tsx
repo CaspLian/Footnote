@@ -1,0 +1,11 @@
+import { useState } from 'react';
+import { Linking, Pressable, View } from 'react-native';
+import { glossary } from '@/domain';
+import { Button, Divider, Field, Group, Screen, Txt, useLanguage } from '@/components/ui';
+import { Icon } from '@/components/icon';
+import { colors, sizes, space } from '@/theme';
+export function Guide() {
+  const {locale,copy}=useLanguage(); const [search,setSearch]=useState('');const [open,setOpen]=useState<string|null>('eob');const [error,setError]=useState(false);
+  const norm=(s:string)=>s.normalize('NFD').replace(/\p{Diacritic}/gu,'').toLowerCase();const terms=glossary.filter(term=>norm(term.title[locale]+' '+term.definition[locale]).includes(norm(search)));
+  return <Screen testID="guide"><Txt variant="display">{copy('Plain words. Useful context.','Un poco de claridad ayuda mucho.')}</Txt><Field label={copy('Search terms','Buscar términos')} placeholder={copy('EOB, deductible, appeal…','EOB, deducible, apelación…')} value={search} onChangeText={setSearch} returnKeyType="search"/>{terms.map(term=><View key={term.id}><Pressable accessibilityRole="button" accessibilityState={{expanded:open===term.id}} accessibilityLabel={term.title[locale]} onPress={()=>setOpen(open===term.id?null:term.id)} style={({pressed})=>({minHeight:sizes.touch,paddingVertical:space.md,flexDirection:'row',alignItems:'center',gap:space.md,opacity:pressed?.6:1})}><Txt variant={open===term.id?'section':'body'} style={{flex:1}}>{term.title[locale]}</Txt><Icon name="next" color={colors.muted}/></Pressable>{open===term.id?<Group gap={space.lg}><Txt muted>{term.definition[locale]}</Txt><Txt>{term.example[locale]}</Txt><Button variant="quiet" title={copy('Read the source','Leer la fuente')} onPress={()=>{void Linking.openURL(term.source.url).catch(()=>setError(true));}} /></Group>:null}<Divider/></View>)}{!terms.length?<Txt muted>{copy('No matching terms. Try EOB or appeal.','No hay términos coincidentes. Prueba EOB o apelación.')}</Txt>:null}{error?<Txt style={{color:colors.error}}>{copy('The source could not be opened. Try again when online.','No se pudo abrir la fuente. Intenta cuando tengas conexión.')}</Txt>:null}<Txt variant="caption" muted>{copy('General explanations; your plan documents control your coverage.','Son explicaciones generales; los documentos de tu plan determinan tu cobertura.')}</Txt></Screen>;
+}

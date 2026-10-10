@@ -30,6 +30,7 @@ Explanation of Benefits (EOB) letters and insurance documents.
 
 Rules:
 - Only report what is actually in the document or the user's text. Never invent codes, amounts or dates. Use null when something is missing.
+- When several page images are supplied, treat them as one document in order. Include a line item's 1-based source_page only when you can identify the image containing it; otherwise use null.
 - Write every explanation for a 5th-grade reading level.
 - Write plain_description, possible_issues, plain_summary, spoken_summary and questions_to_ask in {language}.
   Keep original_description exactly as printed.
@@ -66,23 +67,28 @@ async def analyze(
     *,
     file_bytes: Optional[bytes] = None,
     mime_type: Optional[str] = None,
+    image_inputs: Optional[list[tuple[bytes, str]]] = None,
     text: Optional[str] = None,
     target_language: str = "en",
 ) -> GeminiResult:
     """Send a bill photo/PDF and/or typed text to Gemini and get a GeminiResult back."""
-    if not file_bytes and not (text and text.strip()):
+    inputs = image_inputs or ([(file_bytes, mime_type)] if file_bytes else [])
+    if not inputs and not (text and text.strip()):
         raise ValueError("Send a file, some text, or both.")
-    if file_bytes and mime_type not in SUPPORTED_MIME:
-        raise ValueError(f"Unsupported file type {mime_type}. Use JPG, PNG, WEBP, HEIC or PDF.")
+    for _, input_mime in inputs:
+        if input_mime not in SUPPORTED_MIME:
+            raise ValueError(f"Unsupported file type {input_mime}. Use JPG, PNG, WEBP, HEIC or PDF.")
 
     if is_mock():
         return GeminiResult.model_validate_json(MOCK_PATH.read_text(encoding="utf-8"))
 
     language = LANGUAGES.get(target_language, target_language)
     parts: list = []
-    if file_bytes:
-        parts.append(types.Part.from_bytes(data=file_bytes, mime_type=mime_type))
-    instruction = "Analyze this document." if file_bytes else "Analyze the text below."
+    for input_bytes, input_mime in inputs:
+        parts.append(types.Part.from_bytes(data=input_bytes, mime_type=input_mime))
+    instruction = "Analyze this document." if inputs else "Analyze the text below."
+    if len(inputs) > 1:
+        instruction = "Analyze these bill pages together as one document, in the order provided."
     if text and text.strip():
         instruction += f"\n\nUser's text or question:\n{text.strip()}"
     parts.append(instruction)

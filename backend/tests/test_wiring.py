@@ -100,6 +100,30 @@ def test_an_uploaded_bill_is_saved_as_a_file_analysis(backend):
     assert backend.store.saved[body["audit"]["audit_id"]]["source"] == "file"
 
 
+def test_multiple_camera_pages_are_forwarded_to_gemini_in_order(backend, monkeypatch):
+    received = {}
+    original = backend.main.analyze
+
+    async def capture_inputs(**kwargs):
+        received.update(kwargs)
+        return await original(**kwargs)
+
+    monkeypatch.setattr(backend.main, "analyze", capture_inputs)
+    response = backend.client.post("/api/v1/analyze", files=[
+        ("files", ("page-1.jpg", b"first-page", "image/jpeg")),
+        ("files", ("page-2.jpg", b"second-page", "image/jpeg")),
+    ])
+    assert response.status_code == 200
+    assert received["image_inputs"] == [(b"first-page", "image/jpeg"), (b"second-page", "image/jpeg")]
+    assert backend.store.saved[response.json()["audit"]["audit_id"]]["source"] == "file"
+
+
+def test_combined_camera_upload_limit_is_enforced(backend):
+    too_large = b"x" * (15 * 1024 * 1024 + 1)
+    response = backend.client.post("/api/v1/analyze", files=[("files", ("page.jpg", too_large, "image/jpeg"))])
+    assert response.status_code == 413
+
+
 def test_the_analysis_still_comes_back_when_it_cannot_be_saved(backend):
     backend.store.configured = False
     response = backend.client.post("/api/v1/analyze", data={"text": "Hello"})

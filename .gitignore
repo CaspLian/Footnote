@@ -3,5 +3,6 @@ mobile/.expo/
 backend/venv/
 backend/.env
 backend/__pycache__/
+backend/.pytest_cache/
 .DS_Store
 backend/api.env
