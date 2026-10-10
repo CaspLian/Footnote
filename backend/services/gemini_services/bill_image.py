@@ -41,8 +41,8 @@ def validate_extracted_bill(payload: dict[str, Any]) -> dict[str, Any]:
     return normalized
 
 
-def analyze_bill_image(image: bytes, mime_type: str = "image/jpeg") -> dict[str, Any]:
-    """Call Gemini and return validated extracted bill data."""
+def analyze_bill_image(image: bytes, mime_type: str = "image/jpeg", model: str | None = None) -> dict[str, Any]:
+    """Call Gemini and return validated extracted bill data. model: GEMINI_MODEL unless given (the route's fallback)."""
     load_dotenv()
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key or api_key.startswith("your_"):
@@ -62,7 +62,7 @@ def analyze_bill_image(image: bytes, mime_type: str = "image/jpeg") -> dict[str,
     visible line item. If unreadable or not a medical bill, return {"items":[]}.
     """
     response = client.models.generate_content(
-        model=os.getenv("GEMINI_MODEL", "gemini-2.5-flash"),
+        model=model or os.getenv("GEMINI_MODEL", "gemini-2.5-flash"),
         contents=[prompt, types.Part.from_bytes(data=image, mime_type=mime_type)],
         config=types.GenerateContentConfig(response_mime_type="application/json"),
     )

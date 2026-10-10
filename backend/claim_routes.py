@@ -11,6 +11,7 @@ correction from the user replaces them. The routes are synchronous (the service 
 in its thread pool; the bill-photo route runs its blocking work in a thread.
 """
 import asyncio
+import os
 from datetime import date
 from typing import Any, Literal, Optional
 
@@ -141,8 +142,20 @@ async def analyze_image(file: UploadFile = File(...)):
     if not image or len(image) > MAX_IMAGE_BYTES:
         raise HTTPException(413, "Image must be non-empty and at most 15 MB.")
 
+    def read_bill():
+        try:
+            return bill_image.analyze_bill_image(image, file.content_type)
+        except (ValueError, RuntimeError):
+            raise  # unusable output, or not configured: another model would not help
+        except Exception:
+            # A provider failure such as a used-up quota (429): try GEMINI_FALLBACK_MODEL, as the full analysis does.
+            fallback = os.getenv("GEMINI_FALLBACK_MODEL", "").strip()
+            if not fallback:
+                raise
+            return bill_image.analyze_bill_image(image, file.content_type, model=fallback)
+
     def work():
-        extracted = bill_image.analyze_bill_image(image, file.content_type)
+        extracted = read_bill()
         recordable = [item for item in extracted["items"]
                       if str(item.get("code") or "").strip().upper() not in NO_CODE
                       and str(item.get("description") or "").strip() and item.get("amount") is not None]
@@ -158,6 +171,8 @@ async def analyze_image(file: UploadFile = File(...)):
     except ValueError as e:
         raise HTTPException(422, str(e)) from e
     except Exception as e:  # provider or database details are not shown to clients
+        if getattr(e, "code", None) == 429:
+            raise HTTPException(503, "Gemini's request quota for this key is used up for now. Try again later.") from e
         raise HTTPException(503, "Bill analysis or Tiger Data persistence failed.") from e
     if audit is None:
         raise HTTPException(500, "Tiger Data saved the claim but it could not be read back.")

@@ -4,6 +4,7 @@ The lifecycle tests need TIGER_TEST_DATABASE_URL; they never use the team's data
 """
 import os
 from datetime import date, timedelta
+from urllib.parse import quote
 
 import pytest
 from fastapi.testclient import TestClient
@@ -24,10 +25,24 @@ CLAIM = {
 }
 
 
+SCHEMA = "claim_route_tests"  # its own schema: the Tiger Data tests' snapshot of public stays theirs
+
+
+def _schema_url(url):
+    import psycopg2
+
+    conn = psycopg2.connect(url, connect_timeout=10)
+    conn.autocommit = True
+    with conn.cursor() as cursor:
+        cursor.execute(f"CREATE SCHEMA IF NOT EXISTS {SCHEMA}")
+    conn.close()
+    return url + ("&" if "?" in url else "?") + "options=" + quote(f"-c search_path={SCHEMA}")
+
+
 @pytest.fixture
 def client(monkeypatch):
     # An unreachable local address when there is no test database, so nothing can reach the team's.
-    monkeypatch.setenv("TIGER_DATA_POSTGRES_URL", TEST_DB or "postgresql://nobody@127.0.0.1:9/none")
+    monkeypatch.setenv("TIGER_DATA_POSTGRES_URL", _schema_url(TEST_DB) if TEST_DB else "postgresql://nobody@127.0.0.1:9/none")
     with TestClient(main.app) as test_client:
         yield test_client
 
@@ -140,3 +155,40 @@ def test_a_bill_photo_records_only_complete_lines_and_keeps_every_line_read(clie
 def test_the_bill_photo_route_refuses_what_is_not_an_image(client):
     assert client.post("/api/v1/analyze-image", files={"file": ("bill.txt", b"hello", "text/plain")}).status_code == 415
     assert client.post("/api/v1/analyze-image", files={"file": ("empty.jpg", b"", "image/jpeg")}).status_code == 413
+
+
+class _QuotaError(Exception):
+    code = 429  # like google.genai.errors.ClientError for RESOURCE_EXHAUSTED
+
+
+@needs_db
+def test_a_used_up_quota_falls_back_to_the_fallback_model(client, monkeypatch):
+    from services.gemini_services import bill_image
+
+    extracted = {"provider": {}, "service_date": "2026-09-14", "bill_received_date": None, "payment_due_date": None,
+                 "total_billed": 300.0, "currency": "USD", "items": [{"description": "Office visit", "code": "99213", "amount": 300.0}]}
+    models = []
+
+    def fake(image, mime, model=None):
+        models.append(model)
+        if model is None:
+            raise _QuotaError("429 RESOURCE_EXHAUSTED")
+        return extracted
+
+    monkeypatch.setattr(bill_image, "analyze_bill_image", fake)
+    monkeypatch.setenv("GEMINI_FALLBACK_MODEL", "gemini-fallback")
+    response = client.post("/api/v1/analyze-image", files={"file": ("bill.jpg", b"\xff\xd8\xff" + b"0" * 100, "image/jpeg")})
+    assert response.status_code == 200, response.text
+    assert models == [None, "gemini-fallback"]
+
+
+def test_when_every_model_is_out_of_quota_the_message_says_so(client, monkeypatch):
+    from services.gemini_services import bill_image
+
+    def fake(image, mime, model=None):
+        raise _QuotaError("429 RESOURCE_EXHAUSTED")
+
+    monkeypatch.setattr(bill_image, "analyze_bill_image", fake)
+    monkeypatch.setenv("GEMINI_FALLBACK_MODEL", "gemini-fallback")
+    response = client.post("/api/v1/analyze-image", files={"file": ("bill.jpg", b"\xff\xd8\xff" + b"0" * 100, "image/jpeg")})
+    assert response.status_code == 503 and "quota" in response.json()["detail"]
