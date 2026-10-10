@@ -43,7 +43,8 @@ from the code. The models are defined in `backend/models.py` and `backend/servic
 | `GET /api/v1/benchmarks/{cpt_code}` | Medicare's national rate for one code, for the app's price comparison | `main.py`, `snowflake_service.py` |
 | `POST /api/v1/claims` | Record a confirmed bill as a claim in Tiger Data; its timeline starts | `claim_routes.py`, `tigerdata_service.py` |
 | `GET /api/v1/claims/{claim_id}` | A claim with its lines, deadlines, countdowns and timeline | `claim_routes.py` |
-| `POST /api/v1/claims/{claim_id}/status`, `/deadlines`, `/resolve` | The claim's next steps | `claim_routes.py` |
+| `POST /api/v1/claims/{claim_id}/status`, `/deadlines`, `/resolve`, `/actions` | The claim's next steps (status and deadlines also accept `PATCH`) | `claim_routes.py` |
+| `POST /api/v1/analyze-image` | One bill photo -> its dates and lines -> a claim with estimated deadlines (the Tiger Data flow) | `claim_routes.py`, `gemini_services/bill_image.py` |
 | `POST /api/v1/voice/analyze` | A recorded question (+ optional bill) → transcript, analysis, spoken reply | `voice_routes.py` |
 | `POST /api/v1/voice/speak` | Speak a saved analysis again, without calling Gemini | `voice_routes.py` |
 | `GET /api/v1/voice/audio/{audio_id}` | The reply audio (MP3) | `voice_routes.py`, `audio_http.py` |
@@ -107,14 +108,20 @@ The Tiger Data claim lifecycle (`backend/claim_routes.py`, over `services/tigerd
 JSON bodies:
 - `POST /api/v1/claims`:
   - `items` (required, at least one): `[{code, description, amount}]`, all three on every line
-  - `provider_name`, `service_date` (`YYYY-MM-DD`), `total_billed`, `analysis_audit_id` (stored as `claim_id`), and
-    `region` (for the team's regional benchmarks): optional
+  - `provider_name`, `service_date`, `bill_received_date`, `payment_due_date` (all `YYYY-MM-DD`), `total_billed`,
+    `analysis_audit_id` (stored as `claim_id`), and `region` (for the team's regional benchmarks): optional
+  - Deadlines are estimated from the bill's own dates (`tigerdata_services/timeline.py`). A credit-report warning
+    is 180 days after `service_date`, and a collection date 120 days after `bill_received_date`. A missing date gives
+    no estimate. `collection_deadline_is_estimate` and `credit_warning_date_is_estimate` say which dates are estimates.
 
   Returns `{audit_id, claim_id, region, total_billed, overcharge_total, items, recorded}`. `audit_id` is the claim's
   ID in the other routes.
-- `POST /{claim_id}/status`: `{status}`, either `audit_complete` or `dispute_in_progress`, plus optional `details`.
-- `POST /{claim_id}/deadlines`: `{collection_deadline?, credit_warning_date?}`. At least one is required, and dates
-  cannot be cleared.
+- `POST` or `PATCH` `/{claim_id}/status`: `{status}`, either `audit_complete` or `dispute_in_progress`, plus
+  optional `note` and `details`.
+- `POST` or `PATCH` `/{claim_id}/deadlines`: `{collection_deadline?, credit_warning_date?}`. At least one is
+  required, and dates cannot be cleared. A date set here is the user's, and is no longer an estimate.
+- `POST /{claim_id}/actions`: `{action, note?}`, for example `{"action": "Called provider"}`. It is added to the
+  timeline (201).
 - `POST /{claim_id}/resolve`: `{final_amount}`, in dollars. The status becomes `resolved`, the savings are computed,
   and the countdowns stop.
 - `GET /{claim_id}`: the claim, its `items`, `status`, deadlines with days remaining, and `events` (the timeline).
@@ -134,6 +141,17 @@ How the app uses it (`mobile/src/services/claim-tracker.ts`, from the store):
 | marks a request submitted | status `dispute_in_progress` |
 | sets a notice date | `deadlines` with `collection_deadline` |
 | marks the case resolved | `resolve` with the confirmed statement balance |
+| sets or removes a follow-up reminder, prepares a request, or removes a notice date | `actions` |
+
+The review sends `service_date` and Gemini's `payment_due_date`, then reads the claim back. The case timeline
+shows the estimated deadlines, labeled as estimates. The full analysis does not read a "bill received" date, so
+the collection estimate appears only from `POST /api/v1/analyze-image` or a confirmed notice date.
+
+`POST /api/v1/analyze-image` (`file`: a JPEG, PNG or WebP of up to 15 MB) returns `{extracted_bill, audit}`:
+- Only lines with a code, a description and an amount are recorded. `extracted_bill` keeps every line.
+- Errors: 415 for another type, 413 for an empty or oversized image, 422 when nothing is recordable, 503 when
+  Gemini or Tiger Data are unavailable.
+- It is not the app's analysis. `POST /api/v1/analyze` stays the full analysis.
 
 Some limits:
 - Only lines with a code, a description and an amount are recorded. The total is the confirmed bill total.

@@ -111,3 +111,11 @@ npm run bundle:web
 ```
 
 TypeScript, lint, 39 focused tests, and web/Android/iOS bundle exports pass. The development client built and ran on an iPhone 18 Pro simulator with onboarding, source PDF preview, review, narration, draft copy, restart recovery, and unenrolled Face ID recovery exercised. Android runtime, physical-device camera capture, enrolled biometric authentication, and a full large-text/screen-reader device audit remain to be validated.
+
+## Tiger Data deadline prototype (from `Tiger-data`, 2026-10-10)
+
+`local-timeline.js` was written for the old starter `App.js`: an encrypted local timeline (`expo-sqlite` with
+SQLCipher) and deadline reminders (`expo-notifications`). The Unfold app does not use it yet, and those packages are
+not installed. Its backend side is connected: the claim routes estimate a credit-report warning date (180 days after
+the service date) and a collection date (120 days after the bill was received). Both are shown as estimates on the
+case timeline. See `docs/API_CONTRACTS.md`, "The claim workflow".

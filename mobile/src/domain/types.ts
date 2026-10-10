@@ -126,6 +126,8 @@ export interface BillCase {
   reviewMode?: 'synthetic' | 'manual';
   /** The case's claim in Tiger Data (POST /api/v1/claims), recorded when the case is first confirmed. */
   claimId?: string;
+  /** The claim's deadlines from Tiger Data: estimates from the bill's dates until the user confirms a date. */
+  claimDeadlines?: ClaimDeadlines;
 }
 export interface AppealDraft {
   id: string;
@@ -165,12 +167,22 @@ export interface DraftService {
 export type ClaimChange =
   | { status: 'audit_complete' | 'dispute_in_progress' }
   | { collectionDeadline: string }
-  | { finalCents: Money };
+  | { finalCents: Money }
+  | { action: string; note?: string };
+/** YYYY-MM-DD dates; an estimate is computed by Tiger Data from the bill's dates, not read from a notice. */
+export interface ClaimDeadlines {
+  collectionDeadline?: string;
+  collectionIsEstimate: boolean;
+  creditWarningDate?: string;
+  creditWarningIsEstimate: boolean;
+}
 /** Keeps a case's claim in Tiger Data in step with the app (services/claim-tracker.ts). */
 export interface ClaimTracker {
   /** Records a confirmed case; resolves to its claim id, or undefined when there is nothing to record. */
   record(billCase: BillCase): Promise<string | undefined>;
   update(claimId: string, change: ClaimChange): Promise<void>;
+  /** The claim's current deadlines, or undefined when they cannot be read. */
+  deadlines(claimId: string): Promise<ClaimDeadlines | undefined>;
 }
 export interface NarrationService {
   speak(text: string, language: Language): Promise<void>;

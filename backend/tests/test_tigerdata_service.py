@@ -67,7 +67,7 @@ class TigerDataAuditIntegrationTests(unittest.TestCase):
             self.assertEqual(saved["status"], "audit_complete")
             self.assertEqual(
                 [event["event_type"] for event in saved["events"]],
-                ["bill_scanned", "audit_completed"],
+                ["bill_scanned", "bill_dates_extracted", "audit_completed"],
             )
             self.assertEqual(
                 [item["description"] for item in saved["items"]],
@@ -110,7 +110,7 @@ class TigerDataAuditIntegrationTests(unittest.TestCase):
             self.assertEqual(saved["status"], "dispute_in_progress")
             self.assertEqual(
                 [event["event_type"] for event in saved["events"]],
-                ["bill_scanned", "audit_completed", "dispute_in_progress"],
+                ["bill_scanned", "bill_dates_extracted", "audit_completed", "dispute_in_progress"],
             )
             self.assertEqual(
                 saved["events"][-1]["previous_status"], "audit_complete"
@@ -280,7 +280,7 @@ class TigerDataAuditIntegrationTests(unittest.TestCase):
             ]
             self.assertEqual(
                 [event["event_type"] for event in timeline],
-                ["bill_scanned", "audit_completed", "deadlines_set"],
+                ["bill_scanned", "bill_dates_extracted", "audit_completed", "deadlines_set"],
             )
         finally:
             conn = connect_tiger_data()

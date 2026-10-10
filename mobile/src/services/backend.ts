@@ -1,4 +1,4 @@
-import type { ClaimChange } from '../domain/types';
+import type { ClaimChange, ClaimDeadlines } from '../domain/types';
 
 /**
  * The ClaimPulse backend, from EXPO_PUBLIC_API_URL (for example http://192.168.1.23:8000; see mobile/.env.example).
@@ -77,6 +77,7 @@ export interface ClaimIn {
   provider_name?: string;
   service_date?: string;
   total_billed?: number;
+  payment_due_date?: string;
   analysis_audit_id?: string;
 }
 
@@ -89,7 +90,26 @@ export async function updateClaim(claimId: string, change: ClaimChange): Promise
   const base = `/api/v1/claims/${encodeURIComponent(claimId)}`;
   if ('status' in change) await postJson(`${base}/status`, { status: change.status });
   else if ('collectionDeadline' in change) await postJson(`${base}/deadlines`, { collection_deadline: change.collectionDeadline });
+  else if ('action' in change) await postJson(`${base}/actions`, { action: change.action, note: change.note });
   else await postJson(`${base}/resolve`, { final_amount: change.finalCents / 100 });
+}
+
+interface ClaimOut {
+  collection_deadline: string | null;
+  collection_deadline_is_estimate?: boolean;
+  credit_warning_date: string | null;
+  credit_warning_date_is_estimate?: boolean;
+}
+
+/** GET /api/v1/claims/{id}: the claim's deadlines, and whether each is an estimate from the bill's dates. */
+export async function claimDeadlines(claimId: string): Promise<ClaimDeadlines> {
+  const claim = await call<ClaimOut>(`/api/v1/claims/${encodeURIComponent(claimId)}`, { method: 'GET' }, LOOKUP_TIMEOUT_MS);
+  return {
+    collectionDeadline: claim.collection_deadline ?? undefined,
+    collectionIsEstimate: !!claim.collection_deadline_is_estimate,
+    creditWarningDate: claim.credit_warning_date ?? undefined,
+    creditWarningIsEstimate: !!claim.credit_warning_date_is_estimate,
+  };
 }
 
 /** GET /api/v1/benchmarks/{code}: Medicare's national rate for one code (free; no Gemini call). */

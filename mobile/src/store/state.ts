@@ -125,6 +125,11 @@ export function createUnfoldStore(storage: LocalStorage, options: StoreOptions =
           change({ cases: get().cases.map(item => item.id === caseId ? { ...item, claimId: recorded } : item) });
         }
         await claims.update(claimId, step ?? { status: 'audit_complete' });
+        if (!step || 'collectionDeadline' in step) {
+          // Tiger Data estimates the deadlines when the claim is recorded; a confirmed notice date replaces one.
+          const deadlines = await claims.deadlines(claimId);
+          if (deadlines && get().cases.some(item => item.id === caseId)) change({ cases: get().cases.map(item => item.id === caseId ? { ...item, claimDeadlines: deadlines } : item) });
+        }
       } catch { /* Tiger Data unavailable: the app's own record stays complete. */ }
     };
     const caseById = (id: string) => {
@@ -210,7 +215,7 @@ export function createUnfoldStore(storage: LocalStorage, options: StoreOptions =
       assignCaseProfile(caseId, profileId) { caseById(caseId); if (!get().profiles.some(p => p.id === profileId)) throw new Error('profile_not_found'); change({ cases: get().cases.map(c => c.id === caseId ? { ...c, profileId, updatedAt: now() } : c) }); },
       setExplanationDepth(depth) { if (depth !== 'simple' && depth !== 'detailed') return; change({ personalContext: { ...get().personalContext, explanationDepth: depth } }); },
       markResolved(caseId) { const c = caseById(caseId); if (c.status === 'resolved') return; change({ cases: get().cases.map(c => c.id === caseId ? { ...c, status: 'resolved', updatedAt: now() } : c), events: [...get().events, event(caseId, 'resolved')] }); void trackClaim(caseId, { finalCents: c.financials.remainingCents }); },
-      setNoticeDeadline(caseId, date) { const c = caseById(caseId); if (date !== null && !isISODate(date)) throw new Error('invalid_date'); if ((c.noticeDeadline ?? null) === date) return; change({ cases: get().cases.map(c => c.id === caseId ? { ...c, noticeDeadline: date ?? undefined, updatedAt: now() } : c), events: [...get().events, event(caseId, date ? 'deadline_set' : 'deadline_removed', date ? { date } : {})] }); if (date !== null) void trackClaim(caseId, { collectionDeadline: date }); },
+      setNoticeDeadline(caseId, date) { const c = caseById(caseId); if (date !== null && !isISODate(date)) throw new Error('invalid_date'); if ((c.noticeDeadline ?? null) === date) return; change({ cases: get().cases.map(c => c.id === caseId ? { ...c, noticeDeadline: date ?? undefined, updatedAt: now() } : c), events: [...get().events, event(caseId, date ? 'deadline_set' : 'deadline_removed', date ? { date } : {})] }); void trackClaim(caseId, date !== null ? { collectionDeadline: date } : { action: 'Notice date removed' }); },
       setIconPreferences(preferences) {
         const patch: Partial<UnfoldState> = {};
         if (preferences.iconWeight && ['regular', 'bold', 'thin'].includes(preferences.iconWeight)) patch.iconWeight = preferences.iconWeight;
@@ -298,7 +303,10 @@ export function createUnfoldStore(storage: LocalStorage, options: StoreOptions =
         const body = (await draftService.prepare(billCase, kind, locale)).replace('[Your name]', name || '[Your name]');
         caseById(caseId);
         const duplicate = get().drafts.find(draft => draft.caseId === caseId && draft.kind === kind && draft.locale === locale);
-        return duplicate?.id ?? saveDraft(caseId, kind, body, locale);
+        if (duplicate) return duplicate.id;
+        const draftId = saveDraft(caseId, kind, body, locale);
+        void trackClaim(caseId, { action: kind === 'insurer_appeal' ? 'Prepared an insurer appeal' : 'Prepared a billing request' });
+        return draftId;
       },
       markSubmitted(draftId) {
         ensureWritable(); const draft = get().drafts.find(item => item.id === draftId);
@@ -318,6 +326,7 @@ export function createUnfoldStore(storage: LocalStorage, options: StoreOptions =
         if (date !== null && !isISODate(date)) throw new Error('invalid_date');
         if ((current.followUpDate ?? null) === date) return;
         change({ cases: get().cases.map(item => item.id === caseId ? { ...item, followUpDate: date ?? undefined, updatedAt: now() } : item), events: [...get().events, event(caseId, date ? 'follow_up_set' : 'follow_up_removed', date ? { date } : {})] });
+        void trackClaim(caseId, date ? { action: 'Follow-up reminder set', note: date } : { action: 'Follow-up reminder removed' });
       },
       async deleteCase(caseId) {
         const current = caseById(caseId);

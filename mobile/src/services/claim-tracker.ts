@@ -1,5 +1,6 @@
+import { isISODate } from '../domain/money';
 import type { ClaimTracker } from '../domain/types';
-import { backendConfigured, recordClaim, updateClaim } from './backend';
+import { backendConfigured, claimDeadlines, recordClaim, updateClaim } from './backend';
 import { normalizeCode } from './backend-mapping';
 
 /**
@@ -21,6 +22,8 @@ export const claimTracker: ClaimTracker = {
       items,
       provider_name: billCase.provider || undefined,
       service_date: billCase.serviceDate || undefined,
+      // The due date Gemini read from the bill. Tiger Data estimates the deadlines from the bill's dates.
+      payment_due_date: billCase.extraction?.dueDate && isISODate(billCase.extraction.dueDate) ? billCase.extraction.dueDate : undefined,
       total_billed: billCase.financials.billedCents / 100,
       analysis_audit_id: billCase.extraction?.auditId,
     });
@@ -28,5 +31,8 @@ export const claimTracker: ClaimTracker = {
   },
   async update(claimId, change) {
     if (backendConfigured()) await updateClaim(claimId, change);
+  },
+  async deadlines(claimId) {
+    return backendConfigured() ? claimDeadlines(claimId) : undefined;
   },
 };

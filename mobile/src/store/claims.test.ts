@@ -19,6 +19,7 @@ function fakeTracker(fail = false) {
   const tracker: ClaimTracker = {
     async record(billCase) { if (fail) throw new Error('Tiger Data down'); recorded.push(billCase); return 'claim-1'; },
     async update(claimId, change) { if (fail) throw new Error('Tiger Data down'); updates.push([claimId, change]); },
+    async deadlines() { if (fail) throw new Error('Tiger Data down'); return { creditWarningDate: '2027-03-13', creditWarningIsEstimate: true, collectionIsEstimate: false }; },
   };
   return { tracker, recorded, updates };
 }
@@ -47,6 +48,8 @@ test('confirming a case records its claim once and marks the audit complete; lat
   assert.equal(fake.recorded[0].provider, 'Metropolitan Medical Center');
   assert.equal(store.getState().cases.find(c => c.id === caseId)?.claimId, 'claim-1');
   assert.deepEqual(fake.updates, [['claim-1', { status: 'audit_complete' }]]);
+  // Tiger Data's estimate from the bill's dates is kept on the case for the timeline.
+  assert.deepEqual(store.getState().cases.find(c => c.id === caseId)?.claimDeadlines, { creditWarningDate: '2027-03-13', creditWarningIsEstimate: true, collectionIsEstimate: false });
 
   // Editing and confirming again keeps the same claim: nothing is recorded twice.
   store.getState().updateCase(caseId, { provider: 'Metropolitan Medical Center (corrected)' });
@@ -56,13 +59,16 @@ test('confirming a case records its claim once and marks the audit complete; lat
 
   const draftId = store.getState().saveDraft(caseId, 'billing_correction', 'Please explain code 99285.', 'en');
   store.getState().markSubmitted(draftId);
+  store.getState().setFollowUp(caseId, '2026-11-15');
   store.getState().setNoticeDeadline(caseId, '2026-12-01');
-  store.getState().setNoticeDeadline(caseId, null); // removing a date is not sent: Tiger Data needs at least one date
+  store.getState().setNoticeDeadline(caseId, null); // Tiger Data cannot clear a date, so the removal is logged as an action
   store.getState().markResolved(caseId);
   await settle();
   assert.deepEqual(fake.updates.slice(2), [
     ['claim-1', { status: 'dispute_in_progress' }],
+    ['claim-1', { action: 'Follow-up reminder set', note: '2026-11-15' }],
     ['claim-1', { collectionDeadline: '2026-12-01' }],
+    ['claim-1', { action: 'Notice date removed' }],
     ['claim-1', { finalCents: 182550 }],
   ]);
 });

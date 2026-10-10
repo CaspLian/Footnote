@@ -3,6 +3,7 @@
 The lifecycle tests need TIGER_TEST_DATABASE_URL; they never use the team's database.
 """
 import os
+from datetime import date, timedelta
 
 import pytest
 from fastapi.testclient import TestClient
@@ -78,3 +79,64 @@ def test_without_tiger_data_the_routes_answer_503_without_the_address(monkeypatc
         response = test_client.post("/api/v1/claims", json=CLAIM)
     assert response.status_code == 503
     assert "127.0.0.1" not in response.text and "nobody" not in response.text
+
+
+@needs_db
+def test_deadlines_are_estimated_from_the_bills_dates_and_a_correction_replaces_them(client):
+    created = client.post("/api/v1/claims", json={**CLAIM, "service_date": "2026-09-14", "bill_received_date": "2026-10-01",
+                                                  "payment_due_date": "2026-11-01"})
+    assert created.status_code == 200, created.text
+    claim_id = created.json()["audit_id"]
+    claim = client.get(f"/api/v1/claims/{claim_id}").json()
+    assert claim["credit_warning_date"] == (date(2026, 9, 14) + timedelta(days=180)).isoformat()
+    assert claim["collection_deadline"] == (date(2026, 10, 1) + timedelta(days=120)).isoformat()
+    assert claim["credit_warning_date_is_estimate"] is True and claim["collection_deadline_is_estimate"] is True
+    assert claim["payment_due_date"] == "2026-11-01"
+
+    # PATCH, as in the Tiger Data notes: the user's own date from a notice replaces the estimate.
+    assert client.patch(f"/api/v1/claims/{claim_id}/deadlines", json={"collection_deadline": "2026-12-15"}).status_code == 200
+    claim = client.get(f"/api/v1/claims/{claim_id}").json()
+    assert claim["collection_deadline"] == "2026-12-15" and claim["collection_deadline_is_estimate"] is False
+    assert claim["credit_warning_date_is_estimate"] is True
+
+
+@needs_db
+def test_a_missing_date_is_never_invented(client):
+    claim_id = client.post("/api/v1/claims", json={k: v for k, v in CLAIM.items() if k != "service_date"}).json()["audit_id"]
+    claim = client.get(f"/api/v1/claims/{claim_id}").json()
+    assert claim["collection_deadline"] is None and claim["credit_warning_date"] is None
+
+
+@needs_db
+def test_user_actions_and_status_notes_join_the_timeline(client):
+    claim_id = client.post("/api/v1/claims", json=CLAIM).json()["audit_id"]
+    action = client.post(f"/api/v1/claims/{claim_id}/actions", json={"action": "Called provider", "note": "Asked for an itemized bill"})
+    assert action.status_code == 201 and action.json()["action"] == "Called provider"
+    assert client.patch(f"/api/v1/claims/{claim_id}/status", json={"status": "dispute_in_progress", "note": "Sent a letter"}).status_code == 200
+    kinds = [event.get("event_type") or event.get("type") for event in client.get(f"/api/v1/claims/{claim_id}").json()["events"]]
+    assert "user_action" in kinds and "dispute_in_progress" in kinds
+    assert client.post(f"/api/v1/claims/{claim_id}/actions", json={"action": ""}).status_code == 422
+
+
+@needs_db
+def test_a_bill_photo_records_only_complete_lines_and_keeps_every_line_read(client, monkeypatch):
+    from services.gemini_services import bill_image
+
+    extracted = {"claim_id": None, "provider": {"name": "Riverside Clinic", "npi": None}, "service_date": "2026-09-14",
+                 "bill_received_date": "2026-10-01", "payment_due_date": None, "total_billed": 500.0, "currency": "USD",
+                 "items": [{"description": "Office visit", "code": "99213", "amount": 300.0},
+                           {"description": "Facility fee", "code": None, "amount": 150.0},
+                           {"description": "Supplies", "code": "UNKNOWN", "amount": 50.0}]}
+    monkeypatch.setattr(bill_image, "analyze_bill_image", lambda image, mime: extracted)  # no Gemini call
+    response = client.post("/api/v1/analyze-image", files={"file": ("bill.jpg", b"\xff\xd8\xff" + b"0" * 100, "image/jpeg")})
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert len(body["extracted_bill"]["items"]) == 3  # every line Gemini read
+    assert [item["code"] for item in body["audit"]["items"]] == ["99213"]  # only the complete one is recorded
+    assert float(body["audit"]["total_billed"]) == 500.0  # the bill's real total
+    assert body["audit"]["credit_warning_date"] == (date(2026, 9, 14) + timedelta(days=180)).isoformat()
+
+
+def test_the_bill_photo_route_refuses_what_is_not_an_image(client):
+    assert client.post("/api/v1/analyze-image", files={"file": ("bill.txt", b"hello", "text/plain")}).status_code == 415
+    assert client.post("/api/v1/analyze-image", files={"file": ("empty.jpg", b"", "image/jpeg")}).status_code == 413
