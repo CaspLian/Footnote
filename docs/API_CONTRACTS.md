@@ -37,7 +37,7 @@ from the code. The models are defined in `backend/models.py` and `backend/servic
 | Method and path | Purpose | Code |
 |---|---|---|
 | `GET /` | Health: `{"message", "mock", "model"}` | `main.py` |
-| `GET /api/v1/languages` | The 12 answer languages: `{"en": "English", "es": "Spanish", ...}` | `main.py`, `LANGUAGES` in `gemini_service.py` |
+| `GET /api/v1/languages` | The 39 locales: `{"en-US": "English (United States)", "es-MX": "Spanish (Mexico)", ...}` (see "Languages") | `main.py`, `backend/locales.py` |
 | `POST /api/v1/analyze` | A bill and/or text → analysis, price check, saved record | `main.py` |
 | `GET /api/v1/audits/{audit_id}` | A saved analysis, exactly as it was returned | `main.py`, `analysis_store.py` |
 | `GET /api/v1/benchmarks/{cpt_code}` | Medicare's national rate for one code, for the app's price comparison | `main.py`, `snowflake_service.py` |
@@ -48,8 +48,38 @@ from the code. The models are defined in `backend/models.py` and `backend/servic
 | `POST /api/v1/voice/analyze` | A recorded question (+ optional bill) → transcript, analysis, spoken reply | `voice_routes.py` |
 | `POST /api/v1/voice/speak` | Speak a saved analysis again, without calling Gemini | `voice_routes.py` |
 | `GET /api/v1/voice/audio/{audio_id}` | The reply audio (MP3) | `voice_routes.py`, `audio_http.py` |
-| `GET /api/v1/voice/voices` | Voices for a picker: `{"default": "matilda", "voices": [{key, name, description, accent, gender}]}` (20) | `voice_routes.py`, `text_to_speech/voices.json` |
+| `GET /api/v1/voice/voices` | Voices for a picker: `{"default": "matilda", "language_defaults": {"es": "elio", ...}, "voices": [{key, name, description, accent, gender}]}` (20) | `voice_routes.py`, `text_to_speech/voices.json` |
 | `GET /api/v1/voice/voices/{voice_key}/sample` | A short MP3 sample of one voice | `voice_routes.py` |
+
+### Languages
+
+The app offers 39 locales, the 32 languages ElevenLabs Flash v2.5 speaks. The list is `backend/locales.py`, served
+by `GET /api/v1/languages` as `{locale: name}`:
+
+`en-US`, `en-GB`, `en-AU`, `en-CA`, `ja-JP`, `zh-CN`, `de-DE`, `hi-IN`, `fr-FR`, `fr-CA`, `ko-KR`, `pt-BR`, `pt-PT`,
+`it-IT`, `es-ES`, `es-MX`, `id-ID`, `nl-NL`, `tr-TR`, `fil-PH`, `pl-PL`, `sv-SE`, `bg-BG`, `ro-RO`, `ar-SA`, `ar-AE`,
+`cs-CZ`, `el-GR`, `fi-FI`, `hr-HR`, `ms-MY`, `sk-SK`, `da-DK`, `ta-IN`, `uk-UA`, `ru-RU`, `hu-HU`, `nb-NO`, `vi-VN`
+
+- **What to send.** `target_language` takes one of these locales, case and `_` or `-` as you like (`en_us` works).
+  A bare language means its default locale: `en` → `en-US`, `es` → `es-MX`, `pt` → `pt-BR`, `fr` → `fr-FR`,
+  `ar` → `ar-SA`, `zh` → `zh-CN`. `tl` means Filipino (`fil-PH`) and `no` means Norwegian (`nb-NO`). Anything else
+  (`es-AR`, `yue`, `ht`) is refused with 400 before anything is paid for.
+- **What comes back.** `AnalyzeResponse.target_language` is the resolved locale (`es-MX` when `es` was sent).
+  Gemini writes every text field in that language and regional variant, and keeps amounts in the document's own
+  currency (U.S. dollars on U.S. bills) in every language.
+- **The spoken reply.** Gemini's `spoken_summary` is already in the language. The price findings that follow it are
+  written in English, so for other languages Gemini translates them (cached while the server runs; at most 15 s).
+  If it cannot, the reply is the summary alone, never English sentences in another language's reply.
+- **The voice.** Without a `voice`, each language gets a default whose accent suits it (`language_defaults` in
+  `GET /api/v1/voice/voices`): `en-GB` Alice, `en-AU` Charlie, Spanish Elio, Hindi and Tamil Saavi, Filipino
+  Rachel, Chinese Andy; Matilda for the rest. Any voice speaks every language, with its own accent. Flash is sent
+  the language (`language_code`), which also decides how it reads numbers. English requests are unchanged, so
+  English clips made before still play from the cache.
+- **Speech-to-text** gets the language alone as a hint (`pt-BR` → `pt`; Norwegian as `no`).
+- **Checked live on 2026-10-10:** speech round trips in 10 languages, and full analyses with spoken replies in
+  `en-US`, `en-GB`, `es-MX`, `es-ES`, `pt-BR`, `ja-JP`, `zh-CN`, `ko-KR` and `hi-IN`. Not checked by a native
+  speaker in any language. In Arabic, the formal "two hundred" (ومائتا) was heard back as "one hundred" by
+  speech-to-text; the everyday form was heard right.
 
 ### `POST /api/v1/analyze`
 
@@ -58,7 +88,7 @@ from the code. The models are defined in `backend/models.py` and `backend/servic
 | `file` | no | One JPEG, PNG, WEBP, HEIC, HEIF or PDF; retained for single-file clients |
 | `files` | no | Repeat this multipart field for ordered bill pages. At most 10 uploads total across `file` and `files` |
 | `text` | one of `file` / `files` / `text` | A question or bill text; may accompany uploaded pages |
-| `target_language` | no (`en`) | A code from `/api/v1/languages` (not validated: other text is passed to Gemini as is) |
+| `target_language` | no (`en-US`) | A locale from `/api/v1/languages`; `es` means `es-MX` (see "Languages"). Anything else is a 400 before any upload is read |
 
 The backend sends uploaded files to Gemini together in multipart order, so camera photos of a multi-page bill are
 read as one document. The combined upload limit is 15 MB. Returns `AnalyzeResponse` (below). Errors, with a text
@@ -167,7 +197,7 @@ Some limits:
 |---|---|---|
 | `audio` | yes | The recording. m4a, 3gp, webm, mp3, wav, ogg, flac, aac, aiff or amr, recognised from the bytes (other uploads sent as `audio/*` or `video/*` go to ElevenLabs to decide); at least 1,000 bytes; at most `STT_MAX_AUDIO_MB` (default 10 MB) |
 | `file` | no | A bill, as for `/api/v1/analyze` |
-| `target_language` | no (`en`) | As above. Phone locales such as `en-US` are accepted; speech-to-text receives `en` |
+| `target_language` | no (`en-US`) | As above. The language the user speaks and is answered in; speech-to-text receives the language alone (`en`) |
 | `message_id` | no | Your ID for this message; one is generated if missing |
 | `speak_reply` | no (`true`) | `false` skips the reply audio |
 | `voice` | no | A `key` from `/api/v1/voice/voices`; the default voice if missing |
@@ -182,6 +212,7 @@ Errors carry `{"detail": {"stage", "message", "error_code"?, "retryable"?}}`:
 
 | Status | Stage | When |
 |---|---|---|
+| 400 | `language` | `target_language` is not one of the locales (checked first, before anything is paid for) |
 | 413 | `upload` / `speech_to_text` | Bill over 15 MB, or recording over `STT_MAX_AUDIO_MB` |
 | 400 | `gemini` | Unsupported bill type, or other input Gemini refuses |
 | 422 | `speech_to_text` | `NO_SPEECH`, `EMPTY_AUDIO`, `UNSUPPORTED_AUDIO` or `INVALID_REQUEST`: ask the user to try again. A missing `audio` field gives FastAPI's list instead |
@@ -190,8 +221,8 @@ Errors carry `{"detail": {"stage", "message", "error_code"?, "retryable"?}}`:
 | 504 | `gemini` | Gemini took too long |
 
 A failed reply voice never fails the request. In that case `speech.ok` is false and `speech.error_code` says why.
-For example, `INVALID_REQUEST` comes back for a language other than English, or for an unknown `voice`, and then
-the message lists the valid keys. The voice route saves while it makes the reply audio, so a healthy save adds
+For example, `INVALID_REQUEST` comes back for an unknown `voice`, and then the message lists the valid keys, or for a
+saved analysis in a language no longer offered (such as `yue`, offered before 2026-10-10). The voice route saves while it makes the reply audio, so a healthy save adds
 nothing to the wait.
 
 ### `POST /api/v1/voice/speak`
@@ -244,7 +275,7 @@ Errors carry `detail.stage = "audit"`:
 
 | Field | Type | Notes |
 |---|---|---|
-| `target_language` | string | As requested |
+| `target_language` | string | The resolved locale, e.g. `es-MX` when `es` was sent |
 | `model` | string | `GEMINI_MODEL` (names the primary model even when the fallback answered) |
 | `mock` | bool | `true` when `MOCK=true`: the result is the fixed sample |
 | `result` | `GeminiResult` | See below |
@@ -350,7 +381,7 @@ Shortened response from the sample bill (`backend/samples/sample_bill.png`, synt
 
 ```json
 {
-  "target_language": "en", "model": "gemini-3.5-flash", "mock": false,
+  "target_language": "en-US", "model": "gemini-3.5-flash", "mock": false,
   "result": {"document_type": "hospital_bill", "provider_name": "METROPOLITAN MEDICAL CENTER", "total_billed": 4850.0,
              "line_items": [{"cpt_code": "70450", "original_description": "CT HEAD/BRAIN W/O CONTRAST", "billed_amount": 3200.0},
                             {"cpt_code": null, "original_description": "FACILITY FEE - MISC", "billed_amount": 450.0}],

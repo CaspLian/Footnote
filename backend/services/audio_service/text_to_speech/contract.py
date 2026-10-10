@@ -53,7 +53,9 @@ class TTSRequest:
     """Optional speech-ready version of the answer. Used instead of `text` when provided."""
 
     language: str = "en"
-    """Language of the text. Only English is used for now."""
+    """Language of the text: a locale such as "es-MX", or a language code such as "es". It must be one the model
+    speaks (config.MODEL_LANGUAGES; Flash v2.5 speaks 32). It picks the default voice, the words spoken for marks
+    such as a check mark, and, on Flash v2.5, ElevenLabs' language_code, which also decides how numbers are read."""
 
     voice: str | None = None
     """The user's voice choice: a key from voices.json, e.g. "bunty". None means the default voice."""

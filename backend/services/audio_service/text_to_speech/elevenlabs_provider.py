@@ -106,6 +106,8 @@ class ElevenLabsProvider:
             body["voice_settings"] = settings["voice_settings"]
         if settings.get("apply_text_normalization"):
             body["apply_text_normalization"] = settings["apply_text_normalization"]
+        if settings.get("language_code"):
+            body["language_code"] = settings["language_code"]
 
         # requests' timeouts limit each wait for data, not the whole call, so we also check a
         # total deadline as data arrives (worst case: the deadline plus one stalled read).

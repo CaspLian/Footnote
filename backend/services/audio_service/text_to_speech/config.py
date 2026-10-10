@@ -60,6 +60,46 @@ def default_text_normalization(model_id: str) -> str:
     return "on" if model_id.startswith(("eleven_flash_", "eleven_turbo_")) else "auto"
 
 
+# The languages each model speaks, as ISO 639-1 codes (Filipino has none: "fil"). From ElevenLabs' models page,
+# checked 2026-10-10: Flash v2.5 speaks Multilingual v2's 29 plus Hungarian, Norwegian and Vietnamese; the v4
+# models speak 90+, these 32 included. The product's own list of locales is backend/locales.py.
+MULTILINGUAL_V2_LANGUAGES = frozenset({
+    "en", "ja", "zh", "de", "hi", "fr", "ko", "pt", "it", "es", "id", "nl", "tr", "fil", "pl", "sv",
+    "bg", "ro", "ar", "cs", "el", "fi", "hr", "ms", "sk", "da", "ta", "uk", "ru",
+})
+FLASH_LANGUAGES = MULTILINGUAL_V2_LANGUAGES | {"hu", "nb", "vi"}
+MODEL_LANGUAGES = {
+    "eleven_multilingual_v2": MULTILINGUAL_V2_LANGUAGES,
+    "eleven_flash_v2_5": FLASH_LANGUAGES,
+    "eleven_v4_turbo": FLASH_LANGUAGES,
+    "eleven_v4": FLASH_LANGUAGES,
+}
+_LANGUAGE_ALIASES = {"tl": "fil", "no": "nb"}  # Tagalog (Filipino's base), Norwegian
+# What ElevenLabs' language_code takes for a language, where it differs from the code above.
+_ELEVENLABS_LANGUAGE_CODE = {"nb": "no"}
+
+
+def language_base(language: str) -> str:
+    """"en-US", "pt_BR" or "tl" -> "en", "pt" or "fil": the language a locale or code stands for."""
+    base = str(language or "").strip().replace("_", "-").split("-")[0].lower()
+    return _LANGUAGE_ALIASES.get(base, base)
+
+
+def speaks(model_id: str, language: str) -> bool:
+    """Whether the model can speak this language. A model outside MODELS is trusted with English only, except
+    the Flash and Turbo v2.5 family, which shares Flash's languages."""
+    languages = MODEL_LANGUAGES.get(model_id)
+    if languages is None:
+        languages = FLASH_LANGUAGES if model_id.startswith(("eleven_flash_v2_5", "eleven_turbo_v2_5")) else frozenset({"en"})
+    return language_base(language) in languages
+
+
+def sends_language_code(model_id: str) -> bool:
+    """ElevenLabs' language_code enforces the language, and how numbers are read, on Flash and Turbo v2.5. It is
+    not supported on Multilingual v2 (API reference, checked 2026-10-10), and not documented for v4."""
+    return model_id.startswith(("eleven_flash_v2_5", "eleven_turbo_v2_5"))
+
+
 def supports_speed(model_id: str) -> bool:
     """voice_settings.speed is not available on the v3 and v4 models."""
     return not model_id.startswith(("eleven_v3", "eleven_v4"))
@@ -137,10 +177,10 @@ class TTSConfig:
             settings["speed"] = self.speed
         return settings or None
 
-    def audio_settings(self, model_id: str | None = None) -> dict:
+    def audio_settings(self, model_id: str | None = None, language: str = "en") -> dict:
         """Every setting that changes the sound, apart from the voice (chosen per request), for this
-        config's model or the given one. The cache key is built from these plus the voice, so a
-        change can never replay audio made with old settings."""
+        config's model or the given one, in this language. The cache key is built from these plus the
+        voice, so a change can never replay audio made with old settings."""
         model_id = model_id or self.model_id
         settings = {
             "model_id": model_id,
@@ -150,6 +190,9 @@ class TTSConfig:
         normalization = self.text_normalization or default_text_normalization(model_id)
         if normalization != "auto":  # "auto" is ElevenLabs' default: leaving it out keeps older cache keys
             settings["apply_text_normalization"] = normalization
+        base = language_base(language)
+        if base != "en" and sends_language_code(model_id):  # English is left as it was, so its cache keys stay
+            settings["language_code"] = _ELEVENLABS_LANGUAGE_CODE.get(base, base)
         return settings
 
 

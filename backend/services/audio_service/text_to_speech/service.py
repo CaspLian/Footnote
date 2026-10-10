@@ -2,9 +2,9 @@
 
     TTSRequest
       -> validate          (wrong input fails fast, no cost)
-      -> pick the voice    (the user's choice from voices.json, or the default)
-      -> pick the model    (the request's choice from config.MODELS, or ELEVENLABS_MODEL_ID)
-      -> prepare text      (text_prep.py: Markdown, links, symbols...)
+      -> pick the voice    (the user's choice from voices.json, or the default for the language)
+      -> pick the model    (the request's choice from config.MODELS, or ELEVENLABS_MODEL_ID; it must speak the language)
+      -> prepare text      (text_prep.py: Markdown, links, symbols..., in the reply's language)
       -> check limits      (empty / too long fail here, no cost)
       -> cache             (same text + same voice settings = reuse, no cost)
       -> join in-flight    (an identical request is already generating = share it, no extra cost)
@@ -31,7 +31,7 @@ from dataclasses import dataclass
 from typing import Protocol
 
 from .cache import AudioCache, is_valid_key
-from .config import MODELS, TTSConfig
+from .config import MODELS, TTSConfig, language_base, speaks
 from .contract import AudioCutShort, AudioStream, ErrorCode, TTSRequest, TTSResult
 from .elevenlabs_provider import ElevenLabsProvider, ProviderAudio
 from .errors import TTSError
@@ -220,8 +220,8 @@ class TTSService:
         source = "none"
         try:
             _validate(request)
-            voice_key, voice_id = self._resolve_voice(request.voice)
-            settings = self._settings_for(request.model)
+            voice_key, voice_id = self._resolve_voice(request.voice, request.language)
+            settings = self._settings_for(request.model, request.language)
             spoken = self._prepare(request)
             key = self._cache_key(spoken, request.language, voice_id, settings)
             found = self._get_or_generate(key, spoken, voice_id, settings, streaming=streaming)
@@ -318,11 +318,13 @@ class TTSService:
 
     # --- Steps --------------------------------------------------------------------
 
-    def _resolve_voice(self, choice: str | None) -> tuple[str, str]:
-        """(voice key, ElevenLabs voice ID) for the user's choice. No choice = the default voice,
-        whose ID ELEVENLABS_VOICE_ID may replace."""
+    def _resolve_voice(self, choice: str | None, language: str = "en") -> tuple[str, str]:
+        """(voice key, ElevenLabs voice ID) for the user's choice. No choice = the default voice for the language
+        (voices.json's language_defaults, else the default voice, whose ID ELEVENLABS_VOICE_ID may replace)."""
         if choice is None or not choice.strip():
-            default = self.voices.default
+            default = self.voices.default_for(language)
+            if default.key != self.voices.default_key:
+                return default.key, default.voice_id
             return default.key, self.config.voice_id or default.voice_id
         voice = self.voices.get(choice)
         if voice is None:
@@ -332,17 +334,23 @@ class TTSService:
             )
         return voice.key, voice.voice_id
 
-    def _settings_for(self, model: str | None) -> dict:
-        """The audio settings for the request's model choice. No choice = ELEVENLABS_MODEL_ID."""
-        if model is None or not model.strip():
-            return self.config.audio_settings()
-        model_id = model.strip()
+    def _settings_for(self, model: str | None, language: str = "en") -> dict:
+        """The audio settings for the request's model choice, in its language. No choice = ELEVENLABS_MODEL_ID.
+        A model that cannot speak the language is refused, before anything is paid for."""
+        model_id = self.config.model_id if model is None or not model.strip() else model.strip()
         if model_id != self.config.model_id and model_id not in MODELS:
             raise TTSError(
                 ErrorCode.INVALID_REQUEST,
                 f"Unknown model {model!r}. Choose one of: {', '.join(MODELS)}.",
             )
-        return self.config.audio_settings(model_id)
+        if not speaks(model_id, language):
+            able = [name for name in MODELS if speaks(name, language)]
+            raise TTSError(
+                ErrorCode.INVALID_REQUEST,
+                f"{model_id} does not speak {language!r}."
+                + (f" Use {' or '.join(able)}." if able else " No voice model here speaks it."),
+            )
+        return self.config.audio_settings(model_id, language)
 
     def _prepare(self, request: TTSRequest) -> str:
         use_speech_text = request.speech_text is not None and request.speech_text.strip() != ""
@@ -352,7 +360,7 @@ class TTSService:
                 ErrorCode.TEXT_TOO_LONG,
                 f"Input is {len(source_text)} characters; the hard limit is {MAX_INPUT_CHARS}.",
             )
-        spoken = prepare_for_speech(source_text, self._pronunciations)
+        spoken = prepare_for_speech(source_text, self._pronunciations, request.language)
         if not spoken:
             raise TTSError(ErrorCode.EMPTY_TEXT, "Nothing speakable is left after removing formatting.")
         if len(spoken) > self.config.max_chars:
@@ -363,10 +371,12 @@ class TTSService:
         return spoken
 
     def _cache_key(self, spoken: str, language: str, voice_id: str, settings: dict) -> str:
-        """Same spoken text + same voice + same audio settings -> same key. Any change -> new key."""
+        """Same spoken text + same voice + same audio settings -> same key. Any change -> new key.
+        The language part is the language alone ("en-GB" -> "en"): the region does not change the audio, and English
+        keys stay what they were when English was the only language."""
         identity = {
             "text": spoken,
-            "language": language.strip().lower(),
+            "language": language_base(language),
             "voice_id": voice_id,
             "settings": settings,
         }
@@ -583,7 +593,8 @@ def get_stats() -> dict:
 
 def list_voices() -> dict:
     """The voices users can choose, for the app's voice picker:
-    {"default": "matilda", "voices": [{"key", "name", "description", "accent", "gender"}, ...]}.
+    {"default": "matilda", "language_defaults": {"es-MX": "elio", ...},
+     "voices": [{"key", "name", "description", "accent", "gender"}, ...]}.
 
     It comes from the same catalog synthesize() uses, so the list and the voices that work always
     match. Restart the server after editing voices.json. Raises ValueError if voices.json is broken."""
@@ -608,8 +619,8 @@ def _validate(request: object) -> None:
         )
     if request.speech_text is not None and not isinstance(request.speech_text, str):
         raise invalid(f"speech_text must be a string or None, got {type(request.speech_text).__name__}.")
-    if not isinstance(request.language, str) or not request.language.strip().lower().startswith("en"):
-        raise invalid(f"Only English is supported for now (language={request.language!r}).")
+    if not isinstance(request.language, str) or not request.language.strip():
+        raise invalid(f'language must be a language code such as "en-US" or "es-MX", got {request.language!r}.')
     if request.voice is not None and not isinstance(request.voice, str):
         raise invalid(f"voice must be a key from voices.json or None, got {type(request.voice).__name__}.")
     if request.model is not None and not isinstance(request.model, str):

@@ -36,6 +36,16 @@ class FakeGemini:
         self.error = None
         self.delay = 0.0
         self.spoken_summary = "Your MRI was billed at three thousand two hundred dollars."
+        self.translations = []  # what translate_for_speech was asked
+        self.translated = {}  # locale -> the translation to answer with (None: Gemini could not translate)
+        self.translation_delay = 0.0
+
+    async def translate_for_speech(self, text, target_language):
+        self.translations.append({"text": text, "lang": target_language})
+        locale = importlib.import_module("locales").resolve_locale(target_language)  # ValueError, like the real one
+        if self.translation_delay:
+            await asyncio.sleep(self.translation_delay)
+        return self.translated.get(locale, f"{locale}: {text}")
 
     async def analyze(self, *, file_bytes=None, mime_type=None, text=None, target_language="en"):
         self.calls.append({"file_bytes": file_bytes, "mime_type": mime_type, "text": text, "lang": target_language})
@@ -133,11 +143,13 @@ class FakeVoice:
         self.module = provider_module
         self.texts = []
         self.voice_ids = []
+        self.settings = []
         self.error = None
 
     def generate(self, text, voice_id, settings=None):
         self.texts.append(text)
         self.voice_ids.append(voice_id)
+        self.settings.append(settings)
         if self.error:
             raise self.error
         return self.module.ProviderAudio(audio=b"ID3" + text.encode(), request_id="tts-1", characters_billed=len(text))
@@ -151,6 +163,7 @@ def voice(monkeypatch, no_real_settings_files):
     gemini = FakeGemini(models)
     fake_module = types.ModuleType("services.gemini_services.gemini_service")
     fake_module.analyze = gemini.analyze
+    fake_module.translate_for_speech = gemini.translate_for_speech
     fake_module.is_mock = lambda: True
     fake_module.model_name = lambda: "fake-gemini"
     fake_module.SUPPORTED_MIME = {"image/jpeg", "image/png", "image/webp", "image/heic", "image/heif", "application/pdf"}
@@ -219,7 +232,8 @@ def test_spoken_question_reaches_gemini_and_the_reply_is_spoken(voice):
     assert body["transcript"]["text"] == "Why was my MRI so expensive?"
     assert body["transcript"]["needs_confirmation"] is False
     # The transcript went to the team's Gemini step as the user's text, like /api/v1/analyze does.
-    assert voice.gemini.calls == [{"file_bytes": None, "mime_type": None, "text": "Why was my MRI so expensive?", "lang": "en"}]
+    assert voice.gemini.calls == [{"file_bytes": None, "mime_type": None, "text": "Why was my MRI so expensive?", "lang": "en-US"}]
+    assert body["analysis"]["target_language"] == "en-US" and voice.gemini.translations == []  # English: nothing to translate
     # "analysis" has the /api/v1/analyze shape.
     assert body["analysis"]["model"] == "fake-gemini" and body["analysis"]["mock"] is True
     assert body["analysis"]["result"]["document_type"] == "hospital_bill"
@@ -253,15 +267,73 @@ def test_a_bill_photo_can_come_with_the_question(voice):
     assert voice.gemini.calls[0]["file_bytes"] == BILL_PHOTO and voice.gemini.calls[0]["mime_type"] == "image/png"
 
 
-def test_the_spoken_language_goes_to_both_speech_to_text_and_gemini(voice):
+def test_the_users_language_goes_to_speech_to_text_gemini_and_the_reply_voice(voice):
     response = ask(voice, target_language="es")
     assert response.status_code == 200
-    assert voice.scribe.calls[0]["language"] == "es" and voice.gemini.calls[0]["lang"] == "es"
-    # The reply voice is English-only for now: the text answer still comes back.
-    assert response.json()["speech"] == {
-        "ok": False, "audio_url": None, "mime_type": None, "voice": None, "streaming": False, "text": None,
-        "error_code": "INVALID_REQUEST", "error_message": "Only English is supported for now (language='es').",
-    }
+    body = response.json()
+    # "es" means es-MX. Speech-to-text gets the language alone; Gemini and the answer get the locale.
+    assert voice.scribe.calls[0]["language"] == "es" and voice.gemini.calls[0]["lang"] == "es-MX"
+    assert body["analysis"]["target_language"] == "es-MX"
+    # The reply: Gemini's summary (written in Spanish), then the price findings, which Gemini translated.
+    [asked] = voice.gemini.translations
+    assert asked["lang"] == "es-MX" and asked["text"].startswith("I also compared the charges with Medicare's national rates.")
+    assert "“Brain MRI” was billed about 8 times" in asked["text"]  # names quoted, so the translator knows them
+    assert body["speech"]["ok"] is True and body["speech"]["text"] == voice.speaker.texts[-1]
+    assert body["speech"]["text"].startswith(voice.gemini.spoken_summary + " es-MX: I also compared the charges")
+    # In Elio's voice (voices.json's default for Spanish), with Flash told the language.
+    assert body["speech"]["voice"] == "elio" and voice.speaker.settings[-1]["language_code"] == "es"
+
+
+@pytest.mark.parametrize("language", ["yue", "es-AR", "klingon"])
+def test_a_language_not_offered_is_refused_before_paying_for_anything(voice, language):
+    response = ask(voice, target_language=language)
+    assert response.status_code == 400
+    detail = response.json()["detail"]
+    assert detail["stage"] == "language" and "Use one of: en-US, en-GB" in detail["message"]
+    assert voice.scribe.calls == [] and voice.gemini.calls == [] and voice.speaker.texts == []
+
+
+@pytest.mark.parametrize("language, hint", [("pt-BR", "pt"), ("fil-PH", "fil"), ("nb-NO", "no"), ("zh-CN", "zh"), ("en-GB", "en")])
+def test_speech_to_text_gets_the_language_as_elevenlabs_knows_it(voice, language, hint):
+    assert ask(voice, target_language=language).status_code == 200
+    assert voice.scribe.calls[0]["language"] == hint
+
+
+def test_without_a_translation_the_reply_is_the_summary_alone(voice):
+    voice.gemini.spoken_summary = "MRIの請求額は三千二百ドルです"
+    voice.gemini.translated["ja-JP"] = None  # Gemini could not translate (quota, outage)
+    speech = ask(voice, target_language="ja-JP").json()["speech"]
+    assert speech["ok"] is True and speech["text"] == "MRIの請求額は三千二百ドルです。"  # never the English findings
+
+
+def test_a_japanese_summary_and_its_findings_read_as_two_sentences(voice):
+    voice.gemini.spoken_summary = "MRIの請求額は三千二百ドルです"
+    voice.gemini.translated["ja-JP"] = "メディケアの全国料金と比べました。"
+    speech = ask(voice, target_language="ja-JP").json()["speech"]
+    assert speech["text"] == "MRIの請求額は三千二百ドルです。メディケアの全国料金と比べました。"
+
+
+def test_a_slow_translation_does_not_hold_up_the_reply(voice, monkeypatch):
+    monkeypatch.setattr(voice.routes, "TRANSLATION_TIMEOUT_S", 0.05)
+    voice.gemini.translation_delay = 2.0
+    speech = ask(voice, target_language="de-DE").json()["speech"]
+    assert speech["ok"] is True and speech["text"] == voice.gemini.spoken_summary
+
+
+def test_an_analysis_saved_with_a_bare_language_code_is_spoken_in_it(voice):
+    audit_id = ask(voice).json()["analysis"]["audit"]["audit_id"]
+    voice.store.saved[audit_id]["analysis"]["target_language"] = "es"  # how analyses were saved before locales
+    speech = voice.client.post("/api/v1/voice/speak", data={"audit_id": audit_id}).json()
+    assert speech["ok"] is True and speech["voice"] == "elio" and "es-MX: I also compared" in speech["text"]
+
+
+def test_an_analysis_in_a_language_no_longer_offered_still_gets_an_answer(voice):
+    audit_id = ask(voice).json()["analysis"]["audit"]["audit_id"]
+    voice.store.saved[audit_id]["analysis"]["target_language"] = "yue"  # Cantonese was offered before 2026-10-10
+    response = voice.client.post("/api/v1/voice/speak", data={"audit_id": audit_id})
+    assert response.status_code == 200
+    speech = response.json()
+    assert speech["ok"] is False and speech["error_code"] == "INVALID_REQUEST" and "'yue'" in speech["error_message"]
 
 
 def test_reply_audio_can_be_switched_off(voice):
@@ -377,6 +449,7 @@ def test_the_app_can_list_the_voices(voice):
     keys = [v["key"] for v in body["voices"]]
     assert len(keys) == 20 and keys[:5] == ["matilda", "sarah", "george", "charlie", "bunty"]
     assert body["voices"][4]["accent"] == "Indian"
+    assert body["language_defaults"]["es"] == "elio" and body["language_defaults"]["en-GB"] == "alice"
     assert all("voice_id" not in v for v in body["voices"])
 
 
@@ -584,8 +657,9 @@ def test_the_spoken_reply_when_prices_look_usual_or_were_not_compared(voice):
     )
     no_code = models.PriceCheck(line_index=0, cpt_code=None, billed_amount=3200.0, flag="no_code", note="n")
     assert voice.routes.spoken_reply(_analysis(models, [no_code])) == "Here is your bill."
-    spanish = _analysis(models, [_check(models, 0, "far_above_typical", 30.0)], language="es")
-    assert voice.routes.spoken_reply(spanish) == "Here is your bill."  # the added sentences are English only
+    spanish = _analysis(models, [_check(models, 0, "far_above_typical", 30.0)], language="es-MX")
+    assert voice.routes.spoken_reply(spanish) == "Here is your bill."  # English findings never join another language
+    assert voice.routes.spoken_reply(spanish, "Un cargo es alto.") == "Here is your bill. Un cargo es alto."
 
 
 def test_the_spoken_reply_never_claims_overcharging(voice):
@@ -632,6 +706,15 @@ def test_the_reply_reads_well_without_a_final_full_stop_or_a_plain_name(voice):
     )
 
 
+def test_a_charge_described_in_sentences_is_named_by_its_first(voice):
+    models = importlib.import_module("models")
+    analysis = _analysis(models, [_check(models, 0, "far_above_typical", 30.0)], language="ja-JP")
+    analysis.result.line_items[0].plain_description = "頭部のCT検査です。薬を使わずに頭の中を写真に撮ります。"
+    assert voice.routes.price_findings(analysis).split(" was billed")[0].endswith("頭部のCT検査です")
+    analysis.result.line_items[0].plain_description = "Dr. visit, E.R."  # Latin abbreviations are not sentence ends
+    assert "Dr. visit, E.R was billed" in voice.routes.price_findings(analysis)
+
+
 def test_english_locales_get_the_price_findings_too(voice):
     models = importlib.import_module("models")
     for language in ("en-US", "en_GB", "EN"):
@@ -643,7 +726,7 @@ def test_a_phone_locale_reaches_speech_to_text_as_the_language_alone(voice):
     response = ask(voice, target_language="en-US")
     assert response.status_code == 200
     assert voice.scribe.calls[0]["language"] == "en"  # speech-to-text takes "en", not "en-US"
-    assert voice.gemini.calls[0]["lang"] == "en-US"  # Gemini and the answer keep what the app sent, as /api/v1/analyze does
+    assert voice.gemini.calls[0]["lang"] == "en-US"  # Gemini and the answer get the locale, as on /api/v1/analyze
     assert "I also compared the charges" in response.json()["speech"]["text"]
 
 

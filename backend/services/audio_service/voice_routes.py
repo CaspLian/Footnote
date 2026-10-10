@@ -13,7 +13,8 @@ Snowflake price check (services.snowflake_services.snowflake_service.check_price
 (services.analytical_services.analysis_store), called the same way as /api/v1/analyze calls them, with the transcript as
 the user's text. The response's "analysis" field has exactly what /api/v1/analyze returns, price checks
 and audit included, so the app can show both the same way. The spoken reply is Gemini's spoken summary
-followed by what the price check found (spoken_reply()).
+followed by what the price check found (spoken_reply()), in the user's language: target_language is one of the
+locales in backend/locales.py, and for languages other than English Gemini translates the price findings.
 
 By default /analyze answers once the reply audio is finished. With stream_reply=true it answers as
 soon as the first audio exists and the audio URL plays while the rest is being made: faster, and
@@ -25,12 +26,14 @@ still being made exists only in the process making it.
 from __future__ import annotations
 
 import asyncio
+import re
 import uuid
 from typing import Optional
 
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from pydantic import BaseModel, ValidationError
 
+from locales import language_of, resolve_locale
 from models import AnalyzeResponse, PriceCheck
 from services.analytical_services.analysis_store import StoreUnavailable, load_analysis, save_analysis
 from services.audio_service.audio_http import audio_response
@@ -45,12 +48,19 @@ from services.audio_service.text_to_speech import (
     synthesize_async,
     synthesize_streaming_async,
 )
-from services.gemini_services.gemini_service import SUPPORTED_MIME, analyze, is_mock, model_name
+from services.gemini_services.gemini_service import SUPPORTED_MIME, analyze, is_mock, model_name, translate_for_speech
 from services.snowflake_services.snowflake_service import check_prices
 
 MAX_BILL_MB = 15  # same limits as /api/v1/analyze in main.py
 GEMINI_TIMEOUT_S = 150  # same as main.py: covers 2 attempts x 2 models
 SAMPLE_TEXT = "Hi, I'm {name}. I can read your medical bill explanations out loud."
+TRANSLATION_TIMEOUT_S = 15  # the longest a reply waits for its price findings' translation; then it is said without them
+# Where ElevenLabs' speech-to-text knows a language by another code than backend/locales.py: Norwegian is "no".
+_SPEECH_TO_TEXT_CODES = {"nb": "no"}
+# What ends a sentence, in the reply languages; and what may follow it (closing quotes and brackets).
+_SENTENCE_ENDS = (".", "!", "?", "\u2026", "\u3002", "\uff01", "\uff1f", "\u0964", "\u061f")
+_CLOSING_MARKS = "\"')]\u201d\u2019\u00bb\u300d\u300f"
+_NAME_END = re.compile("[\u3002\uff01\uff1f\u0964\u061f]")
 
 router = APIRouter(prefix="/api/v1/voice", tags=["voice"])
 
@@ -92,7 +102,9 @@ class VoiceAnalyzeResponse(BaseModel):
 async def voice_analyze(
     audio: UploadFile = File(description="The user's spoken question: m4a from the app, webm, mp3, wav, ..."),
     file: Optional[UploadFile] = File(None, description="Optional photo or PDF of the bill/EOB"),
-    target_language: str = Form("en", description="Language the user speaks and wants the answer in"),
+    target_language: str = Form(
+        "en-US", description="The user's language, spoken and for the answer: a locale from GET /api/v1/languages"
+    ),
     message_id: Optional[str] = Form(None, description="Your ID for this message; one is made if missing"),
     speak_reply: bool = Form(True, description="Also turn result.spoken_summary into audio"),
     voice: Optional[str] = Form(None, description="Reply voice: a key from GET /api/v1/voice/voices; default if missing"),
@@ -105,6 +117,10 @@ async def voice_analyze(
 
     # Everything that can be refused is checked first: a refused request must not pay for speech-to-text.
     # Uploads are read only up to their limit, so an oversized one never sits in memory whole.
+    try:
+        locale = resolve_locale(target_language)  # "es" -> "es-MX"
+    except ValueError as e:
+        raise HTTPException(400, detail={"stage": "language", "message": str(e)})
     file_bytes, mime = None, None
     if file is not None and file.filename:
         bill_limit = int(MAX_BILL_MB * 1024 * 1024)
@@ -123,7 +139,7 @@ async def voice_analyze(
             request_id=request_id,
             audio=recording,
             mime_type=audio.content_type,
-            language=_base_language(target_language),  # phones send locales such as "en-US"
+            language=_speech_to_text_language(locale),  # the language alone: "pt-BR" -> "pt"
         )
     )
     handoff = to_gemini_handoff(heard)
@@ -138,7 +154,7 @@ async def voice_analyze(
             },
         )
 
-    analysis = await _ask_gemini(file_bytes, mime, handoff.text, target_language)
+    analysis = await _ask_gemini(file_bytes, mime, handoff.text, locale)
     # Save it to Tiger Data, as main.py does (never fails the request; analysis.audit says how it went), while the
     # reply audio is made: the audio does not need the saved copy, so the user does not wait for both in turn.
     saving = asyncio.create_task(save_analysis(analysis, source="voice", transcript=handoff.text))
@@ -262,7 +278,7 @@ async def _ask_gemini(file_bytes: Optional[bytes], mime: Optional[str], text: st
 
 async def _speak(request_id: str, analysis: AnalyzeResponse, voice: Optional[str], stream: bool = False) -> Speech:
     """Speak the analysis (spoken_reply). A failed reply audio never fails the request: the text answer is still shown."""
-    said = spoken_reply(analysis)
+    said = await _spoken_text(analysis)
     request = TTSRequest(
         request_id=request_id,
         text=analysis.result.spoken_summary,
@@ -283,18 +299,45 @@ async def _speak(request_id: str, analysis: AnalyzeResponse, voice: Optional[str
     )
 
 
-def spoken_reply(analysis: AnalyzeResponse) -> str:
+async def _spoken_text(analysis: AnalyzeResponse) -> str:
+    """spoken_reply() in the analysis' language. Gemini wrote the summary in it; for a language other than English,
+    Gemini also translates the price findings, and if it cannot (in time), the summary is said alone."""
+    findings = price_findings(analysis, quote_names=True)  # quoted, so the translator can tell names from the rest
+    if not findings or _base_language(analysis.target_language) == "en":
+        return spoken_reply(analysis)
+    try:
+        translated = await asyncio.wait_for(translate_for_speech(findings, analysis.target_language), TRANSLATION_TIMEOUT_S)
+    except (ValueError, asyncio.TimeoutError):  # a language no longer offered (an older saved analysis), or too slow
+        translated = None
+    return spoken_reply(analysis, translated or "")
+
+
+def spoken_reply(analysis: AnalyzeResponse, findings: Optional[str] = None) -> str:
     """What the reply voice says: Gemini's spoken summary, then a sentence or two on the price check.
 
     Gemini writes its summary before the price check runs, so the findings are added here. They are
-    comparisons with Medicare's national rates: a reason to ask questions, never proof that a charge is wrong."""
+    comparisons with Medicare's national rates: a reason to ask questions, never proof that a charge is wrong.
+    `findings` are those sentences in the analysis' language. By default they are price_findings(), which is English,
+    so they are added to English replies only; _spoken_text() has them translated for the other languages."""
     summary = analysis.result.spoken_summary.strip()
-    compared = [check for check in analysis.price_checks if check.times_medicare is not None]
-    # These sentences are English, like the reply voices for now; "en-US" and other English codes count.
-    if not compared or not analysis.target_language.strip().lower().startswith("en"):
+    language = _base_language(analysis.target_language)
+    if findings is None:
+        findings = price_findings(analysis) if language == "en" else ""
+    if not findings:
         return summary
-    if summary and summary.rstrip("\"')]”’")[-1:] not in (".", "!", "?"):
-        summary += "."  # so the added sentences do not run on from the summary
+    if summary and summary.rstrip(_CLOSING_MARKS)[-1:] not in _SENTENCE_ENDS:
+        summary += "\u3002" if language in ("ja", "zh") else "."  # so the findings do not run on from the summary
+    if language in ("ja", "zh"):  # written without spaces between sentences
+        return summary + findings
+    return _sentences(summary, findings)
+
+
+def price_findings(analysis: AnalyzeResponse, quote_names: bool = False) -> str:
+    """What the price check found, in English: "" when no charge could be compared with Medicare's rate.
+    `quote_names` puts each charge's name in quotes, for translation: Gemini wrote the names in the user's language."""
+    compared = [check for check in analysis.price_checks if check.times_medicare is not None]
+    if not compared:
+        return ""
     # The furthest above Medicare's rate first, so the charges named are the ones most worth asking about.
     flagged = sorted(
         (check for check in compared if check.flag in ("above_typical", "far_above_typical")),
@@ -302,11 +345,12 @@ def spoken_reply(analysis: AnalyzeResponse) -> str:
     )
     if not flagged:
         they = "it looks" if len(compared) == 1 else "they look"
-        return _sentences(summary, f"I also compared {_charges(len(compared))} with Medicare's national rates, and {they} "
-                                   "within the usual range for hospital prices.")
+        return (f"I also compared {_charges(len(compared))} with Medicare's national rates, and {they} "
+                "within the usual range for hospital prices.")
     sentences, named = [], 0
     for check in flagged:
-        sentence = (f"{_line_name(analysis, check)} was billed about {_times(check.times_medicare)} times Medicare's national "
+        name = f"“{_line_name(analysis, check)}”" if quote_names else _line_name(analysis, check)
+        sentence = (f"{name} was billed about {_times(check.times_medicare)} times Medicare's national "
                     f"rate, which is {'far above the usual range' if check.flag == 'far_above_typical' else 'higher than usual'}.")
         if sentence in sentences:  # the same charge listed twice on the bill: said once
             named += 1
@@ -321,7 +365,7 @@ def spoken_reply(analysis: AnalyzeResponse) -> str:
     if any("facility fee" in check.note for check in flagged):
         sentences.append("For some services Medicare's rate covers only the doctor's part, so some difference is expected.")
     sentences.append(f"It's worth asking the billing office about {'it' if len(flagged) == 1 else 'them'}.")
-    return _sentences(summary, "I also compared the charges with Medicare's national rates.", *sentences)
+    return _sentences("I also compared the charges with Medicare's national rates.", *sentences)
 
 
 def _sentences(*parts: str) -> str:
@@ -337,7 +381,10 @@ def _line_name(analysis: AnalyzeResponse, check: PriceCheck) -> str:
     items = analysis.result.line_items
     if 0 <= check.line_index < len(items):
         item = items[check.line_index]
-        name = (item.plain_description.strip() or item.original_description.strip()).rstrip(".")
+        name = item.plain_description.strip() or item.original_description.strip()
+        # Up to its first full stop in a script without abbreviations (Japanese, Chinese, Hindi, Arabic): Gemini
+        # sometimes describes a charge in sentences there, and the name must fit inside one.
+        name = _NAME_END.split(name, 1)[0].strip().rstrip(".")
         if name:
             return name
     return f"Line {check.line_index + 1}"
@@ -364,8 +411,14 @@ async def _read_recording(audio: UploadFile) -> bytes:
 
 
 def _base_language(code: str) -> str:
-    """"en-US" or "pt_BR" -> "en" or "pt": phones report locales, speech-to-text takes the language alone."""
+    """"en-US" or "pt_BR" -> "en" or "pt", for any code, even one no longer offered (an older saved analysis)."""
     return code.strip().replace("_", "-").split("-")[0].lower()
+
+
+def _speech_to_text_language(locale: str) -> str:
+    """The hint speech-to-text takes for a supported locale: its language alone, as ElevenLabs knows it."""
+    language = language_of(locale)
+    return _SPEECH_TO_TEXT_CODES.get(language, language)
 
 
 def _charges(count: int, kind: str = "") -> str:

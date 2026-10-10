@@ -104,7 +104,8 @@ What this module adds on top of it:
   price check found, for example "Head CT was billed about 30 times Medicare's national rate, which is far above
   the usual range. It's worth asking the billing office about it."
   - Gemini writes its summary before the price check runs, so these sentences are added here (`spoken_reply()`).
-  - They are English, like the reply voices for now.
+  - They are written in English; for other languages Gemini translates them, and if it cannot, the reply is the
+    summary alone (`_spoken_text()`).
   - They compare with Medicare's national rates and never say a charge is wrong.
 - **Captions.** `speech.text` is exactly what the voice says: show it as captions.
 - **Playback.** Play `speech.audio_url` with the mobile code in `../text_to_speech/README.md`, section 4.

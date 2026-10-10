@@ -328,6 +328,14 @@ def test_number_reading_is_not_sent_when_left_to_elevenlabs():
     assert "apply_text_normalization" not in session.calls[0]["json"]
 
 
+def test_the_language_code_is_sent_when_set():
+    settings = {"model_id": "eleven_flash_v2_5", "output_format": "mp3_22050_32", "language_code": "es"}
+    _, session = open_stream(StreamedBody([b"ID3"]), settings=settings)
+    assert session.calls[0]["json"]["language_code"] == "es"
+    _, session = generate(audio_response())
+    assert "language_code" not in session.calls[0]["json"]
+
+
 # --- Secrets -----------------------------------------------------------------------------
 
 

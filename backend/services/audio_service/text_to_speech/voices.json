@@ -1,6 +1,16 @@
 {
   "_comment": "Voices users can choose in the app. 'key' is what the app sends; 'voice_id' is the ElevenLabs voice. Default voices expire on December 31, 2026. Voice Library voices work directly on paid plans; all chosen here cost the standard rate, have no live moderation, and their owners must give 90-730 days' notice before withdrawing them (checked 2026-10-09). Find more with GET https://api.elevenlabs.io/v1/shared-voices. Restart the server after editing this file.",
   "default": "matilda",
+  "language_defaults": {
+    "_comment": "The voice used when the user has not chosen one: for an exact locale, then for a language alone, else the default above. Any voice speaks every language its model speaks, with its own accent; these suit the language.",
+    "en-GB": "alice",
+    "en-AU": "charlie",
+    "hi": "saavi",
+    "ta": "saavi",
+    "fil": "rachel",
+    "es": "elio",
+    "zh": "andy"
+  },
   "voices": [
     {"key": "matilda", "name": "Matilda", "description": "Knowledgeable and professional", "accent": "American", "gender": "female", "voice_id": "XrExE9yKIg1WjnnlVkGX", "source": "ElevenLabs default voice"},
     {"key": "sarah", "name": "Sarah", "description": "Mature, reassuring and confident", "accent": "American", "gender": "female", "voice_id": "EXAVITQu4vr4xnSDxMaL", "source": "ElevenLabs default voice"},

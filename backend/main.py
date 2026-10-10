@@ -8,6 +8,7 @@ load_dotenv()
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile  # noqa: E402
 from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
 
+from locales import resolve_locale  # noqa: E402
 from models import AnalyzeResponse  # noqa: E402
 from services.analytical_services.analysis_store import StoreUnavailable, load_analysis, save_analysis  # noqa: E402
 from services.gemini_services.gemini_service import LANGUAGES, analyze, is_mock, model_name  # noqa: E402
@@ -43,9 +44,13 @@ async def analyze_endpoint(
     file: Optional[UploadFile] = File(None, description="Photo or PDF of the bill/EOB"),
     files: list[UploadFile] = File(default=[], description="One or more bill pages captured as photos"),
     text: Optional[str] = Form(None, description="Typed text or a question (optional if a file is sent)"),
-    target_language: str = Form("en", description="Language code, e.g. en, es, zh, ar"),
+    target_language: str = Form("en-US", description="A locale from GET /api/v1/languages, e.g. en-US, es-MX, ja-JP"),
 ):
     """User input -> Gemini -> Snowflake price check. result.spoken_summary is the text for ElevenLabs."""
+    try:
+        target_language = resolve_locale(target_language)  # "es" -> "es-MX"; refused before any upload is read
+    except ValueError as e:
+        raise HTTPException(400, str(e))
     uploads = [item for item in ([file] if file is not None else []) + files if item.filename]
     image_inputs = []
     total_size = 0

@@ -172,26 +172,56 @@ _MONTHS = [
     "July", "August", "September", "October", "November", "December",
 ]
 
-_TERMINAL_PUNCTUATION = ".!?:;\N{HORIZONTAL ELLIPSIS}"
+# Full-width marks end sentences in Japanese and Chinese, the danda in Hindi, and Arabic has its own question mark.
+_TERMINAL_PUNCTUATION = (
+    ".!?:;\N{HORIZONTAL ELLIPSIS}\N{IDEOGRAPHIC FULL STOP}\N{FULLWIDTH EXCLAMATION MARK}\N{FULLWIDTH QUESTION MARK}"
+    "\N{DEVANAGARI DANDA}\N{ARABIC QUESTION MARK}"
+)
 _CLOSING_CHARS = (
     "\"')]}\N{RIGHT DOUBLE QUOTATION MARK}\N{RIGHT SINGLE QUOTATION MARK}"
-    "\N{RIGHT-POINTING DOUBLE ANGLE QUOTATION MARK}"
+    "\N{RIGHT-POINTING DOUBLE ANGLE QUOTATION MARK}\N{RIGHT CORNER BRACKET}\N{RIGHT WHITE CORNER BRACKET}"
 )
 
 
-def prepare_for_speech(text: str, pronunciations: dict[str, str] | None = None) -> str:
+# What a check mark, a cross and a warning sign are spoken as, per language (ISO 639-1; "fil" for Filipino).
+MARK_WORDS = {
+    "en": ("Yes", "No", "Warning"), "ja": ("はい", "いいえ", "注意"), "zh": ("是", "否", "注意"),
+    "de": ("Ja", "Nein", "Achtung"), "hi": ("हाँ", "नहीं", "चेतावनी"), "fr": ("Oui", "Non", "Attention"),
+    "ko": ("예", "아니요", "주의"), "pt": ("Sim", "Não", "Atenção"), "it": ("Sì", "No", "Attenzione"),
+    "es": ("Sí", "No", "Atención"), "id": ("Ya", "Tidak", "Peringatan"), "nl": ("Ja", "Nee", "Let op"),
+    "tr": ("Evet", "Hayır", "Uyarı"), "fil": ("Oo", "Hindi", "Babala"), "pl": ("Tak", "Nie", "Uwaga"),
+    "sv": ("Ja", "Nej", "Varning"), "bg": ("Да", "Не", "Внимание"), "ro": ("Da", "Nu", "Atenție"),
+    "ar": ("نعم", "لا", "تنبيه"), "cs": ("Ano", "Ne", "Upozornění"), "el": ("Ναι", "Όχι", "Προσοχή"),
+    "fi": ("Kyllä", "Ei", "Varoitus"), "hr": ("Da", "Ne", "Upozorenje"), "ms": ("Ya", "Tidak", "Amaran"),
+    "sk": ("Áno", "Nie", "Upozornenie"), "da": ("Ja", "Nej", "Advarsel"), "ta": ("ஆம்", "இல்லை", "எச்சரிக்கை"),
+    "uk": ("Так", "Ні", "Увага"), "ru": ("Да", "Нет", "Внимание"), "hu": ("Igen", "Nem", "Figyelem"),
+    "nb": ("Ja", "Nei", "Advarsel"), "vi": ("Có", "Không", "Cảnh báo"),
+}
+
+
+def _language_base(language: str) -> str:
+    base = str(language or "en").strip().replace("_", "-").split("-")[0].lower()
+    return {"tl": "fil", "no": "nb"}.get(base, base)
+
+
+def prepare_for_speech(text: str, pronunciations: dict[str, str] | None = None, language: str = "en") -> str:
     """Return the text to send to the speech provider. Returns "" if nothing speakable is left.
 
     `pronunciations` maps exact words to how they should be spelled for the voice,
     e.g. {"ClaimPulse": "Claim Pulse"}. Defaults to pronunciations.json.
+    `language` (a locale such as "es-MX", or "es") decides the words spoken for marks. The English-only rewrites
+    (symbols such as "~" -> "about", abbreviations, dates with English month names, the code-block note) run only
+    for English, so no English word ever lands in another language's reply.
     """
     if not text:
         return ""
     if pronunciations is None:
         pronunciations = load_pronunciations()
 
+    base = _language_base(language)
+    english = base == "en"
     text = _normalize_characters(text)
-    text = _FENCED_CODE.sub(f"\n\n{CODE_BLOCK_NOTE}\n\n", text)
+    text = _FENCED_CODE.sub(f"\n\n{CODE_BLOCK_NOTE}\n\n" if english else "\n\n", text)
     text = _SCRIPT_OR_STYLE.sub(" ", text)
     text = _SUP_CITATION.sub("", text)
     text = _HTML_BLOCK_TAG.sub("\n\n", text)  # a block tag ends the sentence
@@ -210,8 +240,9 @@ def prepare_for_speech(text: str, pronunciations: dict[str, str] | None = None) 
     # A check mark next to a cross is a yes/no answer; on its own it is usually decoration.
     speak_check_marks = any(mark in text for mark in _NO_MARKS)
 
-    blocks = [_clean_block(block, speak_check_marks) for block in _split_blocks(text)]
-    text = "\n".join(_end_sentence(block) for block in blocks if block)
+    blocks = [_clean_block(block, speak_check_marks, base) for block in _split_blocks(text)]
+    full_stop = "\N{IDEOGRAPHIC FULL STOP}" if base in ("ja", "zh") else "."
+    text = "\n".join(_end_sentence(block, full_stop) for block in blocks if block)
     text = _apply_pronunciations(text, pronunciations)
     return _tidy(text)
 
@@ -339,7 +370,7 @@ def _mark_as_word(cell: str) -> str:
     return cell
 
 
-def _clean_block(block: str, speak_check_marks: bool) -> str:
+def _clean_block(block: str, speak_check_marks: bool, language: str = "en") -> str:
     block = _INLINE_CODE.sub(r"\1", block)
     block = _BOLD.sub(r"\2", block)
     block = _ITALIC_STAR.sub(r"\1", block)
@@ -347,13 +378,16 @@ def _clean_block(block: str, speak_check_marks: bool) -> str:
     block = _STRIKETHROUGH.sub(r"\1", block)
     block = block.replace("**", "").replace("__", "").replace("`", "")
     block = _STRAY_STAR.sub("", block)
-    block = _speak_marks(block.strip(), speak_check_marks)
-    for pattern, words in _SYMBOLS:  # before emoji removal: some arrows are emoji
-        block = pattern.sub(words, block)
+    english = language == "en"
+    block = _speak_marks(block.strip(), speak_check_marks, MARK_WORDS.get(language, MARK_WORDS["en"]))
+    if english:
+        for pattern, words in _SYMBOLS:  # before emoji removal: some arrows are emoji
+            block = pattern.sub(words, block)
     block = _EMOJI.sub("", block)
-    for pattern, words in _ABBREVIATIONS:
-        block = pattern.sub(lambda m, words=words: _match_case(m.group(1), words), block)
-    block = _ISO_DATE.sub(_speak_iso_date, block)
+    if english:
+        for pattern, words in _ABBREVIATIONS:
+            block = pattern.sub(lambda m, words=words: _match_case(m.group(1), words), block)
+        block = _ISO_DATE.sub(_speak_iso_date, block)
     # ElevenLabs: characters like [ ] { } "usually result in low quality speech". Keep the words inside.
     block = re.sub(r"[\[\]{}]", "", block)
     block = _PIPE.sub(", ", block).strip(" ,")
@@ -362,20 +396,22 @@ def _clean_block(block: str, speak_check_marks: bool) -> str:
     return block if re.search(r"\w", block) else ""
 
 
-def _speak_marks(block: str, speak_check_marks: bool) -> str:
+def _speak_marks(block: str, speak_check_marks: bool, words: tuple[str, str, str] = ("Yes", "No", "Warning")) -> str:
     """A cross is always spoken, because dropping it would flip the meaning of the line.
 
     A check mark is spoken when it answers something ("Refundable: ✅") or when crosses
     are also present; otherwise ("✅ Step one") it is decoration and is dropped.
+    `words` are the yes, no and warning words of the reply's language (MARK_WORDS).
     """
-    block = _NO_AT_START.sub(_label("No"), block)
-    block = _NO_INLINE.sub(" no", block)
-    block = _WARNING_AT_START.sub(_label("Warning"), block)
-    block = _WARNING_INLINE.sub(" warning", block)
-    block = _YES_AFTER_LABEL.sub(" yes", block)
+    yes, no, warning = words
+    block = _NO_AT_START.sub(_label(no), block)
+    block = _NO_INLINE.sub(lambda m: " " + no.lower(), block)
+    block = _WARNING_AT_START.sub(_label(warning), block)
+    block = _WARNING_INLINE.sub(lambda m: " " + warning.lower(), block)
+    block = _YES_AFTER_LABEL.sub(lambda m: " " + yes.lower(), block)
     if speak_check_marks:
-        block = _YES_AT_START.sub(_label("Yes"), block)
-        block = _YES_INLINE.sub(" yes", block)
+        block = _YES_AT_START.sub(_label(yes), block)
+        block = _YES_INLINE.sub(lambda m: " " + yes.lower(), block)
     return block
 
 
@@ -383,7 +419,7 @@ def _label(word: str):
     """Speak a leading mark as "Word: ", unless the line already starts with that word."""
 
     def replace(match: re.Match) -> str:
-        already_said = re.match(rf"{word}\b", match.string[match.end():], re.IGNORECASE)
+        already_said = re.match(rf"{re.escape(word)}\b", match.string[match.end():], re.IGNORECASE)
         return "" if already_said else f"{word}: "
 
     return replace
@@ -402,12 +438,12 @@ def _speak_iso_date(match: re.Match) -> str:
     return f"{_MONTHS[month - 1]} {day}, {year}"
 
 
-def _end_sentence(block: str) -> str:
+def _end_sentence(block: str, full_stop: str = ".") -> str:
     """Make sure the block ends with punctuation so the voice pauses after it."""
     core = block.rstrip(_CLOSING_CHARS)
     if core and core[-1] in _TERMINAL_PUNCTUATION:
         return block
-    return block + "."
+    return block + full_stop
 
 
 def _apply_pronunciations(text: str, pronunciations: dict[str, str]) -> str:

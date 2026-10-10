@@ -95,6 +95,28 @@ def test_a_typed_question_is_analyzed_price_checked_and_saved(backend):
     assert stored["analysis"]["price_checks"] == body["price_checks"]  # saved after the price check
 
 
+def test_the_app_can_list_the_languages(backend):
+    languages = backend.client.get("/api/v1/languages").json()
+    assert len(languages) == 39 and languages["en-US"] == "English (United States)" and languages["vi-VN"] == "Vietnamese"
+
+
+@pytest.mark.parametrize("sent, answered", [(None, "en-US"), ("es", "es-MX"), ("pt_br", "pt-BR"), ("ja-JP", "ja-JP")])
+def test_the_analysis_answers_in_the_resolved_locale(backend, sent, answered):
+    data = {"text": "Why is my CT so expensive?", **({"target_language": sent} if sent else {})}
+    body = backend.client.post("/api/v1/analyze", data=data).json()
+    assert body["target_language"] == answered
+    assert backend.store.saved[body["audit"]["audit_id"]]["analysis"]["target_language"] == answered
+
+
+def test_a_language_not_offered_is_refused_before_gemini(backend, monkeypatch):
+    async def must_not_run(**kwargs):
+        raise AssertionError("Gemini was called")
+
+    monkeypatch.setattr(backend.main, "analyze", must_not_run)
+    response = backend.client.post("/api/v1/analyze", data={"text": "Hello", "target_language": "ht"})
+    assert response.status_code == 400 and "Use one of: en-US" in response.json()["detail"]
+
+
 def test_an_uploaded_bill_is_saved_as_a_file_analysis(backend):
     body = backend.client.post("/api/v1/analyze", files={"file": ("bill.png", BILL_PNG, "image/png")}).json()
     assert backend.store.saved[body["audit"]["audit_id"]]["source"] == "file"
@@ -218,6 +240,17 @@ def test_a_spoken_question_through_the_app_is_analyzed_price_checked_saved_and_a
     assert "times Medicare's national rate" in body["speech"]["text"]  # the price findings are spoken
     audio = backend.client.get(body["speech"]["audio_url"])
     assert audio.status_code == 200 and audio.headers["content-type"] == "audio/mpeg"
+
+
+def test_a_spoken_question_in_another_language_through_the_app(backend, voice):
+    response = backend.client.post(
+        "/api/v1/voice/analyze", files={"audio": ("question.mp3", RECORDING, "audio/mpeg")}, data={"target_language": "ja-JP"}
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert voice.scribe.languages == ["ja"] and body["analysis"]["target_language"] == "ja-JP"
+    # MOCK mode cannot translate, so the English price findings are left out rather than read in a Japanese reply.
+    assert body["speech"]["ok"] is True and "Medicare" not in body["speech"]["text"]
 
 
 def test_a_saved_analysis_is_spoken_again_through_the_app(backend, voice):
