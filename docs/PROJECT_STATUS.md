@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | Checked on | 2026-10-10 |
-| Branch | `Gemini-Tiger-Snow-ElevenLabs-V2`: the backend from `Gemini-Tiger-Snow-Integration-V1` (`d1753db`), these docs, the frontend from `frontend-aarush`, and the connection between them. `main` is older, at `8c1a321` |
+| Branch | `Backend-Frontend-Connection-V1`: the backend from `Gemini-Tiger-Snow-Integration-V1` (`d1753db`), these docs, the frontend from `frontend-aarush`, and the connection between them. `main` is older, at `8c1a321` |
 | Code | The results below apply to this branch on 2026-10-10 |
 | Last updated by | Nimesh, with Claude Code. Update this file only at integration checkpoints (see `docs/TEAM_WORKFLOW.md`) |
 
@@ -49,6 +49,9 @@
   amount) and passed the app's own validation. The review produced 10 findings (7 price comparisons, 3 Gemini
   notes, including a possible duplicate). ElevenLabs spoke the saved analysis in 9 s. This ran the app's
   `src/services` code in Node, not the app on a device.
+- **The app in a browser (Expo web), against the live backend:** Nimesh tested it by hand. The backend log shows
+  2 documents read (`POST /api/v1/analyze`), 28 Medicare lookups, 2 ElevenLabs readings and the reply audio
+  played in the browser, with no errors. Saved analyses went to the test schema `claimpulse_app_test`.
 - **The app's checks:** `npm run typecheck`, `npm run lint` and `npm test` (42 tests) pass. The web build
   (`expo export --platform web`) succeeds.
 - **Offline:** 528 audio tests and 73 backend tests pass, against a local PostgreSQL 17.
@@ -57,7 +60,6 @@
 - **Not verified:**
   - Anything on a phone or simulator: the screens with the backend, uploads from the camera, playback with
     `expo-audio` (it needs a rebuilt development build), reaching the backend over Wi-Fi.
-  - The web app's upload from IndexedDB (`backend-upload.web.ts`): it builds, but it was not run in a browser.
   - Live answers in the 10 languages other than English and Spanish.
   - Spoken replies in other languages, which aren't implemented.
   - More than a few requests at a time.
@@ -84,7 +86,7 @@
 
 ## Shared blockers
 
-- **Not yet tried on a phone:** the connected app has run only as code and as a web build.
+- **Not yet tried on a phone:** the connected app has run in a browser, not on iOS or Android.
 - **No authentication:** keep the backend on a private network. Anyone who can reach it can spend the team's
   Gemini and ElevenLabs credits and read a saved analysis by its ID.
 - **Branches:**

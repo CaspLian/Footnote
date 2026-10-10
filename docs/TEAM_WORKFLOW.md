@@ -6,7 +6,7 @@ How four people (and their assistants) work on ClaimPulse AI in parallel without
 In PowerShell, run each part of a `&&` chain as its own line.
 
 **`<integration-branch>` means the branch named in `docs/PROJECT_STATUS.md`.** On 2026-10-10 that was
-`Gemini-Tiger-Snow-ElevenLabs-V2`.
+`Backend-Frontend-Connection-V1`.
 
 ## 1. Read these first
 

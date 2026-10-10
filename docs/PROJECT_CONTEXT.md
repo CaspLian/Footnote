@@ -1,6 +1,6 @@
 # ClaimPulse AI: project context
 
-Last checked: 2026-10-10, branch `Gemini-Tiger-Snow-ElevenLabs-V2` (`d1753db` plus the null-text fix). Re-check
+Last checked: 2026-10-10, branch `Backend-Frontend-Connection-V1` (the backend and the connected frontend). Re-check
 anything here against the code after merges: the code wins over this document.
 
 ## Product
@@ -74,7 +74,7 @@ Between checkpoints, record status changes in your handoff.
 | Voice picker and samples; streamed replies; byte ranges for iPhones | Picker and samples: VERIFIED mocked. Streaming: VERIFIED live (first audio after 0.43 s, 2026-10-09). Byte ranges: live on 2026-10-10 just before `d1753db`, mocked at `d1753db`. iPhone playback: UNVERIFIED | `GET /api/v1/voice/voices`, `/audio/{id}` |
 | Spoken replies in languages other than English | PLANNED: text-to-speech accepts English only | `text_to_speech/service.py` |
 | Developer console (every route in a browser) | VERIFIED mocked (headless Chrome, a stand-in for ElevenLabs, 58 checks). Its API also answered live requests (curl, 2026-10-10) | `backend/dev_console.py` |
-| Mobile app connected to the backend | IMPLEMENTED: the connection code was VERIFIED live from Node; typecheck, lint, 42 tests and the web build pass; never run on a phone | `mobile/src/services/backend.ts`, `connected-services.ts` |
+| Mobile app connected to the backend | VERIFIED in a browser (Expo web, live backend): uploads read, Medicare lookups, ElevenLabs playback. Typecheck, lint and 42 tests pass. Never run on a phone | `mobile/src/services/backend.ts`, `connected-services.ts` |
 | Follow-up questions about a saved bill | PLANNED: no route takes an `audit_id` plus a question | `docs/decisions/2026-10-10-proposal-followup-questions.md` |
 | Authentication, rate limits | PLANNED: none; anyone who can reach the server can spend credits | `main.py` (CORS `*`); `docs/decisions/2026-10-10-proposal-app-key.md` |
 | Tiger Data audit / regional benchmark tables | VERIFIED live by its own 4 tests only (throwaway schema); not connected to any route | `tigerdata_service.py` |

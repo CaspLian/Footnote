@@ -1,7 +1,7 @@
 # API contracts
 
-The HTTP contract the backend exposes today, checked on 2026-10-10 against the code on `Gemini-Tiger-Snow-ElevenLabs-V2`
-(`d1753db` plus the null-text fix) and against the real server (`uvicorn main:app`, every live service) over HTTP.
+The HTTP contract the backend exposes today, checked on 2026-10-10 against the code on `Backend-Frontend-Connection-V1`
+(the backend from `d1753db`, the null-text fix and the benchmark route) and against the real server (`uvicorn main:app`, every live service) over HTTP.
 If the code and this file disagree, the code wins: fix this file in the same change.
 
 **Executable schema.** Run the backend (`cd backend && python dev_console.py`) and open
