@@ -9,8 +9,9 @@ from fastapi import FastAPI, File, Form, HTTPException, UploadFile  # noqa: E402
 from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
 
 from models import AnalyzeResponse  # noqa: E402
-from services.gemini_service import LANGUAGES, analyze, is_mock, model_name  # noqa: E402
-from services.snowflake_service import check_prices  # noqa: E402
+from services.analytical_services.analysis_store import StoreUnavailable, load_analysis, save_analysis  # noqa: E402
+from services.gemini_services.gemini_service import LANGUAGES, analyze, is_mock, model_name  # noqa: E402
+from services.snowflake_services.snowflake_service import check_prices  # noqa: E402
 
 MAX_UPLOAD_MB = 15
 GEMINI_TIMEOUT_S = 150  # covers 2 attempts x 2 models
@@ -65,7 +66,7 @@ async def analyze_endpoint(
     # Step 2: compare each line item to Medicare's rate in Snowflake (never fails the request)
     price_checks, price_summary = await check_prices(result.line_items)
 
-    return AnalyzeResponse(
+    response = AnalyzeResponse(
         target_language=target_language,
         model=model_name(),
         mock=is_mock(),
@@ -73,3 +74,26 @@ async def analyze_endpoint(
         price_checks=price_checks,
         price_summary=price_summary,
     )
+    # Step 3: save it to Tiger Data (never fails the request); response.audit says whether it worked
+    response.audit = await save_analysis(response, source="file" if file_bytes else "text")
+    return response
+
+
+@app.get("/api/v1/audits/{audit_id}")
+async def get_audit(audit_id: str):
+    """A saved analysis, exactly as /api/v1/analyze (or /api/v1/voice/analyze) returned it."""
+    try:
+        saved = await load_analysis(audit_id)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    except StoreUnavailable as e:
+        raise HTTPException(503, str(e))
+    if saved is None:
+        raise HTTPException(404, "No saved analysis with this ID.")
+    return saved
+
+
+# Voice: recording -> speech-to-text -> the same steps as above -> spoken reply (services/audio_service)
+from services.audio_service.voice_routes import router as voice_router  # noqa: E402
+
+app.include_router(voice_router)

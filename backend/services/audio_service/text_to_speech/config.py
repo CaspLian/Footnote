@@ -3,6 +3,7 @@
 The .env file loaded is the nearest one above the folder you run from; if there is
 none, backend/.env. In the team repo that means backend/.env, which the repo's
 .gitignore already keeps out of git. See ../.env.example for every variable.
+Only the voice settings (ELEVENLABS_*, TTS_*, STT_*) are read from that file.
 Only ELEVENLABS_API_KEY is required: the voices come from voices.json.
 """
 
@@ -12,7 +13,7 @@ import os
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from dotenv import find_dotenv, load_dotenv
+from dotenv import dotenv_values, find_dotenv
 
 SERVICE_DIR = Path(__file__).resolve().parent.parent  # backend/services/audio_service
 BACKEND_DIR = SERVICE_DIR.parent.parent  # backend
@@ -98,7 +99,7 @@ class TTSConfig:
         if load_env_file:
             env_file = find_env_file()
             if env_file:
-                load_dotenv(env_file, override=False)
+                load_settings_file(env_file)
         speed = _env_float("ELEVENLABS_SPEED", None, minimum=SPEED_RANGE[0], maximum=SPEED_RANGE[1])
         api_key = _env_str("ELEVENLABS_API_KEY", "")
         return cls(
@@ -148,6 +149,24 @@ class TTSConfig:
         if normalization != "auto":  # "auto" is ElevenLabs' default: leaving it out keeps older cache keys
             settings["apply_text_normalization"] = normalization
         return settings
+
+
+# Only this service's settings are taken from the .env file. The file may also hold other services'
+# keys, or placeholders for them (backend/api.env does): copying those into os.environ would change
+# how Gemini, Snowflake or Tiger Data behave once the first voice request has run.
+SETTING_PREFIXES = ("ELEVENLABS_", "TTS_", "STT_")
+
+
+def load_settings_file(path: str) -> None:
+    """Copy the ELEVENLABS_*, TTS_* and STT_* settings in the file into os.environ, unless the
+    environment already sets them (real environment variables win). Other names are ignored.
+    PYTHON_DOTENV_DISABLED=1 turns it off, as it turns off load_dotenv()."""
+    if os.environ.get("PYTHON_DOTENV_DISABLED", "").casefold() in {"1", "true", "t", "yes", "y"}:
+        return
+    for name, value in dotenv_values(path).items():
+        # upper(): on Windows names are not case-sensitive, so "elevenlabs_api_key=" in the file also counts
+        if name.upper().startswith(SETTING_PREFIXES) and value is not None and name not in os.environ:
+            os.environ[name] = value
 
 
 def find_env_file() -> str | None:

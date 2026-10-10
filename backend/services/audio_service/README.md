@@ -6,8 +6,10 @@ and the endpoints that connect them to the team's Gemini step:
 - **text_to_speech**: Gemini's answer → speech the app plays
 - **speech_to_text**: the user's recording → text, handed over ready for Gemini
 - **voice_routes.py**: `POST /api/v1/voice/analyze`: recording → transcript → `gemini_service.analyze()`
-  → spoken reply in the voice the user chose, `GET /api/v1/voice/audio/{id}` to play the reply, and
-  `GET /api/v1/voice/voices` (+ `/voices/{key}/sample`) for the app's voice picker
+  → price check → saved to Tiger Data → spoken reply (the summary plus what the price check found) in
+  the voice the user chose; `POST /api/v1/voice/speak` to hear a saved analysis again without asking
+  Gemini again; `GET /api/v1/voice/audio/{id}` to play a reply; and `GET /api/v1/voice/voices`
+  (+ `/voices/{key}/sample`) for the app's voice picker. Mounted in `backend/main.py`.
 - **20 voices to choose from** (10 female, 9 male, 1 neutral; 11 accents), listed in
   `text_to_speech/voices.json`. Matilda is the default; Bunty and Noor are the fun Indian voices.
 
@@ -47,7 +49,7 @@ audio_service/
 ├── playground.py, .html        a local page to try the voices: type text, pick a voice, hear it
 ├── tests/                      tests for voice_routes (a stand-in replaces the Gemini module)
 ├── __init__.py                 makes this folder a package (see "Git notes")
-├── conftest.py                 test setup for both features (never reads the real backend/.env)
+├── conftest.py                 test setup for both features (never reads the real backend/.env or api.env)
 ├── .env.example                every audio setting, with explanations
 ├── .gitignore                  keeps generated audio, caches and stray .env files out of git
 ├── requirements.txt            this module's runtime dependencies (pinned)
@@ -79,6 +81,10 @@ ELEVENLABS_API_KEY=your-real-key
 
 One `NAME=value` per line: no dashes, no quotes, no spaces around `=`. Do not paste the key anywhere else.
 The voices users can choose come from `text_to_speech/voices.json`, so no voice setting is needed.
+If there is no `backend/.env`, the voice settings are read from `backend/api.env` instead. Only the
+voice settings (`ELEVENLABS_*`, `TTS_*`, `STT_*`) are taken from either file: Gemini, Snowflake and
+Tiger Data read theirs from `backend/.env` through `main.py`, so placeholders for them in
+`api.env` change nothing.
 
 ## Verify, step by step
 
@@ -138,6 +144,39 @@ To compare voices, switch voice and the page speaks the same text in the new one
 It only listens on your computer, so nobody else on the network can use it. Stop it with Ctrl+C
 in the terminal. It needs `fastapi` and `uvicorn` (`pip install -r requirements-dev.txt`), and
 finds the key in `backend/.env` or `backend/api.env`.
+
+## Try the whole backend: the developer console
+
+```powershell
+cd backend
+python dev_console.py
+```
+
+This opens http://127.0.0.1:8770/console, a page that uses the real app from `main.py`, so every
+route is the one the mobile app will call:
+
+1. **Analyze a bill** (`POST /api/v1/analyze`): a photo or PDF, a question, or both. It shows the
+   line items with their price check, the explanation, and whether the analysis was saved.
+2. **Ask by voice** (`POST /api/v1/voice/analyze`): record with the microphone or choose an audio
+   file, optionally with a bill. It shows what was heard and plays the reply.
+3. **Hear it** (`POST /api/v1/voice/speak`) and **Saved analyses** (`GET /api/v1/audits/{id}`):
+   speak or reload a saved analysis.
+
+The chips at the top say what is live. Without keys it still works: Gemini runs in MOCK mode (the
+same Spanish sample bill whatever you send), prices come from `data/cpt_benchmarks.csv`, and
+nothing is saved unless you give it a database:
+
+```powershell
+$env:TIGER_DATA_POSTGRES_URL = "postgresql://user:password@127.0.0.1:5432/test_db"   # a test database
+python dev_console.py
+```
+
+(`--tiger-url URL` does the same, but the password then shows in the process list and in your shell
+history, so keep that for a throwaway local database.)
+
+Voice replies spend ElevenLabs credits like the playground (the same text in the same voice is
+free). Like the playground it only listens on your computer, and it refuses requests sent by other
+web pages, so no site you visit can use it. Stop it with Ctrl+C.
 
 ## Speed (measured 2026-10-09 on the Creator plan)
 
@@ -208,13 +247,30 @@ from services.audio_service.text_to_speech import TTSRequest, synthesize
 from services.audio_service.speech_to_text import STTRequest, to_gemini_handoff, transcribe
 ```
 
-To switch on the voice endpoints (speech → the team's Gemini step → speech), add two lines to
-`backend/main.py`, after `app = FastAPI(...)`:
+The voice endpoints (speech → the team's Gemini step → price check → Tiger Data → speech) are
+switched on at the end of `backend/main.py`:
 
 ```python
 from services.audio_service.voice_routes import router as voice_router
 app.include_router(voice_router)
 ```
+
+How the routes fit together:
+
+| Route | File | What it does |
+|---|---|---|
+| `POST /api/v1/analyze` | `main.py` | bill and/or text → Gemini → price check → saved (`audit`) |
+| `POST /api/v1/voice/analyze` | `voice_routes.py` | recording → transcript → the same three steps → spoken reply |
+| `GET /api/v1/audits/{audit_id}` | `main.py` | a saved analysis, exactly as it was returned |
+| `POST /api/v1/voice/speak` | `voice_routes.py` | speak a saved analysis again, without Gemini |
+| `GET /api/v1/voice/audio/{id}`, `/voices`, `/voices/{key}/sample` | `voice_routes.py` | play replies; the voice picker |
+
+Saving is in `services/analytical_services/analysis_store.py`. It uses Tiger Data's database
+(`TIGER_DATA_POSTGRES_URL`) and two tables of its own, `bill_analyses` and `bill_analysis_lines`
+(made on first use if missing), because a Gemini line item may have no code or no amount, which
+`tigerdata_service`'s audit tables do not accept. Missing codes and amounts are stored as NULL, never
+dropped or made up. Every statement has a time limit, and while Tiger Data cannot be reached saving
+pauses for 30 s, so a database problem never holds up an answer for long.
 
 Fields, response shape and error codes are in section 3 of
 [speech_to_text/README.md](speech_to_text/README.md), along with the mobile recording code.
@@ -315,6 +371,14 @@ $1 until October 18).
   after a listener heard audio), byte ranges, and model choice. In headless Chrome, the playground
   page started playing a streamed 33-second clip 2.7 s before its last piece arrived. With real
   ElevenLabs: the timings in "Speed", and each model's audio transcribed back to check the numbers.
+- **The wiring (2026-10-10):** `backend/tests/test_wiring.py` (every route mounted; typed, file and
+  voice analyses through `main.app`, saved after the price check; saved analyses read back exactly
+  and spoken again), `test_analysis_store.py` (the real store against a local PostgreSQL 17: NULL
+  codes and amounts kept, a failed save leaves nothing behind, text in other alphabets, a held lock,
+  dropped tables, an app role without CREATE, a save that runs out of time is rolled back) and
+  `test_dev_console.py`. In headless Chrome, the developer console ran every flow above against a
+  local PostgreSQL with a stand-in for ElevenLabs, including microphone recording and a streamed
+  reply. The audio and backend suites also pass together in one pytest session, in either order.
 - **Not yet tested:** the mobile playback and recording snippets on a phone, streaming on an iPhone,
   a real human voice recorded on a phone (only synthetic speech so far), and Gemini with a real key
   (only its mock mode).

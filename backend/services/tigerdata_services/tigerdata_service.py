@@ -53,7 +53,7 @@ CREATE TABLE IF NOT EXISTS audit_line_items (
 
 def connect_tiger_data() -> connection:
     """Open and return a PostgreSQL connection to Tiger Data."""
-    load_dotenv(Path(__file__).resolve().parents[1] / ".env")
+    load_dotenv(Path(__file__).resolve().parents[2] / ".env")  # backend/.env
 
     database_url = os.getenv("TIGER_DATA_POSTGRES_URL")
     if not database_url:

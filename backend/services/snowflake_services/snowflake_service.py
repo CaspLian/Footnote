@@ -15,7 +15,7 @@ from typing import Optional
 
 from models import LineItem, PriceCheck, PriceSummary
 
-CSV_PATH = Path(__file__).resolve().parent.parent / "data" / "cpt_benchmarks.csv"
+CSV_PATH = Path(__file__).resolve().parents[2] / "data" / "cpt_benchmarks.csv"  # backend/data
 SNOWFLAKE_TIMEOUT_S = 15
 
 # Hospitals list prices well above Medicare as a matter of course, so the bands are generous.

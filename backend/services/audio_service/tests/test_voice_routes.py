@@ -9,6 +9,7 @@ import asyncio
 import importlib
 import sys
 import types
+import uuid
 from pathlib import Path
 
 import pytest
@@ -27,13 +28,14 @@ BILL_PHOTO = b"\x89PNG\r\n\x1a\n" + b"\x02" * 3000
 
 
 class FakeGemini:
-    """Stands in for services.gemini_service: records each call, returns a GeminiResult."""
+    """Stands in for services.gemini_services.gemini_service: records each call, returns a GeminiResult."""
 
     def __init__(self, models):
         self.models = models
         self.calls = []
         self.error = None
         self.delay = 0.0
+        self.spoken_summary = "Your MRI was billed at three thousand two hundred dollars."
 
     async def analyze(self, *, file_bytes=None, mime_type=None, text=None, target_language="en"):
         self.calls.append({"file_bytes": file_bytes, "mime_type": mime_type, "text": text, "lang": target_language})
@@ -50,13 +52,13 @@ class FakeGemini:
                 )
             ],
             plain_summary="Your MRI was billed at $3,200, more than a typical $1,400.",
-            spoken_summary="Your MRI was billed at three thousand two hundred dollars.",
+            spoken_summary=self.spoken_summary,
             questions_to_ask=["Can you explain the MRI charge?"],
         )
 
 
 class FakePriceCheck:
-    """Stands in for services.snowflake_service.check_prices (the real one queries Snowflake)."""
+    """Stands in for services.snowflake_services.snowflake_service.check_prices (the real one queries Snowflake)."""
 
     def __init__(self, models):
         self.models = models
@@ -74,6 +76,38 @@ class FakePriceCheck:
             source="local_csv", items_checked=1, items_flagged=1, billed_total_checked=3200.0, medicare_total_checked=400.0
         )
         return checks, summary
+
+
+class StoreUnavailable(Exception):
+    """Stands in for services.analytical_services.analysis_store.StoreUnavailable."""
+
+
+class FakeStore:
+    """Stands in for services.analytical_services.analysis_store (the real one writes to Tiger Data): keeps analyses in memory."""
+
+    def __init__(self, models):
+        self.models = models
+        self.saved = {}
+        self.configured = True
+
+    async def save_analysis(self, response, *, source, transcript=None):
+        if not self.configured:
+            return self.models.AuditInfo(saved=False, error="Not saved: Tiger Data is not configured (TIGER_DATA_POSTGRES_URL).")
+        audit_id = str(uuid.uuid4())
+        self.saved[audit_id] = {
+            "audit_id": audit_id, "created_at": "2026-10-09T12:00:00+00:00", "source": source, "transcript": transcript,
+            "analysis": response.model_dump(mode="json", exclude={"audit"}),
+        }
+        return self.models.AuditInfo(saved=True, audit_id=audit_id)
+
+    async def load_analysis(self, audit_id):
+        try:
+            uuid.UUID(str(audit_id))
+        except ValueError:
+            raise ValueError("audit_id must be a valid UUID.") from None
+        if not self.configured:
+            raise StoreUnavailable("Tiger Data is not configured (TIGER_DATA_POSTGRES_URL).")
+        return self.saved.get(audit_id)
 
 
 class FakeScribe:
@@ -110,21 +144,30 @@ class FakeVoice:
 
 
 @pytest.fixture
-def voice(monkeypatch):
+def voice(monkeypatch, no_real_settings_files):
     """A FastAPI app with the voice router mounted, and handles on every fake."""
     monkeypatch.syspath_prepend(str(BACKEND_DIR))
     models = importlib.import_module("models")
     gemini = FakeGemini(models)
-    fake_module = types.ModuleType("services.gemini_service")
+    fake_module = types.ModuleType("services.gemini_services.gemini_service")
     fake_module.analyze = gemini.analyze
     fake_module.is_mock = lambda: True
     fake_module.model_name = lambda: "fake-gemini"
-    monkeypatch.setitem(sys.modules, "services.gemini_service", fake_module)
+    fake_module.SUPPORTED_MIME = {"image/jpeg", "image/png", "image/webp", "image/heic", "image/heif", "application/pdf"}
+    monkeypatch.setitem(sys.modules, "services.gemini_services.gemini_service", fake_module)
     prices = FakePriceCheck(models)
-    fake_prices = types.ModuleType("services.snowflake_service")
+    fake_prices = types.ModuleType("services.snowflake_services.snowflake_service")
     fake_prices.check_prices = prices.check_prices
-    monkeypatch.setitem(sys.modules, "services.snowflake_service", fake_prices)
-    monkeypatch.delitem(sys.modules, "services.audio_service.voice_routes", raising=False)
+    monkeypatch.setitem(sys.modules, "services.snowflake_services.snowflake_service", fake_prices)
+    store = FakeStore(models)
+    fake_store = types.ModuleType("services.analytical_services.analysis_store")
+    fake_store.save_analysis, fake_store.load_analysis = store.save_analysis, store.load_analysis
+    fake_store.StoreUnavailable = StoreUnavailable
+    monkeypatch.setitem(sys.modules, "services.analytical_services.analysis_store", fake_store)
+    # A fresh voice_routes bound to these fakes, removed again afterwards: main.py imports the real one, and in a
+    # combined test run it must not find this one. (setitem first, so monkeypatch remembers it was not there.)
+    monkeypatch.setitem(sys.modules, "services.audio_service.voice_routes", None)
+    monkeypatch.delitem(sys.modules, "services.audio_service.voice_routes")
     routes = importlib.import_module("services.audio_service.voice_routes")
 
     stt_service = importlib.import_module("services.audio_service.speech_to_text.service")
@@ -134,6 +177,8 @@ def voice(monkeypatch):
     tts_config = importlib.import_module("services.audio_service.text_to_speech.config")
     tts_cache = importlib.import_module("services.audio_service.text_to_speech.cache")
     tts_provider = importlib.import_module("services.audio_service.text_to_speech.elevenlabs_provider")
+    no_real_settings_files(stt_config)  # these copies of the config modules are new: keep real settings files out
+    no_real_settings_files(tts_config)
 
     scribe = FakeScribe(stt_provider)
     speaker = FakeVoice(tts_provider)
@@ -151,8 +196,8 @@ def voice(monkeypatch):
     app = FastAPI()
     app.include_router(routes.router)
     return types.SimpleNamespace(
-        client=TestClient(app), gemini=gemini, prices=prices, scribe=scribe, speaker=speaker, routes=routes,
-        stt_errors=stt_provider,
+        client=TestClient(app), gemini=gemini, prices=prices, store=store, scribe=scribe, speaker=speaker,
+        routes=routes, stt_errors=stt_provider,
     )
 
 
@@ -178,12 +223,17 @@ def test_spoken_question_reaches_gemini_and_the_reply_is_spoken(voice):
     # "analysis" has the /api/v1/analyze shape.
     assert body["analysis"]["model"] == "fake-gemini" and body["analysis"]["mock"] is True
     assert body["analysis"]["result"]["document_type"] == "hospital_bill"
-    # spoken_summary was turned into audio, which the audio route serves.
-    assert voice.speaker.texts == ["Your MRI was billed at three thousand two hundred dollars."]
+    # spoken_summary, then what the price check found, was turned into audio, which the audio route serves.
+    [spoken] = voice.speaker.texts
+    assert spoken.startswith(
+        "Your MRI was billed at three thousand two hundred dollars. I also compared the charges with Medicare's national rates."
+    )
+    assert "Brain MRI was billed about 8 times Medicare's national rate, which is far above the usual range." in spoken
     assert body["speech"]["ok"] is True and body["speech"]["mime_type"] == "audio/mpeg"
+    assert body["speech"]["text"] == spoken  # the captions are exactly what the voice says
     audio = voice.client.get(body["speech"]["audio_url"])
     assert audio.status_code == 200 and audio.headers["content-type"] == "audio/mpeg"
-    assert audio.content == b"ID3Your MRI was billed at three thousand two hundred dollars."
+    assert audio.content == b"ID3" + spoken.encode()
 
 
 def test_the_bill_gets_the_same_price_check_as_the_analyze_endpoint(voice):
@@ -209,7 +259,7 @@ def test_the_spoken_language_goes_to_both_speech_to_text_and_gemini(voice):
     assert voice.scribe.calls[0]["language"] == "es" and voice.gemini.calls[0]["lang"] == "es"
     # The reply voice is English-only for now: the text answer still comes back.
     assert response.json()["speech"] == {
-        "ok": False, "audio_url": None, "mime_type": None, "voice": None, "streaming": False,
+        "ok": False, "audio_url": None, "mime_type": None, "voice": None, "streaming": False, "text": None,
         "error_code": "INVALID_REQUEST", "error_message": "Only English is supported for now (language='es').",
     }
 
@@ -261,10 +311,11 @@ def test_missing_recording_is_rejected_by_fastapi(voice):
     assert voice.client.post("/api/v1/voice/analyze", data={"message_id": "m"}).status_code == 422
 
 
-def test_bill_over_the_limit_is_413(voice, monkeypatch):
+def test_bill_over_the_limit_is_413_before_paying_for_speech_to_text(voice, monkeypatch):
     monkeypatch.setattr(voice.routes, "MAX_BILL_MB", 0.001)
     response = ask(voice, bill=BILL_PHOTO)
-    assert response.status_code == 413 and voice.gemini.calls == []
+    assert response.status_code == 413 and response.json()["detail"]["stage"] == "upload"
+    assert voice.scribe.calls == [] and voice.gemini.calls == []  # the recording was never sent to ElevenLabs
 
 
 # --- Gemini stage failures, mapped like /api/v1/analyze --------------------------------------
@@ -356,7 +407,8 @@ def test_reply_audio_supports_byte_ranges_for_iphones(voice):
     probe = voice.client.get(url, headers={"Range": "bytes=0-1"})  # what AVPlayer asks for first
     assert probe.status_code == 206 and probe.content == b"ID"
     assert probe.headers["content-range"].startswith("bytes 0-1/")
-    assert probe.headers["cache-control"] == "public, max-age=31536000, immutable"
+    # Kept by the phone, never by shared caches: the reply explains someone's bill.
+    assert probe.headers["cache-control"] == "private, max-age=31536000, immutable"
     assert voice.client.get(url).headers["accept-ranges"] == "bytes"
 
 
@@ -427,3 +479,212 @@ def test_stream_reply_answers_at_the_first_audio_and_streams_the_rest(voice, mon
     response = received["response"]
     assert response.status_code == 200 and response.content == b"ID3-rest of the reply"
     assert response.headers["cache-control"] == "no-store"  # a stream is never cached for good
+
+
+# --- Saving, speaking a saved analysis, and the spoken price findings -----------------------------
+
+
+def test_a_voice_analysis_is_saved_with_its_transcript(voice):
+    body = ask(voice).json()
+    audit = body["analysis"]["audit"]
+    assert audit["saved"] is True and audit["error"] is None
+    stored = voice.store.saved[audit["audit_id"]]
+    assert stored["source"] == "voice" and stored["transcript"] == "Why was my MRI so expensive?"
+    assert stored["analysis"]["price_checks"][0]["flag"] == "far_above_typical"  # saved after the price check
+
+
+def test_without_tiger_data_the_answer_still_comes_back(voice):
+    voice.store.configured = False
+    body = ask(voice).json()
+    assert body["analysis"]["audit"] == {
+        "saved": False, "audit_id": None, "error": "Not saved: Tiger Data is not configured (TIGER_DATA_POSTGRES_URL).",
+    }
+    assert body["speech"]["ok"] is True
+
+
+def test_a_saved_analysis_can_be_spoken_again_without_analyzing_it_again(voice):
+    audit_id = ask(voice).json()["analysis"]["audit"]["audit_id"]
+    gemini_calls, [first_reply] = len(voice.gemini.calls), voice.speaker.texts
+    speech = voice.client.post("/api/v1/voice/speak", data={"audit_id": audit_id, "voice": "george"}).json()
+    assert len(voice.gemini.calls) == gemini_calls  # Gemini was not asked again
+    assert speech["ok"] is True and speech["voice"] == "george"
+    assert voice.speaker.texts[-1] == first_reply  # the same words, now in George's voice
+    audio = voice.client.get(speech["audio_url"])
+    assert audio.status_code == 200 and audio.content == b"ID3" + first_reply.encode()
+
+
+@pytest.mark.parametrize("audit_id, status", [("not-a-uuid", 400), (str(uuid.uuid4()), 404)])
+def test_speaking_an_unknown_analysis_is_refused(voice, audit_id, status):
+    response = voice.client.post("/api/v1/voice/speak", data={"audit_id": audit_id})
+    assert response.status_code == status and response.json()["detail"]["stage"] == "audit"
+    assert voice.speaker.texts == []
+
+
+def test_speaking_a_saved_analysis_needs_tiger_data(voice):
+    voice.store.configured = False
+    assert voice.client.post("/api/v1/voice/speak", data={"audit_id": str(uuid.uuid4())}).status_code == 503
+
+
+def _analysis(models, checks, language="en"):
+    result = models.GeminiResult(
+        document_type="hospital_bill",
+        line_items=[
+            models.LineItem(cpt_code="70450", original_description="CT HEAD", plain_description="The head CT scan", billed_amount=3200.0),
+            models.LineItem(cpt_code="99284", original_description="ER VISIT", plain_description="The ER visit", billed_amount=1200.0),
+            models.LineItem(cpt_code="80053", original_description="LAB PANEL", plain_description="The lab panel", billed_amount=90.0),
+        ],
+        plain_summary="Summary.",
+        spoken_summary="Here is your bill.",
+    )
+    return models.AnalyzeResponse(target_language=language, model="m", mock=True, result=result, price_checks=checks)
+
+
+def _check(models, index, flag, times, note="note"):
+    return models.PriceCheck(
+        line_index=index, cpt_code="x", billed_amount=1.0, medicare_rate=1.0, times_medicare=times, flag=flag, note=note
+    )
+
+
+def test_the_spoken_reply_adds_what_the_price_check_found(voice):
+    models = importlib.import_module("models")
+    checks = [_check(models, 0, "far_above_typical", 30.0), _check(models, 1, "above_typical", 4.5), _check(models, 2, "typical", 1.2)]
+    assert voice.routes.spoken_reply(_analysis(models, checks)) == (
+        "Here is your bill. I also compared the charges with Medicare's national rates. "
+        "The head CT scan was billed about 30 times Medicare's national rate, which is far above the usual range. "
+        "The ER visit was billed about 4.5 times Medicare's national rate, which is higher than usual. "
+        "It's worth asking the billing office about them."
+    )
+
+
+def test_the_spoken_reply_when_prices_look_usual_or_were_not_compared(voice):
+    models = importlib.import_module("models")
+    usual = voice.routes.spoken_reply(_analysis(models, [_check(models, 2, "typical", 1.2)]))
+    assert usual == (
+        "Here is your bill. I also compared 1 charge with Medicare's national rates, and it looks within the "
+        "usual range for hospital prices."
+    )
+    no_code = models.PriceCheck(line_index=0, cpt_code=None, billed_amount=3200.0, flag="no_code", note="n")
+    assert voice.routes.spoken_reply(_analysis(models, [no_code])) == "Here is your bill."
+    spanish = _analysis(models, [_check(models, 0, "far_above_typical", 30.0)], language="es")
+    assert voice.routes.spoken_reply(spanish) == "Here is your bill."  # the added sentences are English only
+
+
+def test_the_spoken_reply_never_claims_overcharging(voice):
+    models = importlib.import_module("models")
+    facility = "Medicare's rate here covers only the doctor's fee; hospitals also bill a separate facility fee."
+    checks = [_check(models, i, "far_above_typical", 30.0, note=facility) for i in range(3)]
+    reply = voice.routes.spoken_reply(_analysis(models, checks)).lower()
+    assert "1 other charge also looks high." in reply
+    assert "covers only the doctor's part, so some difference is expected." in reply  # the caveat is spoken too
+    for word in ("overcharg", "illegal", "fraud", "negotiat", "rip"):
+        assert word not in reply
+
+
+def test_the_worst_charges_are_named_first(voice):
+    models = importlib.import_module("models")
+    checks = [_check(models, 0, "above_typical", 3.1), _check(models, 1, "above_typical", 3.2), _check(models, 2, "far_above_typical", 50.0)]
+    assert voice.routes.spoken_reply(_analysis(models, checks)) == (
+        "Here is your bill. I also compared the charges with Medicare's national rates. "
+        "The lab panel was billed about 50 times Medicare's national rate, which is far above the usual range. "
+        "The ER visit was billed about 3.2 times Medicare's national rate, which is higher than usual. "
+        "1 other charge also looks high. It's worth asking the billing office about them."
+    )
+
+
+def test_large_ratios_are_said_as_plain_numbers(voice):
+    models = importlib.import_module("models")
+    reply = voice.routes.spoken_reply(_analysis(models, [_check(models, 0, "far_above_typical", 1234567.0)]))
+    assert "billed about 1,234,567 times Medicare's national rate" in reply and "e+" not in reply
+    assert [voice.routes._times(value) for value in (30.0, 4.5, 99.9, 123.4)] == ["30", "4.5", "99.9", "123"]
+
+
+def test_the_reply_reads_well_without_a_final_full_stop_or_a_plain_name(voice):
+    models = importlib.import_module("models")
+    analysis = _analysis(models, [_check(models, 0, "far_above_typical", 30.0), _check(models, 1, "far_above_typical", 20.0)])
+    analysis.result.spoken_summary = "Here is your bill"
+    analysis.result.line_items[0].plain_description = "   "  # blank: the printed description is used
+    analysis.result.line_items[1].plain_description = ""
+    analysis.result.line_items[1].original_description = " "  # nothing to say: "Line 2"
+    assert voice.routes.spoken_reply(analysis) == (
+        "Here is your bill. I also compared the charges with Medicare's national rates. "
+        "CT HEAD was billed about 30 times Medicare's national rate, which is far above the usual range. "
+        "Line 2 was billed about 20 times Medicare's national rate, which is far above the usual range. "
+        "It's worth asking the billing office about them."
+    )
+
+
+def test_english_locales_get_the_price_findings_too(voice):
+    models = importlib.import_module("models")
+    for language in ("en-US", "en_GB", "EN"):
+        reply = voice.routes.spoken_reply(_analysis(models, [_check(models, 0, "far_above_typical", 30.0)], language=language))
+        assert "I also compared the charges with Medicare's national rates." in reply
+
+
+def test_a_phone_locale_reaches_speech_to_text_as_the_language_alone(voice):
+    response = ask(voice, target_language="en-US")
+    assert response.status_code == 200
+    assert voice.scribe.calls[0]["language"] == "en"  # speech-to-text takes "en", not "en-US"
+    assert voice.gemini.calls[0]["lang"] == "en-US"  # Gemini and the answer keep what the app sent, as /api/v1/analyze does
+    assert "I also compared the charges" in response.json()["speech"]["text"]
+
+
+def test_captions_are_exactly_the_text_sent_to_elevenlabs(voice):
+    voice.gemini.spoken_summary = "Your visit on 2026-09-02 was billed three thousand two hundred dollars"
+    speech = ask(voice).json()["speech"]
+    assert speech["ok"] is True
+    assert speech["text"] == voice.speaker.texts[-1]  # after the module's cleanup, as ElevenLabs received it
+    assert "2026-09-02" not in speech["text"]  # the cleanup says dates the way people do
+
+
+def test_an_unsupported_bill_type_is_refused_before_paying_for_speech_to_text(voice):
+    response = voice.client.post(
+        "/api/v1/voice/analyze",
+        files={"audio": ("question.m4a", PHONE_RECORDING, "audio/m4a"), "file": ("bill.gif", b"GIF89a" + b"\x00" * 500, "image/gif")},
+    )
+    assert response.status_code == 400
+    assert response.json()["detail"] == {"stage": "gemini", "message": "Unsupported file type image/gif. Use JPG, PNG, WEBP, HEIC or PDF."}
+    assert voice.scribe.calls == [] and voice.gemini.calls == []
+
+
+def test_an_oversized_recording_is_refused_without_reading_it_all(voice, monkeypatch):
+    stt_service = importlib.import_module("services.audio_service.speech_to_text.service")
+    stt_config = importlib.import_module("services.audio_service.speech_to_text.config")
+    small = stt_service.STTService(stt_config.STTConfig(api_key="k", max_audio_mb=0.001), voice.scribe, sleep=lambda s: None)
+    monkeypatch.setattr(stt_service, "_default_service", small)
+    response = ask(voice)  # about 5 KB, over the 1 KB limit
+    assert response.status_code == 413
+    detail = response.json()["detail"]
+    assert detail["stage"] == "speech_to_text" and detail["error_code"] == "AUDIO_TOO_LARGE" and "STT_MAX_AUDIO_MB" in detail["message"]
+    assert voice.scribe.calls == [] and voice.gemini.calls == []
+
+
+def test_speaking_an_analysis_saved_in_an_older_shape_is_409(voice):
+    audit_id = str(uuid.uuid4())
+    voice.store.saved[audit_id] = {"audit_id": audit_id, "created_at": "2026-10-09T12:00:00+00:00", "source": "text",
+                                   "transcript": None, "analysis": {"target_language": "en", "model": "m"}}  # no result
+    response = voice.client.post("/api/v1/voice/speak", data={"audit_id": audit_id})
+    assert response.status_code == 409 and response.json()["detail"]["stage"] == "audit"
+    assert voice.speaker.texts == []
+
+
+def test_the_reply_audio_is_made_while_the_analysis_is_saved(voice, monkeypatch):
+    import threading
+
+    speaking = threading.Event()
+    real_generate = voice.speaker.generate
+
+    def generate(*args, **kwargs):
+        speaking.set()
+        return real_generate(*args, **kwargs)
+
+    monkeypatch.setattr(voice.speaker, "generate", generate)
+    seen = {}
+
+    async def slow_save(response, *, source, transcript=None):
+        seen["speaking_during_save"] = await asyncio.to_thread(speaking.wait, 5)  # sequential code would wait 5 s here
+        return await voice.store.save_analysis(response, source=source, transcript=transcript)
+
+    monkeypatch.setattr(voice.routes, "save_analysis", slow_save)
+    body = ask(voice).json()
+    assert seen == {"speaking_during_save": True}
+    assert body["speech"]["ok"] is True and body["analysis"]["audit"]["saved"] is True

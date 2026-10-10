@@ -4,7 +4,7 @@ from decimal import Decimal
 from pathlib import Path
 from uuid import uuid4
 
-from services.tigerdata_service import (
+from services.tigerdata_services.tigerdata_service import (
     connect_tiger_data,
     get_bill_audit,
     initialize_tiger_data,

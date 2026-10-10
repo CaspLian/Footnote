@@ -192,8 +192,9 @@ def audio(audio_id: str, request: Request):
         raise HTTPException(status_code=404)
     # Byte ranges for iPhones; the same audio_id always means the same audio, so finished clips may
     # be cached for good (audio still being made, from synthesize_streaming, is never cached).
+    # "private": a reply explains someone's bill, so only their own device may keep it.
     return audio_response(
-        stream, request.headers.get("range"), finished_headers={"Cache-Control": "public, max-age=31536000, immutable"}
+        stream, request.headers.get("range"), finished_headers={"Cache-Control": "private, max-age=31536000, immutable"}
     )
 
 

@@ -1,0 +1,483 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ClaimPulse developer console</title>
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #f6f7f9; --card: #ffffff; --text: #1d2330; --muted: #5d6779; --line: #dde1e8;
+    --accent: #2f5bea; --accent-text: #ffffff; --soft: #eef2fd; --error: #b3261e; --ok: #1f7a3d;
+    --red: #b3261e; --orange: #9a5b00; --green: #1f7a3d; --gray: #5d6779;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      color-scheme: dark;
+      --bg: #12151b; --card: #1b2029; --text: #e7eaf0; --muted: #9aa3b2; --line: #2c3340;
+      --accent: #7c9cff; --accent-text: #0d1220; --soft: #222a3a; --error: #ff8a80; --ok: #7ad19a;
+      --red: #ff8a80; --orange: #ffb74d; --green: #7ad19a; --gray: #9aa3b2;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 980px; margin: 0 auto; padding: 28px 16px 190px; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  h2 { font-size: 17px; margin: 0 0 10px; }
+  h3 { font-size: 15px; margin: 16px 0 6px; }
+  .lead { color: var(--muted); margin: 0 0 14px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+  .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 10px; }
+  .muted { color: var(--muted); font-size: 13px; }
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+  .chip { border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px; font-size: 13px; background: var(--card); }
+  .chip b { font-weight: 600; }
+  .warn { color: var(--orange); font-size: 13px; }
+  #service-notes:not(:empty) { margin-bottom: 14px; }
+  label.field { display: block; font-weight: 600; margin: 10px 0 4px; }
+  textarea, select, input[type=text] { font: inherit; color: var(--text); background: var(--bg);
+           border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
+  textarea { width: 100%; min-height: 70px; resize: vertical; }
+  input[type=text] { min-width: 320px; max-width: 100%; }
+  button { font: inherit; border-radius: 8px; border: 1px solid var(--line); background: var(--card);
+           color: var(--text); padding: 7px 14px; cursor: pointer; }
+  button.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); font-weight: 600; }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  .recording { background: var(--red) !important; color: #fff !important; border-color: var(--red) !important; }
+  .table-wrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  th, td { text-align: left; padding: 6px 8px; border-top: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; border-top: 0; }
+  td.num { text-align: right; white-space: nowrap; }
+  .flag { display: inline-block; border-radius: 6px; padding: 0 6px; font-size: 12px; font-weight: 600; border: 1px solid currentColor; }
+  .flag.far_above_typical { color: var(--red); }
+  .flag.above_typical { color: var(--orange); }
+  .flag.typical { color: var(--green); }
+  .flag.no_code, .flag.no_benchmark, .flag.no_amount, .flag.not_checked { color: var(--gray); }
+  .note { color: var(--muted); font-size: 13px; }
+  .facts { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 6px 16px; }
+  .facts div span { color: var(--muted); font-size: 13px; display: block; }
+  .saved-ok { color: var(--ok); }
+  .saved-no { color: var(--orange); }
+  ul.plain { margin: 4px 0; padding-left: 20px; }
+  #saved-list button { margin: 4px 6px 0 0; font: 12px ui-monospace, monospace; }
+  pre { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 10px; overflow-x: auto;
+        font-size: 12px; max-height: 360px; }
+  .bar { position: fixed; left: 0; right: 0; bottom: 0; background: var(--card); border-top: 1px solid var(--line);
+         box-shadow: 0 -4px 18px rgba(0, 0, 0, .08); }
+  .bar-inner { max-width: 980px; margin: 0 auto; padding: 10px 16px 12px; }
+  #status { min-height: 22px; font-size: 14px; color: var(--muted); }
+  #status.error { color: var(--error); }
+  #status.ok { color: var(--ok); }
+  audio { width: 100%; height: 40px; margin-top: 6px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>ClaimPulse developer console</h1>
+  <p class="lead">Try the whole backend the way the app will use it: the same routes, the same Gemini step, price
+    check, Tiger Data saving and voice. Local only.</p>
+  <div class="chips" id="services"><span class="chip">Loading services&hellip;</span></div>
+  <div class="warn" id="service-notes"></div>
+
+  <section class="card">
+    <h2>1. Analyze a bill</h2>
+    <div class="muted">POST /api/v1/analyze: a photo or PDF of the bill, a question, or both.</div>
+    <label class="field" for="bill">Bill photo or PDF (optional)</label>
+    <input type="file" id="bill" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,application/pdf">
+    <label class="field" for="text">Question or bill text (optional if you choose a file)</label>
+    <textarea id="text">Why was my head CT billed $3,200? Code 70450.</textarea>
+    <div class="row">
+      <label for="language">Language</label>
+      <select id="language"><option value="en">English</option></select>
+      <button class="primary" id="analyze" type="button">Analyze</button>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>2. Ask by voice</h2>
+    <div class="muted">POST /api/v1/voice/analyze: your recording is transcribed, analyzed like a typed question,
+      and answered out loud. Replies are English only for now.</div>
+    <div class="row">
+      <button id="record" type="button">&#9679; Record</button>
+      <span class="muted" id="record-state">or</span>
+      <input type="file" id="audio-file" accept="audio/*,.m4a,.mp3,.wav,.webm,.ogg">
+    </div>
+    <label class="field" for="voice-bill">Bill photo or PDF to ask about (optional)</label>
+    <input type="file" id="voice-bill" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,application/pdf">
+    <div class="row">
+      <label for="voice">Reply voice</label>
+      <select id="voice"></select>
+      <label><input type="checkbox" id="stream"> Stream the reply</label>
+      <button class="primary" id="ask" type="button" disabled>Send question</button>
+    </div>
+  </section>
+
+  <section class="card" id="result-card" hidden>
+    <h2 id="result-title">Result</h2>
+    <div id="transcript"></div>
+    <div class="facts" id="facts"></div>
+    <h3>Line items and price check</h3>
+    <div class="muted" id="price-summary"></div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>#</th><th>Code</th><th>Description</th><th>Billed</th><th>Medicare rate</th><th>&times; Medicare</th><th>Check</th></tr></thead>
+        <tbody id="lines"></tbody>
+      </table>
+    </div>
+    <h3>Explanation</h3>
+    <div id="plain-summary"></div>
+    <h3>Spoken summary (from Gemini)</h3>
+    <div id="spoken-summary"></div>
+    <div id="said-box" hidden>
+      <h3>What the voice said (summary plus price check)</h3>
+      <div id="said"></div>
+    </div>
+    <h3>Questions to ask</h3>
+    <ul class="plain" id="questions"></ul>
+    <h3>Saved to Tiger Data</h3>
+    <div id="audit"></div>
+    <div class="row">
+      <button id="hear" type="button" disabled>&#9654; Hear it</button>
+      <button id="open-saved" type="button" disabled>Open the saved copy</button>
+    </div>
+    <details style="margin-top:12px"><summary class="muted">Raw JSON</summary><pre id="raw"></pre></details>
+  </section>
+
+  <section class="card">
+    <h2>3. Saved analyses</h2>
+    <div class="muted">GET /api/v1/audits/{id}. Analyses saved during this visit appear here; you can also paste any ID.</div>
+    <div id="saved-list" class="row"><span class="muted">None yet.</span></div>
+    <div class="row">
+      <input type="text" id="audit-id" placeholder="audit_id (a UUID)" aria-label="Audit ID">
+      <button id="load-audit" type="button">Load</button>
+    </div>
+  </section>
+</main>
+
+<footer class="bar">
+  <div class="bar-inner">
+    <div id="status" role="status">Ready.</div>
+    <audio id="player" controls></audio>
+  </div>
+</footer>
+
+<script>
+const $ = (selector) => document.querySelector(selector);
+const player = $("#player");
+const state = { current: null, recorded: null, recorder: null, saved: [] };
+const money = (value) => (value === null || value === undefined ? "unknown" : `$${Number(value).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
+const show = (value) => (value === null || value === undefined || value === "" ? "unknown" : String(value));
+
+function setStatus(message, kind = "") {
+  $("#status").textContent = message;
+  $("#status").className = kind;
+}
+
+function element(tag, text, className) {
+  const node = document.createElement(tag);
+  if (text !== undefined) node.textContent = text;
+  if (className) node.className = className;
+  return node;
+}
+
+async function request(method, url, body) {
+  let response, text;
+  try {
+    response = await fetch(url, { method, body });
+    text = await response.text();
+  } catch {
+    return { ok: false, status: 0, error: "Could not reach the console server. Is it still running?" };
+  }
+  let data = null;
+  try { data = JSON.parse(text); } catch { /* not JSON */ }
+  if (!response.ok) {
+    const detail = data && data.detail !== undefined ? data.detail : text.slice(0, 300);
+    const message = typeof detail === "string" ? detail
+      : detail && detail.message ? [detail.stage, detail.error_code, detail.message].filter(Boolean).join(": ")
+      : JSON.stringify(detail);
+    return { ok: false, status: response.status, error: message, data };
+  }
+  return { ok: true, status: response.status, data };
+}
+
+async function play(url) {
+  player.pause();
+  player.src = url;
+  try { await player.play(); } catch (error) {
+    if (error.name === "NotAllowedError") setStatus("The browser blocked autoplay: press play below.", "error");
+  }
+}
+
+// --- Services and choices --------------------------------------------------------------------
+
+async function loadServices() {
+  const result = await request("GET", "/console/status");
+  const box = $("#services");
+  box.textContent = "";
+  if (!result.ok) { box.append(element("span", "Could not read the service status.", "chip")); return; }
+  const s = result.data;
+  const labels = {
+    gemini: ["Gemini", s.gemini === "live" ? "live" : "MOCK"],
+    prices: ["Prices", s.prices === "snowflake" ? "Snowflake" : "local CSV"],
+    saving: ["Saving", s.saving],
+    voice: ["Voice", s.voice === "live" ? "ElevenLabs live" : s.voice],
+  };
+  for (const [name, value] of Object.values(labels)) {
+    const chip = element("span", "", "chip");
+    chip.append(`${name}: `, element("b", value));
+    box.append(chip);
+  }
+  const notes = [];
+  if (s.gemini !== "live") notes.push("No GEMINI_API_KEY in backend/.env, so Gemini runs in MOCK mode: every analysis returns the same sample bill, written in Spanish, whatever you send (so an English voice reads Spanish).");
+  if (s.prices !== "snowflake") notes.push("No Snowflake credentials in backend/.env: prices come from data/cpt_benchmarks.csv.");
+  if (s.saving === "off") notes.push("Tiger Data is not configured (TIGER_DATA_POSTGRES_URL in backend/.env, or --tiger-url): analyses are not saved, so Hear it and Saved analyses are off.");
+  if (s.voice === "off") notes.push("No ELEVENLABS_API_KEY in backend/.env or backend/api.env: voice questions and replies will fail.");
+  if (s.voice === "settings error") notes.push("A voice setting (ELEVENLABS_*, TTS_*, STT_*) is malformed: the voice features will say which.");
+  $("#service-notes").textContent = notes.join(" ");
+}
+
+async function loadChoices() {
+  const languages = await request("GET", "/api/v1/languages");
+  if (languages.ok) {
+    const box = $("#language");
+    box.textContent = "";
+    for (const [code, name] of Object.entries(languages.data)) box.append(new Option(`${name} (${code})`, code, code === "en", code === "en"));
+  }
+  const voices = await request("GET", "/api/v1/voice/voices");
+  const box = $("#voice");
+  if (voices.ok) {
+    for (const voice of voices.data.voices) {
+      const details = [voice.accent, voice.gender].filter(Boolean).join(", ");
+      const label = details ? `${voice.name} (${details})` : voice.name;
+      box.append(new Option(label, voice.key, voice.key === voices.data.default, voice.key === voices.data.default));
+    }
+  } else {
+    box.append(new Option("default voice", ""));
+  }
+}
+
+// --- Showing a result --------------------------------------------------------------------------
+
+function renderResult(analysis, extra = {}) {
+  state.current = analysis;
+  $("#result-card").hidden = false;
+  $("#result-title").textContent = extra.title || "Result";
+  const transcript = $("#transcript");
+  transcript.textContent = "";
+  if (extra.transcript) {
+    const t = extra.transcript;
+    transcript.append(element("h3", "What you said"),
+      element("div", `"${t.text}"` + (t.confidence != null ? `  (confidence ${t.confidence})` : "") + (t.needs_confirmation ? "  - may be misheard" : "")));
+  }
+
+  const r = analysis.result;
+  const facts = $("#facts");
+  facts.textContent = "";
+  for (const [name, value] of [
+    ["Document", show(r.document_type)], ["Provider", show(r.provider_name)], ["Total billed", money(r.total_billed)],
+    ["Patient owes", money(r.amount_patient_owes)], ["Due date", show(r.due_date)],
+    ["Model", `${analysis.model}${analysis.mock ? " (MOCK)" : ""}`], ["Language", analysis.target_language],
+  ]) {
+    const item = element("div", value);
+    item.prepend(element("span", name));
+    facts.append(item);
+  }
+
+  const checks = new Map((analysis.price_checks || []).map((check) => [check.line_index, check]));
+  const lines = $("#lines");
+  lines.textContent = "";
+  r.line_items.forEach((item, index) => {
+    const check = checks.get(index);
+    const row = document.createElement("tr");
+    const description = element("td", item.original_description);
+    if (item.plain_description) description.append(element("div", item.plain_description, "note"));
+    for (const issue of item.possible_issues || []) description.append(element("div", `! ${issue}`, "note"));
+    const flag = element("td");
+    if (check) {
+      flag.append(element("span", check.flag.replaceAll("_", " "), `flag ${check.flag}`), element("div", check.note, "note"));
+    } else {
+      flag.append(element("span", "not checked", "flag not_checked"));
+    }
+    row.append(element("td", String(index + 1)), element("td", show(item.cpt_code)), description,
+      element("td", money(item.billed_amount), "num"), element("td", check ? money(check.medicare_rate) : "", "num"),
+      element("td", check && check.times_medicare != null ? `${check.times_medicare}x` : "", "num"), flag);
+    lines.append(row);
+  });
+  const ps = analysis.price_summary;
+  $("#price-summary").textContent = ps
+    ? `Source: ${ps.source}. Compared ${ps.items_checked} line(s), ${ps.items_flagged} worth asking about.` +
+      ` Billed ${money(ps.billed_total_checked)} vs Medicare ${money(ps.medicare_total_checked)} on those lines.` +
+      (ps.error ? ` (${ps.error})` : "") + " Medicare's national rates are a reference point, not what insurers pay."
+    : "No price check.";
+
+  $("#plain-summary").textContent = r.plain_summary;
+  $("#spoken-summary").textContent = r.spoken_summary;
+  const questions = $("#questions");
+  questions.textContent = "";
+  for (const question of r.questions_to_ask || []) questions.append(element("li", question));
+  if (!questions.children.length) questions.append(element("li", "none", "muted"));
+
+  const audit = analysis.audit;
+  const box = $("#audit");
+  box.textContent = "";
+  if (audit && audit.saved) {
+    box.append(element("span", `Saved. audit_id ${audit.audit_id}`, "saved-ok"));
+    rememberSaved(audit.audit_id);
+  } else {
+    box.append(element("span", audit ? (audit.error || "Not saved.") : "Not saved.", "saved-no"));
+  }
+  showSaid(null);
+  $("#hear").disabled = !(audit && audit.saved);
+  $("#open-saved").disabled = !(audit && audit.saved);
+  $("#raw").textContent = JSON.stringify(extra.raw || analysis, null, 2);
+}
+
+function showSaid(text) {
+  $("#said-box").hidden = !text;
+  $("#said").textContent = text || "";
+}
+
+function rememberSaved(id) {
+  if (state.saved.includes(id)) return;
+  state.saved.unshift(id);
+  const list = $("#saved-list");
+  list.textContent = "";
+  for (const saved of state.saved) {
+    const button = element("button", saved);
+    button.type = "button";
+    button.addEventListener("click", () => loadAudit(saved));
+    list.append(button);
+  }
+}
+
+// --- 1. Typed or uploaded bill -------------------------------------------------------------------
+
+async function analyzeBill() {
+  const form = new FormData();
+  const file = $("#bill").files[0];
+  if (file) form.append("file", file, file.name);
+  const text = $("#text").value.trim();
+  if (text) form.append("text", text);
+  form.append("target_language", $("#language").value);
+  if (!file && !text) { setStatus("Choose a bill file or type a question first.", "error"); return; }
+  $("#analyze").disabled = true;
+  setStatus("Analyzing: Gemini, then the price check, then saving…");
+  const started = performance.now();
+  const result = await request("POST", "/api/v1/analyze", form);
+  $("#analyze").disabled = false;
+  const seconds = ((performance.now() - started) / 1000).toFixed(1);
+  if (!result.ok) { setStatus(`Analyze failed (HTTP ${result.status}): ${result.error}`, "error"); return; }
+  renderResult(result.data, { title: `Result: typed${file ? " + file" : ""} (${seconds} s)` });
+  setStatus(`Analyzed in ${seconds} s.`, "ok");
+}
+
+// --- 2. Voice question ------------------------------------------------------------------------------
+
+async function toggleRecording() {
+  if (state.recorder && state.recorder.state === "recording") { state.recorder.stop(); return; }
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  } catch (error) {
+    setStatus(`Microphone not available (${error.name}). You can choose an audio file instead.`, "error");
+    return;
+  }
+  const chunks = [];
+  const type = MediaRecorder.isTypeSupported("audio/webm") ? "audio/webm" : "";
+  const recorder = new MediaRecorder(stream, type ? { mimeType: type } : undefined);
+  const started = performance.now();
+  recorder.addEventListener("dataavailable", (event) => { if (event.data.size) chunks.push(event.data); });
+  recorder.addEventListener("stop", () => {
+    stream.getTracks().forEach((track) => track.stop());
+    const blob = new Blob(chunks, { type: recorder.mimeType || "audio/webm" });
+    state.recorded = blob;
+    $("#record").classList.remove("recording");
+    $("#record").textContent = "● Record again";
+    $("#record-state").textContent = `Recorded ${((performance.now() - started) / 1000).toFixed(1)} s. or`;
+    $("#audio-file").value = "";
+    $("#ask").disabled = false;
+    setStatus("Recording ready: press Send question.", "ok");
+  });
+  state.recorder = recorder;
+  recorder.start();
+  $("#record").classList.add("recording");
+  $("#record").textContent = "■ Stop";
+  setStatus("Recording… press Stop when you are done.");
+}
+
+async function askByVoice() {
+  const file = $("#audio-file").files[0];
+  const audio = file || state.recorded;
+  if (!audio) { setStatus("Record a question or choose an audio file first.", "error"); return; }
+  const form = new FormData();
+  form.append("audio", audio, file ? file.name : "question.webm");
+  const bill = $("#voice-bill").files[0];
+  if (bill) form.append("file", bill, bill.name);
+  form.append("target_language", $("#language").value);
+  if ($("#voice").value) form.append("voice", $("#voice").value);
+  form.append("stream_reply", $("#stream").checked ? "true" : "false");
+  $("#ask").disabled = true;
+  setStatus("Sending: speech-to-text, Gemini, price check, saving, then the spoken reply…");
+  const started = performance.now();
+  const result = await request("POST", "/api/v1/voice/analyze", form);
+  $("#ask").disabled = false;
+  const seconds = ((performance.now() - started) / 1000).toFixed(1);
+  if (!result.ok) { setStatus(`Voice question failed (HTTP ${result.status}): ${result.error}`, "error"); return; }
+  const data = result.data;
+  renderResult(data.analysis, { title: `Result: voice question (${seconds} s)`, transcript: data.transcript, raw: data });
+  if (data.speech.ok) {
+    showSaid(data.speech.text);
+    setStatus(`Answered in ${seconds} s. Playing the reply${data.speech.streaming ? " while it streams" : ""}.`, "ok");
+    play(data.speech.audio_url);
+  } else {
+    setStatus(`Answered in ${seconds} s, but the spoken reply failed: ${data.speech.error_code}: ${data.speech.error_message}`, "error");
+  }
+}
+
+// --- 3. Saved analyses ------------------------------------------------------------------------------
+
+async function hearIt() {
+  const audit = state.current && state.current.audit;
+  if (!audit || !audit.saved) return;
+  const form = new FormData();
+  form.append("audit_id", audit.audit_id);
+  if ($("#voice").value) form.append("voice", $("#voice").value);
+  form.append("stream_reply", $("#stream").checked ? "true" : "false");
+  setStatus("Making the spoken reply from the saved analysis (no new Gemini call)…");
+  const result = await request("POST", "/api/v1/voice/speak", form);
+  if (!result.ok) { setStatus(`Hear it failed (HTTP ${result.status}): ${result.error}`, "error"); return; }
+  if (!result.data.ok) { setStatus(`Spoken reply failed: ${result.data.error_code}: ${result.data.error_message}`, "error"); return; }
+  showSaid(result.data.text);
+  setStatus(`Playing the saved analysis in ${result.data.voice}'s voice.`, "ok");
+  play(result.data.audio_url);
+}
+
+async function loadAudit(id) {
+  const auditId = (id || $("#audit-id").value).trim();
+  if (!auditId) { setStatus("Paste an audit_id first.", "error"); return; }
+  const result = await request("GET", `/api/v1/audits/${encodeURIComponent(auditId)}`);
+  if (!result.ok) { setStatus(`Could not load it (HTTP ${result.status}): ${result.error}`, "error"); return; }
+  const saved = result.data;
+  renderResult(saved.analysis, {
+    title: `Saved analysis from ${new Date(saved.created_at).toLocaleString()} (${saved.source})`,
+    transcript: saved.transcript ? { text: saved.transcript } : null,
+    raw: saved,
+  });
+  setStatus("Loaded the saved copy from Tiger Data.", "ok");
+}
+
+$("#analyze").addEventListener("click", analyzeBill);
+$("#record").addEventListener("click", toggleRecording);
+$("#audio-file").addEventListener("change", () => { $("#ask").disabled = !($("#audio-file").files[0] || state.recorded); });
+$("#ask").addEventListener("click", askByVoice);
+$("#hear").addEventListener("click", hearIt);
+$("#open-saved").addEventListener("click", () => state.current && state.current.audit && loadAudit(state.current.audit.audit_id));
+$("#load-audit").addEventListener("click", () => loadAudit());
+$("#audit-id").addEventListener("keydown", (event) => { if (event.key === "Enter") loadAudit(); });
+loadServices();
+loadChoices();
+</script>
+</body>
+</html>

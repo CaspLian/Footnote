@@ -59,6 +59,13 @@ class PriceSummary(BaseModel):
     error: Optional[str] = None
 
 
+class AuditInfo(BaseModel):
+    """Whether this analysis was saved to Tiger Data, and the ID to load or speak it again."""
+    saved: bool
+    audit_id: Optional[str] = Field(None, description="GET /api/v1/audits/{audit_id}; POST /api/v1/voice/speak")
+    error: Optional[str] = Field(None, description="Why it was not saved (the analysis itself is still valid)")
+
+
 class AnalyzeResponse(BaseModel):
     target_language: str
     model: str
@@ -66,3 +73,4 @@ class AnalyzeResponse(BaseModel):
     result: GeminiResult
     price_checks: list[PriceCheck] = Field(default_factory=list)
     price_summary: Optional[PriceSummary] = None
+    audit: Optional[AuditInfo] = None

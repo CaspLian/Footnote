@@ -92,14 +92,16 @@ from speech recognition and may contain misheard words.
 ## 3. Connected to Gemini: the voice endpoints
 
 [`../voice_routes.py`](../voice_routes.py) receives the recording, transcribes it, passes the text to
-the team's Gemini step (`services.gemini_service.analyze`, called the same way `/api/v1/analyze`
-calls it), and turns Gemini's `spoken_summary` into audio. To switch it on, add two lines to
-`backend/main.py`, after `app = FastAPI(...)`:
+the team's Gemini step (`services.gemini_services.gemini_service.analyze`, called the same way `/api/v1/analyze`
+calls it) and the price check, saves the analysis to Tiger Data, and speaks the answer. The router
+is mounted in `backend/main.py` (`app.include_router(voice_router)`), so these routes are part of
+the app.
 
-```python
-from services.audio_service.voice_routes import router as voice_router
-app.include_router(voice_router)
-```
+The reply voice says Gemini's `spoken_summary`, then a sentence or two on what the price check
+found (for example "Head CT was billed about 30 times Medicare's national rate, which is far above
+the usual range. It's worth asking the billing office about it."). Gemini writes its summary before
+the price check runs, so this is added here. These sentences are English, like the reply voices for
+now; they compare with Medicare's national rates and never say a charge is wrong.
 
 ### `POST /api/v1/voice/analyze` (multipart form)
 
@@ -119,16 +121,29 @@ A successful answer (from the end-to-end run on 2026-10-09, shortened):
 {
   "transcript": {"text": "Hi. Why was my MRI billed $3,200? Is that normal?", "language": "eng",
                  "confidence": 0.991, "needs_confirmation": false, "audio_seconds": 5.43},
-  "analysis":   {"target_language": "en", "model": "gemini-3.8-flash", "mock": true, "result": {"...": "..."}},
+  "analysis":   {"target_language": "en", "model": "gemini-3.8-flash", "mock": true, "result": {"...": "..."},
+                 "price_checks": ["..."], "price_summary": {"...": "..."},
+                 "audit": {"saved": true, "audit_id": "6ddb0e91-707f-4a1e-90b8-26aa751f0307", "error": null}},
   "speech":     {"ok": true, "audio_url": "/api/v1/voice/audio/eb271c6235a68884ff2a308e63c5f7a5",
                  "mime_type": "audio/mpeg", "voice": "matilda", "streaming": false,
+                 "text": "Your MRI was billed at three thousand two hundred dollars. I also compared ...",
                  "error_code": null, "error_message": null}
 }
 ```
 
 `analysis` is exactly what `/api/v1/analyze` returns, so the app can show both the same way.
 Play `speech.audio_url` (`GET /api/v1/voice/audio/{audio_id}`, an MP3) with the playback code in
-`../text_to_speech/README.md`. Show `transcript.text` when `needs_confirmation` is true.
+`../text_to_speech/README.md`; `speech.text` is what the voice says, for captions. Show
+`transcript.text` when `needs_confirmation` is true.
+`analysis.audit` says whether the analysis was saved to Tiger Data (with the question's transcript).
+Saving never fails the request: without `TIGER_DATA_POSTGRES_URL`, or if Tiger Data is down,
+`audit.saved` is false, `audit.audit_id` is null and `audit.error` says why. When `saved` is true,
+keep `audit.audit_id`: it loads the analysis again (`GET /api/v1/audits/{audit_id}`) and speaks it
+again (`POST /api/v1/voice/speak`, below). The voice route saves while it makes the reply audio, so a
+healthy save adds nothing to the wait. If Tiger Data cannot be reached, one request waits for the
+connection to time out (5 s per address), and saving is then skipped for 30 s ("could not be
+reached a moment ago") instead of every request waiting again. A save that takes over 15 s is
+rolled back, so "not saved" is always true.
 `speech.streaming` is `true` only with `stream_reply=true`: the audio URL then plays while the rest
 of the reply is still being made. Finished audio supports byte ranges, which iPhones need.
 
@@ -137,7 +152,7 @@ Errors come back as `{"detail": {"stage": ..., ...}}` so the app knows which ste
 | Status | Stage | When |
 |---|---|---|
 | 422 | `speech_to_text` | Silent, empty or non-audio recording (`detail.error_code`: `NO_SPEECH`, `EMPTY_AUDIO`, `UNSUPPORTED_AUDIO`). Ask the user to try again. |
-| 413 | `speech_to_text` / `upload` | Recording over `STT_MAX_AUDIO_MB`, or bill over 15 MB |
+| 413 | `speech_to_text` / `upload` | Recording over `STT_MAX_AUDIO_MB`, or bill over 15 MB (checked before the recording is sent, so it costs nothing) |
 | 503 | `speech_to_text` | ElevenLabs temporarily unavailable (`detail.retryable` is true) |
 | 502 | `speech_to_text` / `gemini` | Key, permission or quota problem, or Gemini failed |
 | 400 / 504 | `gemini` | Gemini rejected the input / took too long (same as `/api/v1/analyze`) |
@@ -146,6 +161,25 @@ A failed reply voice never fails the request: `speech.ok` is false and the text 
 there. That includes an unknown `voice` (`INVALID_REQUEST`, and the message lists the valid keys).
 The reply voice is English-only for now: other languages get the text answer, with
 `speech.error_code` set to `INVALID_REQUEST`.
+
+### `POST /api/v1/voice/speak` (multipart form): hear a saved analysis again
+
+| Field | Required | Meaning |
+|---|---|---|
+| `audit_id` | yes | `analysis.audit.audit_id` from `/api/v1/analyze` or `/api/v1/voice/analyze` |
+| `voice` | no (default voice) | As for `/analyze` |
+| `stream_reply` | no (`false`) | As for `/analyze` |
+
+It answers with the `speech` object above, made from the saved analysis without calling Gemini
+again (the same text in the same voice comes from the cache, free; each other voice is a new, paid
+clip). Only saved analyses can be spoken: the server never reads out text sent to it directly.
+Errors: 400 (`audit_id` is not a UUID), 404 (no saved analysis with this ID), 409 (saved in an older
+format that no longer fits `models.py`), 503 (Tiger Data not configured or not reachable), all with
+`detail.stage` = `audit`.
+
+`GET /api/v1/audits/{audit_id}` (in `main.py`) returns the saved analysis itself:
+`{"audit_id", "created_at", "source": "text" | "file" | "voice", "transcript", "analysis"}`, where
+`analysis` is exactly what was returned the first time.
 
 ### Voice picker: `GET /api/v1/voice/voices` and `GET /api/v1/voice/voices/{key}/sample`
 
@@ -163,11 +197,13 @@ medical bill explanations out loud.", so users can hear a voice before choosing 
 is made once (about 30 credits) and then served from the cache. Send the chosen `key` as `voice`
 with `/analyze`.
 
-**Tested:** `../tests/test_voice_routes.py` (with stand-ins for Gemini and the price check), and
-end-to-end runs on 2026-10-09: the team's `main.py` plus the two lines above, real ElevenLabs
-speech-to-text and text-to-speech, and the team's `gemini_service` in `MOCK=true` mode. The second
-run, after merging `backend-gemini` and `Tiger-data`, also checked that a spoken question gets the
-same Snowflake price check (from the local CSV) as a typed one.
+**Tested:** `../tests/test_voice_routes.py` (with stand-ins for Gemini, the price check and Tiger
+Data), `backend/tests/test_wiring.py` and `test_analysis_store.py` (the real store against a local
+PostgreSQL), end-to-end runs on 2026-10-09 (the team's `main.py` with the voice router, real
+ElevenLabs speech-to-text and text-to-speech, and the team's `gemini_service` in `MOCK=true` mode;
+the second run, after merging `backend-gemini` and `Tiger-data`, also checked that a spoken question
+gets the same price check as a typed one), and a headless-Chrome run of the developer console
+(`backend/dev_console.py`) on 2026-10-10 with a stand-in for ElevenLabs and a local PostgreSQL.
 
 ## 4. Using speech-to-text on its own
 
@@ -214,8 +250,9 @@ Do not set the `Content-Type` header yourself; `fetch` adds the right one for `F
 | Part | Owner |
 |---|---|
 | Recording, microphone permission, upload, showing and playing the answer | Mobile app |
-| Mounting the voice router in `main.py` (two lines) | Backend teammate |
-| What Gemini does with the question: prompt, model, `GeminiResult` | Gemini teammate (`services/gemini_service.py`) |
+| `main.py`, which mounts the voice router (`app.include_router(voice_router)`) | Backend teammate |
+| Saving analyses (`services/analytical_services/analysis_store.py`) and the database itself | Backend / Tiger Data teammate |
+| What Gemini does with the question: prompt, model, `GeminiResult` | Gemini teammate (`services/gemini_services/gemini_service.py`) |
 | The voice endpoints, checking the audio, transcription, retries, cache, the handoff, the spoken reply | This module |
 | Recognition accuracy, billing | ElevenLabs |
 
@@ -223,9 +260,14 @@ Do not set the `Content-Type` header yourself; `fetch` adds the right one for `F
 
 - **Cost:** `scribe_v2` is $0.22 per hour of audio, so a 10-second question costs about $0.0006.
   The Creator plan includes 100 hours. Silence is billed too.
-- **Privacy:** people will talk about their medical bills. This module logs only lengths and
-  error codes, never what was said, and keeps transcripts in memory only. ElevenLabs keeps request
-  history by default (its zero-retention mode is enterprise-only), so use test data for demos.
+- **Privacy:** people will talk about their medical bills, sometimes with their names. This module
+  logs only lengths and error codes, never what was said, and its own cache keeps transcripts in
+  memory only. But when `TIGER_DATA_POSTGRES_URL` is set, every voice analysis is saved to Tiger Data
+  with its transcript (`bill_analyses.transcript`), until the row is deleted
+  (`DELETE FROM bill_analyses WHERE audit_id = '...'` also deletes its lines). There is no automatic
+  expiry and no delete route yet. Reply audio is kept in `audio_service/.tts_cache/` (set
+  `TTS_CACHE_DIR=` for memory only). ElevenLabs keeps request history by default (its zero-retention
+  mode is enterprise-only). Use test data for demos.
 - **`scribe_v2_medical`** (`ELEVENLABS_STT_MODEL_ID=scribe_v2_medical`): same price and API, tuned
   for clinical audio. Worth comparing with `python -m speech_to_text.demo --model scribe_v2_medical`.
 - **Not built yet:** keyterm prompting (bias towards words like "ClaimPulse" or "CPT"; +$0.05 per

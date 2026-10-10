@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from services.gemini_service import analyze  # noqa: E402
+from services.gemini_services.gemini_service import analyze  # noqa: E402
 
 
 async def main():

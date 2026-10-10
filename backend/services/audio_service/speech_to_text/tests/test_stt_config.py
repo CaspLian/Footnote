@@ -1,3 +1,5 @@
+import os
+
 import pytest
 
 import speech_to_text.config as config_module
@@ -6,6 +8,7 @@ from speech_to_text.config import STTConfig
 ENV_NAMES = [
     "ELEVENLABS_API_KEY", "ELEVENLABS_STT_MODEL_ID", "STT_MAX_AUDIO_MB", "STT_TIMEOUT_SECONDS",
     "STT_MAX_RETRIES", "ELEVENLABS_BASE_URL",
+    "PYTHON_DOTENV_DISABLED",  # a developer's own setting must not turn the file tests off
 ]
 
 
@@ -53,6 +56,33 @@ def test_backend_api_env_is_used_when_there_is_no_env(clean_env, tmp_path):
     (backend / "api.env").write_text("ELEVENLABS_API_KEY=from-api-env\n", encoding="utf-8")
     clean_env.setattr(config_module, "BACKEND_DIR", backend)
     assert STTConfig.from_env().api_key == "from-api-env"
+
+
+def test_only_voice_settings_are_taken_from_the_file(clean_env, tmp_path):
+    """The file may also hold other services' keys or placeholders for them (backend/api.env does). They must not
+    reach os.environ, where Gemini, Snowflake and Tiger Data read their settings."""
+    backend = tmp_path / "backend"
+    backend.mkdir()
+    (backend / "api.env").write_text(
+        "ELEVENLABS_API_KEY=from-api-env\nGEMINI_API_KEY=your-gemini-key\nSNOWFLAKE_ACCOUNT=your-account\n"
+        "TIGER_DATA_POSTGRES_URL=postgresql://user:password@host:port/dbname\n",
+        encoding="utf-8",
+    )
+    others = {"GEMINI_API_KEY", "SNOWFLAKE_ACCOUNT", "TIGER_DATA_POSTGRES_URL"}
+    for name in others:
+        clean_env.delenv(name, raising=False)
+    clean_env.setattr(config_module, "BACKEND_DIR", backend)
+    assert STTConfig.from_env().api_key == "from-api-env"
+    assert not others & set(os.environ)
+
+
+def test_python_dotenv_disabled_turns_the_file_off(clean_env, tmp_path):
+    backend = tmp_path / "backend"
+    backend.mkdir()
+    (backend / "api.env").write_text("ELEVENLABS_API_KEY=from-api-env\n", encoding="utf-8")
+    clean_env.setattr(config_module, "BACKEND_DIR", backend)
+    clean_env.setenv("PYTHON_DOTENV_DISABLED", "True")  # the switch python-dotenv itself honors
+    assert STTConfig.from_env().api_key == ""
 
 
 @pytest.mark.parametrize(
