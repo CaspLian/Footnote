@@ -10,8 +10,8 @@ Rules this module follows:
   "about 5 days" and a cross mark becomes "No:". Decorative emoji are dropped.
 - Only unambiguous rewrites. "2026-10-09" becomes "October 9, 2026", but
   "10/09/2026" is left alone because it could mean September or October.
-- Numbers and money ("$1,250.50") are left to the voice model. ElevenLabs says
-  eleven_multilingual_v2 reads them well; Flash models do not. For full control,
+- Numbers and money ("$1,250.50") are left to the voice model. Flash models (the default)
+  read them right only with ElevenLabs' number reading on, which config sends for them. For full control,
   have Gemini write a speech_text version with numbers in words (see README).
 
 Known trade-off: a bracketed whole number such as "[3]" is treated as a citation

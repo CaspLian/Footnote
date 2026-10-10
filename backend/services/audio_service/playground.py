@@ -45,8 +45,9 @@ DEFAULT_PORT = 8765
 # of numbers. Credits per character are what ElevenLabs' character-cost header reported; for v4 and
 # v4 Turbo they are the regular rates, because the 72%-off launch price we measured ends Oct 12, 2026.
 MODEL_NOTES = {
-    "eleven_multilingual_v2": (0.44, "today's default. First audio in about 1.5 s, or 3.6 s for longer text"),
-    "eleven_flash_v2_5": (0.22, "fastest. First audio in about 0.3-1 s; numbers are read right with number "
+    "eleven_multilingual_v2": (0.44, "the most lifelike, and the default until 2026-10-10. First audio in about 1.5 s, "
+                                     "or 3.6 s for longer text"),
+    "eleven_flash_v2_5": (0.22, "today's default, and the fastest. First audio in about 0.3-1 s; numbers are read right with number "
                                 "reading on (sent automatically); ElevenLabs says the quality is slightly lower"),
     "eleven_v4_turbo": (0.22, "newest real-time model. First audio in about 0.4-1 s, but slow to finish; "
                               "ElevenLabs documents it for its dialogue API, it works here too"),

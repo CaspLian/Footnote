@@ -18,10 +18,12 @@ from dotenv import dotenv_values, find_dotenv
 SERVICE_DIR = Path(__file__).resolve().parent.parent  # backend/services/audio_service
 BACKEND_DIR = SERVICE_DIR.parent.parent  # backend
 
-# eleven_multilingual_v2: the API's own default, "most stable", recommended by ElevenLabs where
-# numbers must be read correctly, and it supports the speed setting. Checked 2026-10-09 at
-# https://elevenlabs.io/docs/overview/models
-DEFAULT_MODEL_ID = "eleven_multilingual_v2"
+# eleven_flash_v2_5 since 2026-10-10 (docs/decisions/2026-10-09-tts-default-model.md). The app's 918-character
+# reading of a test bill took 1.89 s, against 8.49 s on eleven_multilingual_v2, for about half the credits, and
+# every amount, date and ratio was read right (transcribed back). That needs ElevenLabs' number reading on, which
+# default_text_normalization() sends for Flash. 19 of the 20 voices are tuned for Flash (not "sarah").
+# ElevenLabs calls Flash "fast, affordable" and Multilingual v2 "lifelike"; ELEVENLABS_MODEL_ID switches back.
+DEFAULT_MODEL_ID = "eleven_flash_v2_5"
 DEFAULT_OUTPUT_FORMAT = "mp3_44100_128"  # MP3 plays on every phone and browser; 128 kbps works on the free plan
 DEFAULT_BASE_URL = "https://api.elevenlabs.io"
 # Generated audio stays inside this service's folder (git-ignored there), whichever folder

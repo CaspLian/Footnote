@@ -23,7 +23,7 @@ def clean_env(monkeypatch, tmp_path):
 def test_defaults(clean_env):
     config = TTSConfig.from_env()
     assert not config.is_configured
-    assert config.model_id == "eleven_multilingual_v2"
+    assert config.model_id == "eleven_flash_v2_5"
     assert config.output_format == "mp3_44100_128"
     assert config.mime_type == "audio/mpeg" and config.file_extension == "mp3"
     assert config.speed is None and config.voice_settings() is None
@@ -146,7 +146,15 @@ def test_speed_goes_into_voice_settings_and_audio_settings(clean_env):
 def test_default_audio_settings_are_unchanged_so_cached_audio_stays_valid(clean_env):
     # The cache key is built from these. Adding a key here would make every clip already made
     # (and paid for) unreachable, so new settings are only added when they are not the default.
+    # The default model changed on purpose on 2026-10-10, to Flash v2.5. Clips made with Multilingual v2 stay
+    # cached for requests that choose it; the default makes new ones.
     assert TTSConfig.from_env().audio_settings() == {
+        "model_id": "eleven_flash_v2_5",
+        "output_format": "mp3_44100_128",
+        "voice_settings": None,
+        "apply_text_normalization": "on",
+    }
+    assert TTSConfig.from_env().audio_settings("eleven_multilingual_v2") == {
         "model_id": "eleven_multilingual_v2",
         "output_format": "mp3_44100_128",
         "voice_settings": None,
@@ -166,7 +174,7 @@ def test_number_reading_setting_applies_to_every_model(clean_env, value, flash, 
     clean_env.setenv("ELEVENLABS_TEXT_NORMALIZATION", value)
     config = TTSConfig.from_env()
     assert config.audio_settings("eleven_flash_v2_5").get("apply_text_normalization") == flash
-    assert config.audio_settings().get("apply_text_normalization") == multilingual
+    assert config.audio_settings("eleven_multilingual_v2").get("apply_text_normalization") == multilingual
 
 
 def test_bad_number_reading_setting_fails_at_startup(clean_env):

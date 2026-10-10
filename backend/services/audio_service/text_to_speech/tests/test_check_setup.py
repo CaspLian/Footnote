@@ -156,5 +156,8 @@ def test_the_number_reading_setting_in_use_is_shown():
     flash = TTSConfig(api_key="sk-test", model_id="eleven_flash_v2_5", cache_dir=None)
     _, output = check({"/v1/user": [(200, USER_FREE_OLD)], "/v2/voices": [(200, VOICES)]}, config=flash)
     assert "Model eleven_flash_v2_5, format mp3_44100_128, number reading on." in output
-    _, output = check({"/v1/user": [(200, USER_FREE_OLD)], "/v2/voices": [(200, VOICES)]})
+    multilingual = TTSConfig(api_key="sk-test", model_id="eleven_multilingual_v2", cache_dir=None)
+    _, output = check({"/v1/user": [(200, USER_FREE_OLD)], "/v2/voices": [(200, VOICES)]}, config=multilingual)
     assert "number reading auto." in output  # Multilingual v2: ElevenLabs' default
+    _, output = check({"/v1/user": [(200, USER_FREE_OLD)], "/v2/voices": [(200, VOICES)]})
+    assert "Model eleven_flash_v2_5" in output and "number reading on." in output  # the default model

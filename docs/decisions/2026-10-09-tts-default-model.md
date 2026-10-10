@@ -1,6 +1,6 @@
-# Switch the text-to-speech default to eleven_flash_v2_5?
+# Switch the text-to-speech default to eleven_flash_v2_5
 
-- Status: proposed (not decided)
+- Status: accepted by Nimesh (audio), 2026-10-10, after listening and comparing four models
 - Date: 2026-10-09        Decision owner: Nimesh (audio)
 
 ## Context
@@ -30,3 +30,14 @@ this changes only the default.
 ## Impacted components
 
 The `ELEVENLABS_MODEL_ID` setting; reply speed and cost for every spoken answer.
+
+## Decision (2026-10-10)
+
+`eleven_flash_v2_5` is the code default (`DEFAULT_MODEL_ID` in `text_to_speech/config.py`), and the settings example
+says the same. Measured on the app's whole reading of a test bill, voice Matilda:
+- 918 characters: 8.49 s on Multilingual v2 and 1.89 s on Flash v2.5, for about half the credits
+- 963 characters: 10.19 s on v4 Turbo and 12.20 s on v4, slower to finish than both
+
+Flash read every amount, date and ratio right (transcribed back). 19 of the 20 voices are tuned for Flash; "sarah"
+is not. v4 sounds richer, but it only starts quickly when streamed or made sentence by sentence, and neither is
+built. To go back: `ELEVENLABS_MODEL_ID=eleven_multilingual_v2`.

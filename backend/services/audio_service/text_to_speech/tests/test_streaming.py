@@ -344,15 +344,15 @@ def test_a_request_can_choose_the_model():
     provider = FakeStreamingProvider()
     service, _ = make_service(provider)
     default = _made_with(service, provider, req())
-    flash = _made_with(service, provider, req(model="eleven_flash_v2_5"))
+    multilingual = _made_with(service, provider, req(model="eleven_multilingual_v2"))
 
-    assert default.model == "eleven_multilingual_v2" and flash.model == "eleven_flash_v2_5"
-    assert default.audio_id != flash.audio_id  # a different model is a different clip
-    (_, _, default_settings), (_, _, flash_settings) = provider.calls
-    assert default_settings["model_id"] == "eleven_multilingual_v2"
-    assert "apply_text_normalization" not in default_settings
-    assert flash_settings["model_id"] == "eleven_flash_v2_5"
-    assert flash_settings["apply_text_normalization"] == "on"  # so it reads money and codes right
+    assert default.model == "eleven_flash_v2_5" and multilingual.model == "eleven_multilingual_v2"
+    assert default.audio_id != multilingual.audio_id  # a different model is a different clip
+    (_, _, default_settings), (_, _, multilingual_settings) = provider.calls
+    assert default_settings["model_id"] == "eleven_flash_v2_5"
+    assert default_settings["apply_text_normalization"] == "on"  # so Flash reads money and codes right
+    assert multilingual_settings["model_id"] == "eleven_multilingual_v2"
+    assert "apply_text_normalization" not in multilingual_settings
 
 
 @pytest.mark.parametrize("model", ["eleven_monolingual_v1", "gpt-4"])
@@ -367,7 +367,7 @@ def test_unknown_models_are_refused_before_any_cost(model):
 def test_an_empty_model_choice_means_the_configured_model():
     provider = FakeStreamingProvider()
     service, _ = make_service(provider)
-    assert _made_with(service, provider, req(model="  ")).model == "eleven_multilingual_v2"
+    assert _made_with(service, provider, req(model="  ")).model == "eleven_flash_v2_5"
 
 
 def test_the_configured_model_is_always_allowed():

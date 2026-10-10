@@ -149,7 +149,7 @@ rows, all from the **CMS 2026 Physician Fee Schedule (RVU26D, October release), 
 | Benchmarks | regional, ZIP code, fair-market medians | national Medicare rates |
 | Tiger Data | time-series hypertables, deadlines, alerts | plain tables for saved analyses |
 | Languages | Gemini "100+", ElevenLabs "30+" | 12 text languages; English voice replies |
-| Models | Gemini 1.5 Flash/Pro; `eleven_multilingual_v2` / `eleven_v3` | `GEMINI_MODEL` setting (default `gemini-3.8-flash`); `eleven_multilingual_v2` |
+| Models | Gemini 1.5 Flash/Pro; `eleven_multilingual_v2` / `eleven_v3` | `GEMINI_MODEL` setting (default `gemini-3.8-flash`); `eleven_flash_v2_5` (since 2026-10-10) |
 
 Which contract to keep is an open team decision: `docs/decisions/2026-10-10-open-whiteboard-contract.md`.
 

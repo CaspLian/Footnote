@@ -107,7 +107,7 @@ def test_port_helpers():
 
 def test_the_page_can_list_the_models_to_compare(client):
     data = client.get("/api/models").json()
-    assert data["default"] == "eleven_multilingual_v2"
+    assert data["default"] == "eleven_flash_v2_5"
     ids = [m["id"] for m in data["models"]]
     assert ids == ["eleven_multilingual_v2", "eleven_flash_v2_5", "eleven_v4_turbo", "eleven_v4"]
     flash = next(m for m in data["models"] if m["id"] == "eleven_flash_v2_5")
@@ -115,10 +115,10 @@ def test_the_page_can_list_the_models_to_compare(client):
 
 
 def test_the_chosen_model_is_used_and_reported(client):
-    flash = client.post("/api/speak", json={"text": "Hello", "voice": "george", "model": "eleven_flash_v2_5"}).json()
-    assert flash["ok"] and flash["model"] == "eleven_flash_v2_5"
+    multilingual = client.post("/api/speak", json={"text": "Hello", "voice": "george", "model": "eleven_multilingual_v2"}).json()
+    assert multilingual["ok"] and multilingual["model"] == "eleven_multilingual_v2"
     default = speak(client, "Hello", "george")
-    assert default["model"] == "eleven_multilingual_v2" and default["audio_id"] != flash["audio_id"]
+    assert default["model"] == "eleven_flash_v2_5" and default["audio_id"] != multilingual["audio_id"]
     unknown = client.post("/api/speak", json={"text": "Hello", "model": "gpt-4"}).json()
     assert unknown["ok"] is False and unknown["error_code"] == "INVALID_REQUEST"
 

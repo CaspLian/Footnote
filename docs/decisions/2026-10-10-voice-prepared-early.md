@@ -20,10 +20,8 @@ one generation, so a clip is never paid for twice.
 
 - **Cost:** one ElevenLabs clip per analyzed document, even if nobody presses Listen. That is about 650 KB of audio
   and a few hundred credits for a typical summary.
-- **Still slow if pressed very early:** within about 8 s of the document being read. The next options:
-  - `ELEVENLABS_MODEL_ID=eleven_flash_v2_5`: generates 2 to 4 times faster, for half the credits. Listen to it
-    first (`docs/decisions/2026-10-09-tts-default-model.md`).
-  - `stream_reply=true`: plays from the first audio, about 1 to 3.6 s, but it is untested on iPhones.
+- **Pressed very early:** the user waits for the rest of the clip. Since Flash v2.5 became the default
+  (2026-10-10), that is about 2 s at most instead of 8.5 s (`docs/decisions/2026-10-09-tts-default-model.md`).
 
 ## Impacted components
 

@@ -65,7 +65,7 @@ expected to work and iPhones may not, so test on phones first (see "Speed" in
 | `speech_text` | `str` or `None` | Optional speech-ready version of the answer. Used instead of `text` when given (see section 6). |
 | `language` | `str`, default `"en"` | Only English for now. |
 | `voice` | `str` or `None` | The user's voice choice, a key from `voices.json` (see "Voices" below). `None` = the default voice. |
-| `model` | `str` or `None` | Optional ElevenLabs model for this request: `eleven_multilingual_v2`, `eleven_flash_v2_5`, `eleven_v4_turbo` or `eleven_v4` (`config.MODELS`). `None` = `ELEVENLABS_MODEL_ID`. |
+| `model` | `str` or `None` | Optional ElevenLabs model for this request: `eleven_multilingual_v2`, `eleven_flash_v2_5`, `eleven_v4_turbo` or `eleven_v4` (`config.MODELS`). `None` = `ELEVENLABS_MODEL_ID` (default `eleven_flash_v2_5`). |
 
 Pass the answer **text**, not Gemini's response object. A non-string `text` returns `INVALID_REQUEST`.
 Streaming (partial) Gemini output is not supported yet: send the finished answer.

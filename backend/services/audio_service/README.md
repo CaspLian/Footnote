@@ -136,7 +136,7 @@ To compare voices, switch voice and the page speaks the same text in the new one
   2,000 credits. Stop ends it, and so does choosing a voice or model or pressing any play button.
 - The newest click always wins: an answer that arrives after you moved on is not played, but
   it is kept in the replay list.
-- The Model buttons switch between Multilingual v2 (today's default), Flash v2.5, v4 Turbo and v4,
+- The Model buttons switch between Multilingual v2, Flash v2.5 (today's default), v4 Turbo and v4,
   and speak the same text again, so you can compare speed and sound (see "Speed" below).
 - The audio is streamed: it starts playing at the "first audio" time shown, while the rest is
   still being made. Use Chrome, Edge or Firefox; Safari may wait for the whole clip.
@@ -189,8 +189,8 @@ A 222-character bill text full of numbers, voice Matilda:
 
 | Model | First audio | All audio | Credits per character | Numbers read right |
 |---|---|---|---|---|
-| `eleven_multilingual_v2` (today's default) | 3.6 s | 4.0 s | 0.44 | yes |
-| `eleven_flash_v2_5`, number reading on | 1.0 s | 1.8 s | 0.22 | yes |
+| `eleven_multilingual_v2` (the default until 2026-10-10) | 3.6 s | 4.0 s | 0.44 | yes |
+| `eleven_flash_v2_5`, number reading on (today's default) | 1.0 s | 1.8 s | 0.22 | yes |
 | `eleven_flash_v2_5`, ElevenLabs' default | 0.2 s | 0.9 s | 0.22 | **no**: "$12,345.67" came out as "12,340.67", "E11.9" as "11.9" |
 | `eleven_v4_turbo` | 1.0 s | 5.7 s | 0.06 now, ~0.22 after Oct 12 | yes |
 | `eleven_v4` | 1.2 s | 6.7 s | 0.12 now, ~0.44 after Oct 12 | yes |
@@ -198,6 +198,14 @@ A 222-character bill text full of numbers, voice Matilda:
 For a short sentence (95 characters) the first audio came after 1.5 s on Multilingual v2, 0.3-0.4 s
 on Flash v2.5 with number reading on, 0.4 s on v4 Turbo and 1.7 s on v4. The v4 prices are a launch
 offer ("72% off until Oct 12"). Before streaming, users always waited for "All audio".
+
+On 2026-10-10 the app's whole reading of a test bill, in voice Matilda, took:
+- 8.49 s on Multilingual v2 and 1.89 s on Flash v2.5 (918 characters)
+- 10.19 s on v4 Turbo and 12.20 s on v4 (963 characters)
+
+Flash read every amount, date and ratio right (transcribed back). That is why it became the default
+(`docs/decisions/2026-10-09-tts-default-model.md`). v4 can start in about 1-2 s only if the audio is streamed or
+made sentence by sentence; neither is built for v4.
 
 What this module now does:
 
@@ -216,11 +224,14 @@ What this module now does:
 
 Choices for the team, fastest first:
 
-- **Switch to Flash**: `ELEVENLABS_MODEL_ID=eleven_flash_v2_5` in `backend/.env`. 2-4 times faster
-  and half the credits, with number reading on automatically. Listen in the playground first:
-  ElevenLabs says its quality is slightly lower than Multilingual v2. One ElevenLabs page still
-  calls number reading on Flash an Enterprise feature; it worked on our Creator plan, so recheck it
-  before the demo (playground, Flash v2.5, a text with money and codes).
+- **Flash is the default** (since 2026-10-10): about 4.5 times faster on the app's reading, for half the
+  credits, with number reading on automatically.
+  - ElevenLabs says its quality is slightly lower than Multilingual v2.
+  - Voice "sarah" is not tuned for Flash.
+  - One ElevenLabs page calls number reading on Flash an Enterprise feature, but it worked on our Creator plan
+    (2026-10-09 and 2026-10-10). Recheck it before the demo: the playground, with a text of money and codes.
+
+  To go back: `ELEVENLABS_MODEL_ID=eleven_multilingual_v2` in `backend/.env`.
 - **Stream replies to the app**: send `stream_reply=true` to `/api/v1/voice/analyze`. Tested in
   Chrome. Android is expected to play it (its player reads streams of unknown length); iPhones
   (Safari, and AVPlayer under expo-audio) may not. Test on both phones first; the default waits
@@ -270,8 +281,9 @@ The text-to-speech contract, a FastAPI example and the mobile playback code are 
 
 - ElevenLabs bills every character sent, including spaces and punctuation, and charges again for
   identical requests (free regenerations exist only on their website). That is why the cache exists.
-- Free plan: 10,000 credits a month. With `eleven_multilingual_v2`, 1 character = 1 credit, so that
-  is roughly 25 answers of 400 characters.
+- Free plan: 10,000 credits a month. At ElevenLabs' prices, Multilingual v2 costs 1 credit per character and
+  Flash v2.5, the default, half that. That is roughly 50 answers of 400 characters on Flash, or 25 on
+  Multilingual v2.
 - Cleanup removes Markdown, links and citations before sending (27% fewer characters for the
   Markdown mock answer). Run `--dry-run` to see the numbers.
 - A timeout on our side does **not** cancel the generation at ElevenLabs. It may still be billed,
@@ -318,12 +330,14 @@ $1 until October 18).
   errors. It also does not retry `convert()`, and it reads the API key when it is imported. One
   documented POST is easier to control, test and explain. (The `elevenlabs` package in
   `backend/requirements.txt` is not used by this module; it does no harm.)
-- **Default model `eleven_multilingual_v2`.** It is the API default, documented as the most
-  stable, recommended by ElevenLabs where numbers must be read correctly, and it supports the
-  speed setting. It is also the slowest (see "Speed"). `eleven_flash_v2_5` misreads numbers with
-  ElevenLabs' default setting, so the module turns number reading on for it; in our test it then
-  read every amount, date and code right. Switching is the team's call after listening (an open
-  proposal: `docs/decisions/2026-10-09-tts-default-model.md`).
+- **Default model `eleven_flash_v2_5`** (since 2026-10-10; before, `eleven_multilingual_v2`).
+  - It made the app's reading 4.5 times faster, for half the credits (see "Speed").
+  - It misreads numbers with ElevenLabs' default setting, so the module turns number reading on for it. It then
+    read every amount, date and code right (2026-10-09 and 2026-10-10).
+  - Multilingual v2 is still the most stable and lifelike, and is tuned for all 20 voices. A request can choose
+    it (`TTSRequest.model`).
+
+  Decision: `docs/decisions/2026-10-09-tts-default-model.md`.
 - **Streaming shares the generation, not the connection.** Every listener of a clip reads the same
   buffer from its first byte, so a player that reconnects (iPhones do) never pays for a second
   generation. A failed generation is retried only before anyone has heard part of it, because a

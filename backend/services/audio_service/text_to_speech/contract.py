@@ -75,7 +75,7 @@ class TTSResult:
     mime_type: str | None = None  # e.g. "audio/mpeg"; use it as the HTTP Content-Type
     audio_id: str | None = None  # same text + same voice settings -> same ID; see get_audio()
     voice: str | None = None  # key of the voice used, e.g. "matilda"
-    model: str | None = None  # ElevenLabs model used, e.g. "eleven_multilingual_v2"
+    model: str | None = None  # ElevenLabs model used, e.g. "eleven_flash_v2_5"
     streaming: bool = False  # True: the audio is still being made (from synthesize_streaming())
 
     # What was actually spoken, after cleanup. Useful for captions and debugging.
