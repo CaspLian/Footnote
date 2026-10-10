@@ -6,3 +6,4 @@ elevenlabs
 psycopg2-binary
 snowflake-connector-python
 python-dotenv
+python-multipart

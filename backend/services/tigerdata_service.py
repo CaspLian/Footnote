@@ -11,6 +11,8 @@ from dotenv import load_dotenv
 from psycopg2.extras import execute_values
 from psycopg2.extensions import connection
 
+from services.timeline import estimate_deadlines
+
 
 _SCHEMA = """
 -- Regional reference prices are optional; audits keep an explicit no-benchmark result.
@@ -30,6 +32,8 @@ CREATE TABLE IF NOT EXISTS audit_records (
     provider_name TEXT,
     provider_npi TEXT,
     service_date DATE,
+    bill_received_date DATE,
+    payment_due_date DATE,
     total_billed NUMERIC(12, 2) NOT NULL,
     currency TEXT NOT NULL,
     region TEXT,
@@ -37,6 +41,8 @@ CREATE TABLE IF NOT EXISTS audit_records (
     status TEXT NOT NULL DEFAULT 'scanned',
     collection_deadline DATE,
     credit_warning_date DATE,
+    collection_deadline_is_estimate BOOLEAN NOT NULL DEFAULT FALSE,
+    credit_warning_date_is_estimate BOOLEAN NOT NULL DEFAULT FALSE,
     final_settled_amount NUMERIC(12, 2),
     savings_amount NUMERIC(12, 2),
     resolved_at TIMESTAMPTZ,
@@ -76,6 +82,10 @@ ALTER TABLE audit_records
     ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'scanned',
     ADD COLUMN IF NOT EXISTS collection_deadline DATE,
     ADD COLUMN IF NOT EXISTS credit_warning_date DATE,
+    ADD COLUMN IF NOT EXISTS collection_deadline_is_estimate BOOLEAN NOT NULL DEFAULT FALSE,
+    ADD COLUMN IF NOT EXISTS credit_warning_date_is_estimate BOOLEAN NOT NULL DEFAULT FALSE,
+    ADD COLUMN IF NOT EXISTS bill_received_date DATE,
+    ADD COLUMN IF NOT EXISTS payment_due_date DATE,
     ADD COLUMN IF NOT EXISTS final_settled_amount NUMERIC(12, 2),
     ADD COLUMN IF NOT EXISTS savings_amount NUMERIC(12, 2),
     ADD COLUMN IF NOT EXISTS resolved_at TIMESTAMPTZ;
@@ -179,12 +189,16 @@ def record_bill_audit(
 
     amounts = [item["amount"] for item in normalized_items]
     total_billed = _money(claim.get("total_billed", sum(amounts)), "total_billed")
-    service_date = claim.get("service_date")
-    if service_date is not None:
-        try:
-            service_date = date.fromisoformat(str(service_date))
-        except ValueError as exc:
-            raise ValueError("claim.service_date must be an ISO date.") from exc
+    service_date = _optional_date(claim.get("service_date"), "service_date")
+    received_date = _optional_date(
+        claim.get("bill_received_date"), "bill_received_date"
+    )
+    payment_due_date = _optional_date(
+        claim.get("payment_due_date"), "payment_due_date"
+    )
+    collection_deadline, credit_warning_date = estimate_deadlines(
+        received_date, service_date
+    )
 
     audit_id = str(uuid4())
     conn = connect_tiger_data()
@@ -232,8 +246,11 @@ def record_bill_audit(
                     """
                     INSERT INTO audit_records (
                         audit_id, claim_id, provider_name, provider_npi, service_date,
-                        total_billed, currency, region, overcharge_total, status
-                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, 'scanned')
+                        bill_received_date, payment_due_date, total_billed, currency,
+                        region, overcharge_total, status, collection_deadline,
+                        credit_warning_date, collection_deadline_is_estimate,
+                        credit_warning_date_is_estimate
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'scanned', %s, %s, %s, %s)
                     """,
                     (
                         audit_id,
@@ -241,10 +258,16 @@ def record_bill_audit(
                         provider.get("name"),
                         provider.get("npi"),
                         service_date,
+                        received_date,
+                        payment_due_date,
                         total_billed,
                         claim.get("currency", "USD"),
                         normalized_region,
                         overcharge_total,
+                        collection_deadline,
+                        credit_warning_date,
+                        collection_deadline is not None,
+                        credit_warning_date is not None,
                     ),
                 )
                 cursor.execute(
@@ -259,6 +282,24 @@ def record_bill_audit(
                             {
                                 "claim_id": claim.get("claim_id"),
                                 "line_item_count": len(results),
+                            }
+                        ),
+                    ),
+                )
+                cursor.execute(
+                    """
+                    INSERT INTO audit_events (audit_id, event_type, details)
+                    VALUES (%s, 'bill_dates_extracted', %s)
+                    """,
+                    (
+                        audit_id,
+                        psycopg2.extras.Json(
+                            {
+                                "service_date": service_date.isoformat() if service_date else None,
+                                "bill_received_date": received_date.isoformat() if received_date else None,
+                                "payment_due_date": payment_due_date.isoformat() if payment_due_date else None,
+                                "collection_deadline_estimate": collection_deadline.isoformat() if collection_deadline else None,
+                                "credit_warning_date_estimate": credit_warning_date.isoformat() if credit_warning_date else None,
                             }
                         ),
                     ),
@@ -341,8 +382,11 @@ def get_bill_audit(audit_id: str | UUID) -> dict[str, Any] | None:
             cursor.execute(
                 """
                 SELECT claim_id, provider_name, provider_npi, service_date,
+                       bill_received_date, payment_due_date,
                        total_billed, currency, region, overcharge_total, created_at,
                        status, collection_deadline, credit_warning_date,
+                       collection_deadline_is_estimate,
+                       credit_warning_date_is_estimate,
                        final_settled_amount, savings_amount, resolved_at,
                        CASE
                            WHEN status = 'resolved' OR collection_deadline IS NULL
@@ -380,21 +424,25 @@ def get_bill_audit(audit_id: str | UUID) -> dict[str, Any] | None:
             "claim_id": record[0],
             "provider": {"name": record[1], "npi": record[2]},
             "service_date": record[3].isoformat() if record[3] else None,
-            "total_billed": record[4],
-            "currency": record[5],
-            "region": record[6],
-            "overcharge_total": record[7],
-            "created_at": record[8].isoformat(),
-            "status": record[9],
+            "bill_received_date": record[4].isoformat() if record[4] else None,
+            "payment_due_date": record[5].isoformat() if record[5] else None,
+            "total_billed": record[6],
+            "currency": record[7],
+            "region": record[8],
+            "overcharge_total": record[9],
+            "created_at": record[10].isoformat(),
+            "status": record[11],
             "collection_deadline": (
-                record[10].isoformat() if record[10] else None
+                record[12].isoformat() if record[12] else None
             ),
-            "credit_warning_date": record[11].isoformat() if record[11] else None,
-            "final_settled_amount": record[12],
-            "savings_amount": record[13],
-            "resolved_at": record[14].isoformat() if record[14] else None,
-            "collection_days_remaining": record[15],
-            "credit_warning_days_remaining": record[16],
+            "credit_warning_date": record[13].isoformat() if record[13] else None,
+            "collection_deadline_is_estimate": record[14],
+            "credit_warning_date_is_estimate": record[15],
+            "final_settled_amount": record[16],
+            "savings_amount": record[17],
+            "resolved_at": record[18].isoformat() if record[18] else None,
+            "collection_days_remaining": record[19],
+            "credit_warning_days_remaining": record[20],
             "events": _event_records(conn, str(parsed_audit_id)),
             "items": [
                 {
@@ -480,6 +528,43 @@ def update_claim_status(
         conn.close()
 
 
+def record_claim_action(
+    audit_id: str | UUID, action: str, details: Mapping[str, Any] | None = None
+) -> dict[str, str]:
+    """Append a user-entered action to the audit trail without changing status."""
+    parsed_audit_id = _parse_audit_id(audit_id)
+    normalized_action = _required_text(action, "action")
+    if len(normalized_action) > 200:
+        raise ValueError("action must be 200 characters or fewer.")
+    if details is not None and not isinstance(details, Mapping):
+        raise ValueError("details must be an object.")
+
+    conn = connect_tiger_data()
+    try:
+        with conn:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    "SELECT status FROM audit_records WHERE audit_id = %s",
+                    (str(parsed_audit_id),),
+                )
+                row = cursor.fetchone()
+                if row is None:
+                    raise LookupError(f"No audit found for audit_id {parsed_audit_id}.")
+                cursor.execute(
+                    """
+                    INSERT INTO audit_events (audit_id, event_type, details)
+                    VALUES (%s, 'user_action', %s)
+                    """,
+                    (
+                        str(parsed_audit_id),
+                        psycopg2.extras.Json({"action": normalized_action, **dict(details or {})}),
+                    ),
+                )
+        return {"audit_id": str(parsed_audit_id), "action": normalized_action}
+    finally:
+        conn.close()
+
+
 def set_claim_deadlines(
     audit_id: str | UUID,
     collection_deadline: date | str | None = None,
@@ -521,12 +606,18 @@ def set_claim_deadlines(
                 cursor.execute(
                     """
                     UPDATE audit_records
-                    SET collection_deadline = %s, credit_warning_date = %s
+                    SET collection_deadline = %s, credit_warning_date = %s,
+                        collection_deadline_is_estimate = CASE WHEN %s
+                            THEN collection_deadline_is_estimate ELSE FALSE END,
+                        credit_warning_date_is_estimate = CASE WHEN %s
+                            THEN credit_warning_date_is_estimate ELSE FALSE END
                     WHERE audit_id = %s
                     """,
                     (
                         stored_collection,
                         stored_credit,
+                        collection_date is None,
+                        credit_date is None,
                         str(parsed_audit_id),
                     ),
                 )
