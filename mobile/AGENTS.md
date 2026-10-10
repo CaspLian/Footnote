@@ -2,16 +2,14 @@ This is an Expo/React Native mobile application. Prioritize mobile-first pattern
 
 ## This project today (checked 2026-10-10)
 
-The guidance below is Expo's generated template.
-
-- On this branch the app is still the starter `App.js`, and it calls no backend route.
-- The frontend prototype is on the branch `frontend-aarush` (Aarush Kumar, 2026-10-10): Expo Router in `src/app/`,
-  TypeScript, React Native Web and a development build (`expo start --dev-client`). It uses local sample data and
-  does not call the backend yet. Once it is merged, its structure is the app's: follow it, and update this note.
-- Playing the backend's spoken replies (MP3 URLs) needs an audio player, which `frontend-aarush` does not have yet
-  (it uses `expo-speech`, the phone's own voice). The backend's audio docs recommend `expo-audio`: check the Expo
-  SDK 57 docs before choosing.
-- The backend contract the app calls, including how a phone reaches the backend, is in `docs/API_CONTRACTS.md`.
+- On `Camera-capture`, the app is the Unfold Expo Router/TypeScript frontend in `src/app/`; it is based on
+  `Gemini-Tiger-Snow-ElevenLabs-V2` and includes the `frontend-aarush` UI.
+- `Take a photo` uses `expo-camera` to capture and keep ordered JPEG pages. Imported pages are sent to
+  `POST /api/v1/analyze`; the backend passes them together to Gemini. The user reviews the extracted result in the
+  editable verification screen. Physical Android capture still needs device testing.
+- The sample/demo journey and non-analysis services remain local. Backend spoken MP3 replies are not played by the
+  app; narration uses the phone's `expo-speech` voice.
+- The backend contract, including multi-file uploads and phone network setup, is in `docs/API_CONTRACTS.md`.
   Shared rules are in the repository's root `AGENTS.md`.
 
 ## Expo has changed — do not trust your training data

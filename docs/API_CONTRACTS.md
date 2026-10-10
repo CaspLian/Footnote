@@ -50,13 +50,16 @@ from the code. The models are defined in `backend/models.py` and `backend/servic
 
 | Field | Required | Format |
 |---|---|---|
-| `file` | one of `file` / `text` | JPEG, PNG, WEBP, HEIC, HEIF or PDF; up to 15 MB. Checked by exact content type |
-| `text` | one of `file` / `text` | A question or bill text |
+| `file` | no | One JPEG, PNG, WEBP, HEIC, HEIF or PDF; retained for single-file clients |
+| `files` | no | Repeat this multipart field for ordered bill pages. At most 10 uploads total across `file` and `files` |
+| `text` | one of `file` / `files` / `text` | A question or bill text; may accompany uploaded pages |
 | `target_language` | no (`en`) | A code from `/api/v1/languages` (not validated: other text is passed to Gemini as is) |
 
-Returns `AnalyzeResponse` (below). Errors, with a text `detail`:
-- 400: nothing sent, or an unsupported file type
-- 413: file over 15 MB
+The backend sends uploaded files to Gemini together in multipart order, so camera photos of a multi-page bill are
+read as one document. The combined upload limit is 15 MB. Returns `AnalyzeResponse` (below). Errors, with a text
+`detail`:
+- 400: nothing sent, more than 10 uploaded pages, or an unsupported file type
+- 413: combined uploads over 15 MB
 - 422: malformed form
 - 502: the Gemini step failed (key, quota, network, unusable output)
 - 504: Gemini took longer than 150 s
@@ -188,6 +191,7 @@ All text is in `target_language`.
 - `plain_description`
 - `billed_amount`: number or null
 - `date_of_service`: `YYYY-MM-DD` or null
+- `source_page`: 1-based upload page when Gemini can identify it, otherwise null
 - `possible_issues`: a list of strings
 
 `PriceCheck`:
