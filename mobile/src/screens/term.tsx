@@ -43,7 +43,7 @@ function TermDetailContent({ termId }: { termId: string }) {
       <ButtonRow><Button title={saved ? 'Saved term' : 'Save term'} icon={saved ? 'check' : 'bookmark'} variant="quiet" onPress={() => useUnfoldStore.getState().toggleSavedTerm(termId)} /><Button title="Read the source" icon="export" variant="secondary" onPress={() => { void Linking.openURL(explanation.source.url).catch(() => setError('The source could not be opened. Try again when online.')); }} /></ButtonRow>
       <Txt variant="caption" muted>{explanation.source.title}. These are curated explanations; no AI or ElevenLabs service is connected.</Txt>
     </>}
-    {explanation && error ? <Feedback danger text={error} /> : null}
+    {explanation && error ? <Feedback danger onDismiss={() => setError('')} text={error} /> : null}
     <Txt variant="caption" muted>Your own plan documents determine your coverage.</Txt>
   </Screen>;
 }

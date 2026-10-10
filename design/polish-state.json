@@ -41,7 +41,8 @@
       ".impeccable/review/phone-ios.jpg",
       ".impeccable/review/mobile.png",
       ".impeccable/review/desktop.png",
-      ".impeccable/review/agent-collapsed-mobile.png"
+      ".impeccable/review/agent-collapsed-mobile.png",
+      ".impeccable/review/follow-up-ios-current.jpg"
     ]
   },
   "pending": [
@@ -56,13 +57,18 @@
     "radius": 16,
     "portuguese": "pt-PT",
     "truncate": true,
-    "requiredActionGating": true
+    "requiredActionGating": "visible-disabled",
+    "taiwan": "zh-Hant-TW"
   },
   "latestCorrections": {
     "minimizedRadialShadow": true,
     "voiceChooserOrbHitTesting": false,
     "screenWideVoiceSwipe": true,
     "billsGuideEdgeSoftening": true,
-    "nativeIosErrorAlerts": true
+    "nativeIosErrorAlerts": true,
+    "nativeVoicePaging": true,
+    "continuousPageColoredOrbHalo": true,
+    "dateBySaveCTA": true,
+    "reviewToolsWithIcons": true
   }
 }

@@ -53,10 +53,10 @@ export function Onboarding() {
     } finally { setBusy(false); }
   }
 
-  const footer = canContinue || step > 0 ? <Group gap={space.sm}>
-    {canContinue ? <Button title={step < 3 ? 'Continue' : demo === '1' ? 'Finish & explore sample' : 'Finish setup'} loading={busy} onPress={() => void next()} /> : null}
+  const footer = <Group gap={space.sm}>
+    <Button title={step < 3 ? 'Continue' : demo === '1' ? 'Finish & explore sample' : 'Finish setup'} disabled={!canContinue} loading={busy} onPress={() => void next()} />
     {step > 0 ? <Button title="Previous step" variant="quiet" disabled={busy} onPress={() => { Keyboard.dismiss(); setError(''); setStep(v => v - 1); }} /> : null}
-  </Group> : undefined;
+  </Group>;
 
   return <Screen testID="onboarding" footer={footer}>
     <Group gap={space.sm}><Txt variant="label" muted>Personal setup · {step + 1} of 4</Txt><View style={{ flexDirection: 'row', gap: space.sm }}>{[0, 1, 2, 3].map(v => <View key={v} style={{ flex: 1, height: 3, borderRadius: 2, backgroundColor: v <= step ? colors.accent : colors.line }} />)}</View></Group>
@@ -81,6 +81,6 @@ export function Onboarding() {
         <Group gap={space.sm}><Txt variant="section">I’d like to start with…</Txt>{([['understand', 'Understanding my bill'], ['check_charges', 'Checking the charges'], ['prepare_request', 'Preparing a request']] as const).map(([goal, title]) => <Choice key={goal} title={title} selected={context.goal === goal} onPress={() => setContext(c => ({ ...c, goal }))} />)}</Group>
       </>}
     </Animated.View>
-    {error ? <Feedback danger title="Unable to continue" text={error} /> : null}
+    {error ? <Feedback danger title="Unable to continue" text={error} onDismiss={() => setError('')} /> : null}
   </Screen>;
 }

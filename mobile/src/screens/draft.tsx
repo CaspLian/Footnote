@@ -85,6 +85,6 @@ export function DraftWorkspace() { const { colors } = useTheme(); const styles =
     <Txt variant="caption" muted>{storageError ? 'Changes are in memory. Saving needs attention.' : recovered ? 'Your saved draft was restored on this device.' : 'Saved on this device'}</Txt>
     {!desktop ? utilities : null}
     {message ? <Feedback text={message} /> : null}
-    {error ? <Feedback danger text={error} action={body.trim() ? undefined : { title: 'Try preparing again', onPress: () => { void useUnfoldStore.getState().prepareDraft(c.id, kind).then(() => { setError(''); setPreparedHere(true); }).catch(() => setError('Try preparing the draft again.')); } }} /> : null}
+    {error ? <Feedback danger onDismiss={() => setError('')} text={error} action={body.trim() ? undefined : { title: 'Try preparing again', onPress: () => { void useUnfoldStore.getState().prepareDraft(c.id, kind).then(() => { setError(''); setPreparedHere(true); }).catch(() => setError('Try preparing the draft again.')); } }} /> : null}
   </Screen>;
 }

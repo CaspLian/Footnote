@@ -8,7 +8,7 @@ export const workingLanguages = [
   { code: 'de', agentCode: 'de', name: 'German', native: 'Deutsch', country: 'de', locale: 'de-DE' },
   { code: 'it', agentCode: 'it', name: 'Italian', native: 'Italiano', country: 'it', locale: 'it-IT' },
   { code: 'zh-Hans', agentCode: 'zh', name: 'Chinese · Simplified', native: '简体中文', country: 'cn', locale: 'zh-Hans' },
-  { code: 'zh-Hant', agentCode: 'zh', name: 'Chinese · Traditional', native: '繁體中文', country: 'tw', locale: 'zh-Hant' },
+  { code: 'zh-Hant', agentCode: 'zh', name: 'Chinese (Taiwan)', native: '中文（台灣）', country: 'tw', locale: 'zh-Hant-TW' },
   { code: 'ja', agentCode: 'ja', name: 'Japanese', native: '日本語', country: 'jp', locale: 'ja-JP' },
   { code: 'ko', agentCode: 'ko', name: 'Korean', native: '한국어', country: 'kr', locale: 'ko-KR' },
   { code: 'hi', agentCode: 'hi', name: 'Hindi', native: 'हिन्दी', country: 'in', locale: 'hi-IN' },

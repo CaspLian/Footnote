@@ -70,7 +70,7 @@ export function Settings() {
       <SettingsLink title={busy ? 'Updating local data…' : 'Reset the sample'} detail="Keep profiles and imported cases" icon="document" onPress={reset} disabled={busy} />
       <SettingsDivider /><SettingsLink title="Delete imported cases" detail={`${cases.filter(c => c.source === 'manual').length} imported ${cases.filter(c => c.source === 'manual').length === 1 ? 'case' : 'cases'}`} icon="files" danger onPress={clearImports} disabled={busy || !cases.some(c => c.source === 'manual')} />
     </SettingsGroup>
-    {error ? <Feedback danger text={error} /> : null}
+    {error ? <Feedback danger onDismiss={() => setError('')} text={error} /> : null}
     <Group gap={space.sm}><Txt variant="label">Unfold · Prototype 0.1</Txt><Txt variant="caption" muted>No account. No family cloud. Sponsor services are not connected.</Txt></Group>
   </Screen>;
 }
