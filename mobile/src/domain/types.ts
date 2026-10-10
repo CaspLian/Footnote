@@ -124,6 +124,8 @@ export interface BillCase {
   /** True when confirmed values differ from the original synthetic documents. */
   entriesEdited?: boolean;
   reviewMode?: 'synthetic' | 'manual';
+  /** The case's claim in Tiger Data (POST /api/v1/claims), recorded when the case is first confirmed. */
+  claimId?: string;
 }
 export interface AppealDraft {
   id: string;
@@ -158,6 +160,17 @@ export interface BenchmarkService {
 }
 export interface DraftService {
   prepare(billCase: BillCase, kind: DraftKind, locale: Language): Promise<string>;
+}
+/** A step in a case's claim in Tiger Data. finalCents is the statement balance when the user marked it resolved. */
+export type ClaimChange =
+  | { status: 'audit_complete' | 'dispute_in_progress' }
+  | { collectionDeadline: string }
+  | { finalCents: Money };
+/** Keeps a case's claim in Tiger Data in step with the app (services/claim-tracker.ts). */
+export interface ClaimTracker {
+  /** Records a confirmed case; resolves to its claim id, or undefined when there is nothing to record. */
+  record(billCase: BillCase): Promise<string | undefined>;
+  update(claimId: string, change: ClaimChange): Promise<void>;
 }
 export interface NarrationService {
   speak(text: string, language: Language): Promise<void>;

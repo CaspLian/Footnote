@@ -1,7 +1,8 @@
 import { backendUrl, speakAnalysis } from './backend';
 
-// The ElevenLabs reading of each saved analysis, requested as soon as the analysis exists (intake) and again when
-// the review opens, so "Listen" plays at once instead of waiting about 9 s for the clip to be made. The backend
+// The ElevenLabs reading of each saved analysis, requested as soon as Gemini has read the pages (the processing
+// screen) and again when the review opens, so "Listen" plays at once instead of waiting for the clip to be made
+// (about 2 s on Flash v2.5, 8.5 s on Multilingual v2). The backend
 // caches finished clips and lets identical requests share one generation, so asking twice is never paid twice.
 const prepared = new Map<string, Promise<string>>();
 

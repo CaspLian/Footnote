@@ -127,3 +127,8 @@ async def get_benchmark(cpt_code: str):
 from services.audio_service.voice_routes import router as voice_router  # noqa: E402
 
 app.include_router(voice_router)
+
+# Claim workflow: the Tiger Data lifecycle (record, status, deadlines, resolution, timeline)
+from claim_routes import router as claim_router  # noqa: E402
+
+app.include_router(claim_router)

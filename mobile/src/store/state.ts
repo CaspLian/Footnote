@@ -2,7 +2,8 @@ import { createStore } from 'zustand/vanilla';
 import { createManualCase, createSampleCase, SAMPLE_CASE_ID } from '../domain/fixtures';
 import { isISODate, isMoney } from '../domain/money';
 import { validateCase } from '../domain/review';
-import type { AppealDraft, BillCase, CaseEvent, DocumentAttachment, DraftKind, FamilyProfile, PersonalContext, IconWeight, Language, ReviewResult } from '../domain/types';
+import type { AppealDraft, BillCase, CaseEvent, ClaimChange, ClaimTracker, DocumentAttachment, DraftKind, FamilyProfile, PersonalContext, IconWeight, Language, ReviewResult } from '../domain/types';
+import { claimTracker } from '../services/claim-tracker';
 import { documentService } from '../services/connected-services';
 import { draftService, sampleEntriesChanged } from '../services/local-services';
 import { parseSnapshot, STORAGE_KEY, type PersistedSnapshot } from './persistence';
@@ -69,6 +70,8 @@ export interface StoreOptions {
   processBill?: (billCase: BillCase) => Promise<ReviewResult>;
   deleteAttachments?: (attachments: DocumentAttachment[]) => Promise<void>;
   clearAllAttachments?: () => Promise<void>;
+  /** Tiger Data claim tracking; the default calls the backend when EXPO_PUBLIC_API_URL is set. */
+  claims?: ClaimTracker;
   autoHydrate?: boolean;
 }
 
@@ -106,6 +109,24 @@ export function createUnfoldStore(storage: LocalStorage, options: StoreOptions =
       });
     };
     const change = (patch: Partial<UnfoldState>) => { ensureWritable(); set(patch); persist(); };
+    const claims = options.claims ?? claimTracker;
+    // Keeps the case's claim in Tiger Data in step: recorded on the first confirmation (then "audit complete"), and
+    // updated after later steps. It is a side record, so a failure never reaches the user or changes the case.
+    const trackClaim = async (caseId: string, step?: ClaimChange) => {
+      try {
+        const current = get().cases.find(item => item.id === caseId);
+        if (!current || current.source === 'sample') return;
+        let claimId = current.claimId;
+        if (!claimId) {
+          if (step) return; // nothing recorded yet, so nothing to update
+          claimId = await claims.record(current);
+          if (!claimId || !get().cases.some(item => item.id === caseId)) return;
+          const recorded = claimId;
+          change({ cases: get().cases.map(item => item.id === caseId ? { ...item, claimId: recorded } : item) });
+        }
+        await claims.update(claimId, step ?? { status: 'audit_complete' });
+      } catch { /* Tiger Data unavailable: the app's own record stays complete. */ }
+    };
     const caseById = (id: string) => {
       const billCase = get().cases.find(item => item.id === id);
       if (!billCase) throw new Error('case_not_found');
@@ -188,8 +209,8 @@ export function createUnfoldStore(storage: LocalStorage, options: StoreOptions =
       setActiveProfile(id) { if (!get().profiles.some(p => p.id === id)) throw new Error('profile_not_found'); change({ activeProfileId: id }); },
       assignCaseProfile(caseId, profileId) { caseById(caseId); if (!get().profiles.some(p => p.id === profileId)) throw new Error('profile_not_found'); change({ cases: get().cases.map(c => c.id === caseId ? { ...c, profileId, updatedAt: now() } : c) }); },
       setExplanationDepth(depth) { if (depth !== 'simple' && depth !== 'detailed') return; change({ personalContext: { ...get().personalContext, explanationDepth: depth } }); },
-      markResolved(caseId) { const c = caseById(caseId); if (c.status === 'resolved') return; change({ cases: get().cases.map(c => c.id === caseId ? { ...c, status: 'resolved', updatedAt: now() } : c), events: [...get().events, event(caseId, 'resolved')] }); },
-      setNoticeDeadline(caseId, date) { const c = caseById(caseId); if (date !== null && !isISODate(date)) throw new Error('invalid_date'); if ((c.noticeDeadline ?? null) === date) return; change({ cases: get().cases.map(c => c.id === caseId ? { ...c, noticeDeadline: date ?? undefined, updatedAt: now() } : c), events: [...get().events, event(caseId, date ? 'deadline_set' : 'deadline_removed', date ? { date } : {})] }); },
+      markResolved(caseId) { const c = caseById(caseId); if (c.status === 'resolved') return; change({ cases: get().cases.map(c => c.id === caseId ? { ...c, status: 'resolved', updatedAt: now() } : c), events: [...get().events, event(caseId, 'resolved')] }); void trackClaim(caseId, { finalCents: c.financials.remainingCents }); },
+      setNoticeDeadline(caseId, date) { const c = caseById(caseId); if (date !== null && !isISODate(date)) throw new Error('invalid_date'); if ((c.noticeDeadline ?? null) === date) return; change({ cases: get().cases.map(c => c.id === caseId ? { ...c, noticeDeadline: date ?? undefined, updatedAt: now() } : c), events: [...get().events, event(caseId, date ? 'deadline_set' : 'deadline_removed', date ? { date } : {})] }); if (date !== null) void trackClaim(caseId, { collectionDeadline: date }); },
       setIconPreferences(preferences) {
         const patch: Partial<UnfoldState> = {};
         if (preferences.iconWeight && ['regular', 'bold', 'thin'].includes(preferences.iconWeight)) patch.iconWeight = preferences.iconWeight;
@@ -263,6 +284,7 @@ export function createUnfoldStore(storage: LocalStorage, options: StoreOptions =
               cases: get().cases.map(item => item.id === caseId ? { ...item, status: 'ready', findings: result.findings, reviewMode: result.mode, verifiedAt: timestamp, updatedAt: timestamp } : item),
               events: [...get().events, event(caseId, 'verified')],
             });
+            void trackClaim(caseId);
           } finally { set({ processingCaseIds: get().processingCaseIds.filter(id => id !== caseId) }); inFlightReviews.delete(caseId); }
         })();
         inFlightReviews.set(caseId, review); return review;
@@ -289,6 +311,7 @@ export function createUnfoldStore(storage: LocalStorage, options: StoreOptions =
           cases: get().cases.map(item => item.id === draft.caseId ? { ...item, status: 'submitted', updatedAt: timestamp } : item),
           events: get().events.some(item => item.id === eventId) ? get().events : [...get().events, event(draft.caseId, 'submitted', { id: eventId, draftId: draft.id, draftKind: draft.kind })],
         });
+        void trackClaim(draft.caseId, { status: 'dispute_in_progress' });
       },
       setFollowUp(caseId, date) {
         const current = caseById(caseId);

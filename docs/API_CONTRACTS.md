@@ -41,6 +41,9 @@ from the code. The models are defined in `backend/models.py` and `backend/servic
 | `POST /api/v1/analyze` | A bill and/or text → analysis, price check, saved record | `main.py` |
 | `GET /api/v1/audits/{audit_id}` | A saved analysis, exactly as it was returned | `main.py`, `analysis_store.py` |
 | `GET /api/v1/benchmarks/{cpt_code}` | Medicare's national rate for one code, for the app's price comparison | `main.py`, `snowflake_service.py` |
+| `POST /api/v1/claims` | Record a confirmed bill as a claim in Tiger Data; its timeline starts | `claim_routes.py`, `tigerdata_service.py` |
+| `GET /api/v1/claims/{claim_id}` | A claim with its lines, deadlines, countdowns and timeline | `claim_routes.py` |
+| `POST /api/v1/claims/{claim_id}/status`, `/deadlines`, `/resolve` | The claim's next steps | `claim_routes.py` |
 | `POST /api/v1/voice/analyze` | A recorded question (+ optional bill) → transcript, analysis, spoken reply | `voice_routes.py` |
 | `POST /api/v1/voice/speak` | Speak a saved analysis again, without calling Gemini | `voice_routes.py` |
 | `GET /api/v1/voice/audio/{audio_id}` | The reply audio (MP3) | `voice_routes.py`, `audio_http.py` |
@@ -97,6 +100,48 @@ Free: no Gemini call. The app uses it for the codes the user confirmed or correc
 - `error`: `null`, or a short note when Snowflake failed and the CSV answered
 
 Errors: 400 when the text holds fewer than 5 letters or digits.
+
+### The claim workflow: `/api/v1/claims`
+
+The Tiger Data claim lifecycle (`backend/claim_routes.py`, over `services/tigerdata_services/tigerdata_service.py`).
+JSON bodies:
+- `POST /api/v1/claims`:
+  - `items` (required, at least one): `[{code, description, amount}]`, all three on every line
+  - `provider_name`, `service_date` (`YYYY-MM-DD`), `total_billed`, `analysis_audit_id` (stored as `claim_id`), and
+    `region` (for the team's regional benchmarks): optional
+
+  Returns `{audit_id, claim_id, region, total_billed, overcharge_total, items, recorded}`. `audit_id` is the claim's
+  ID in the other routes.
+- `POST /{claim_id}/status`: `{status}`, either `audit_complete` or `dispute_in_progress`, plus optional `details`.
+- `POST /{claim_id}/deadlines`: `{collection_deadline?, credit_warning_date?}`. At least one is required, and dates
+  cannot be cleared.
+- `POST /{claim_id}/resolve`: `{final_amount}`, in dollars. The status becomes `resolved`, the savings are computed,
+  and the countdowns stop.
+- `GET /{claim_id}`: the claim, its `items`, `status`, deadlines with days remaining, and `events` (the timeline).
+
+Errors, with a text `detail`:
+- 400: not a UUID, or rejected by the service (for example, no deadline)
+- 404: no such claim
+- 422: malformed body
+- 503: Tiger Data not configured or not reachable; the address is never echoed
+
+How the app uses it (`mobile/src/services/claim-tracker.ts`, from the store):
+
+| When the user... | The app sends |
+|---|---|
+| confirms a case for the first time | `POST /api/v1/claims`, then status `audit_complete` |
+| confirms it again after edits | status `audit_complete` (the same claim, never a second one) |
+| marks a request submitted | status `dispute_in_progress` |
+| sets a notice date | `deadlines` with `collection_deadline` |
+| marks the case resolved | `resolve` with the confirmed statement balance |
+
+Some limits:
+- Only lines with a code, a description and an amount are recorded. The total is the confirmed bill total.
+- The app has no field for a final settled amount yet, so the resolution sends the statement balance at that
+  moment. The service's "savings" figure (billed minus final) is an approximation, and the app does not show it.
+- `overcharge_total` uses the team's regional benchmark table and is not shown either: a difference is not proof of
+  overcharging.
+- Failures never reach the user. The claim is a side record, and the app's own case stays complete.
 
 ### `POST /api/v1/voice/analyze`
 
@@ -166,7 +211,7 @@ Errors carry `detail.stage = "audit"`:
   - Audio still being made exists only in the server process making it, so run one process when streaming.
 - **Methods:** `GET` only; `HEAD` gives 405. The OpenAPI schema lists these routes as JSON, but they send audio.
 - **Samples:** each voice's sample ("Hi, I'm Bunty. I can read your medical bill explanations out loud.") is made
-  once, for about 30 credits, then served from the cache.
+  once, for about 15 credits (Flash v2.5, the default), then served from the cache.
 - **Errors:**
   - Unknown or unsafe IDs give 404.
   - Audio still being made answers in the text shape:

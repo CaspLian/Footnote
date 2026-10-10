@@ -85,6 +85,7 @@ Document processing, benchmark lookup, draft preparation, and narration have asy
 
 - **Reading documents:** camera pages (`expo-camera`), photos and PDFs are sent together to `POST /api/v1/analyze` (`src/services/gemini-api.ts`). Gemini's provider, dates, amounts and line items fill the verify screen, each with the page it came from (`src/domain/extraction.ts`), and the user checks every value. The analysis is saved in Tiger Data.
 - **Prices:** the review compares each confirmed code with Medicare's national rate (`GET /api/v1/benchmarks/{code}`, from Snowflake) and adds Gemini's notes. Findings are questions, never proof of an error.
+- **Claims:** each confirmed case is recorded as a claim in Tiger Data, and its later steps (review complete, request submitted, notice date, resolved) are added to the claim's timeline (`src/services/claim-tracker.ts`, `/api/v1/claims`). It is a side record: if Tiger Data is down, the app carries on.
 - **Voice:** the review can play the saved analysis in an ElevenLabs voice (`POST /api/v1/voice/speak`, played with `expo-audio`). The reading is prepared as soon as the document is read, so Listen plays at once. That costs one clip per analyzed document (`docs/decisions/2026-10-10-voice-prepared-early.md`).
 
 Without the variable, everything stays local, as before: the synthetic sample, manual entry, and device narration. The sample and the drafts stay local either way. `expo-camera` and `expo-audio` are native modules, so rebuild the development build once (`npm run ios` or `npm run android`).
