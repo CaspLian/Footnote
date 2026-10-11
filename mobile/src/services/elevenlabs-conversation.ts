@@ -37,6 +37,8 @@ export const MICROPHONE_TEXT: Record<Exclude<MicrophoneAccess, 'granted'>, strin
   insecure: 'The microphone only works on a secure page. Open Footnote at http://localhost or over HTTPS.',
   no_device: 'No microphone was found. Connect one, then try again.',
 };
+/** How long a Guide conversation waits for the agent's start signal before sending its request anyway. */
+export const OPENING_FALLBACK_MS = 4_000;
 export const DEFAULT_PRIVACY_NOTICE = "The bill details and everything said in this call go to ElevenLabs, which uses Google's Gemini, and ElevenLabs keeps them for 7 days.";
 let notice = DEFAULT_PRIVACY_NOTICE;
 const noticeListeners = new Set<() => void>();
@@ -97,6 +99,9 @@ export function createElevenLabsConversation(deps: ElevenLabsDeps) {
 
       let started: Promise<SdkConversation> | undefined;
       let timer: ReturnType<typeof setTimeout> | undefined;
+      // The agent ignores a message sent before it has started the conversation; its initiation metadata says it has.
+      let agentReady!: () => void;
+      const ready = new Promise<void>(resolve => { agentReady = resolve; });
       let onAbort: (() => void) | undefined;
       try {
         if (closed) throw abortError();
@@ -114,6 +119,7 @@ export function createElevenLabsConversation(deps: ElevenLabsDeps) {
           clientTools,
           onUnhandledClientToolCall: call => deps.log?.('tool_unknown', { name: call.tool_name }),
           ...events.callbacks,
+          onConversationMetadata: () => agentReady(),
           onError(message) {
             events.callbacks.onError(message);
             if (/input muted state|microphone/i.test(message)) {
@@ -150,7 +156,9 @@ export function createElevenLabsConversation(deps: ElevenLabsDeps) {
       }
       const activeConversation = conversation;
       // A Guide conversation has no greeting: this request asks the agent to explain the term in the call's language.
-      if (grant.openingMessage) activeConversation.sendUserMessage(grant.openingMessage);
+      const opening = grant.openingMessage;
+      if (opening) void Promise.race([ready, new Promise(resolve => setTimeout(resolve, OPENING_FALLBACK_MS))])
+        .then(() => { if (!closed) activeConversation.sendUserMessage(opening); });
       deps.devHook?.({ send: text => { if (!closed) { events.userTyped(text); activeConversation.sendUserMessage(text); } }, id: () => activeConversation.getId() });
       return {
         async end() { if (closed) return; closed = true; events.closeQuietly(); cleanup(); await closeSdk(activeConversation); },

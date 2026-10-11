@@ -120,3 +120,16 @@ test('microphone unmute failures are surfaced and close the call instead of show
   h.options().onError?.('Failed to set input muted state',new Error('synthetic recording failure'));
   await tick();assert.equal(h.controller.getSnapshot().status,'error');assert.match(h.controller.getSnapshot().error??'',/Microphone control failed/);assert.equal(h.ends(),1);
 });
+
+test('a Guide conversation sends its opening request only once the agent has started the conversation', async () => {
+  const h = harness();
+  const guide = { ...grant, openingMessage: 'Please explain this term in simple words.' };
+  const client = h.client;
+  const session = await client.open(guide, { ...context, case: undefined }, { signal: new AbortController().signal, onStatus: () => {}, onMessage: () => {} }, await client.prepare(context, new AbortController().signal));
+  await tick();
+  assert.equal(h.calls.some(call => call.startsWith('message:')), false); // too early: the agent would ignore it
+  h.options().onConversationMetadata?.({ conversation_id: 'synthetic', agent_output_audio_format: 'pcm_48000', user_input_audio_format: 'pcm_48000' } as never);
+  await tick(); await tick();
+  assert.deepEqual(h.calls.filter(call => call.startsWith('message:')), ['message:Please explain this term in simple words.']);
+  await session.end();
+});
