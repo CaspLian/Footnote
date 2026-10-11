@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="en">
+<head>
+<base href="../../src/">
+<meta charset="utf-8">
+<title>Itemized Statement - Linnet Valley Medical Center (SPECIMEN)</title>
+<!-- Template. build.py fills every double-brace token from src/scenario.json and prints it with headless Chrome.
+     Edit amounts in scenario.json, not here. -->
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/itemized-bill.css">
+</head>
+<body>
+
+<!-- ============================== PAGE 1: statement summary + coupon ============================== -->
+<section class="page p1">
+
+  <header class="hdr">
+    <div class="brand">
+      <svg class="logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 262 50" role="img" aria-label="Linnet Valley Medical Center">
+  <defs>
+    <clipPath id="lvmc-disc-1"><circle cx="24" cy="25" r="22.5"/></clipPath>
+  </defs>
+  <circle cx="24" cy="25" r="22.5" fill="#1f3a5c"/>
+  <g clip-path="url(#lvmc-disc-1)">
+    <path d="M0 35.5 C7 27.5 14.5 26 22.5 33 C28 27.6 36.5 25.6 49 31 L49 50 L0 50 Z" fill="#fff"/>
+    <path d="M0 41 C9 35.5 17 35.8 24.5 40.5 C32 36 40 35.2 49 38.6 L49 50 L0 50 Z" fill="#8fa6bf"/>
+  </g>
+  <path d="M25.5 15.6 q3.2 -3.4 6.4 0 q3.2 -3.4 6.4 0" fill="none" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="56" y="25.5" font-family="Georgia, 'Times New Roman', serif" font-size="22.5" fill="#1f3a5c" letter-spacing="0.2">Linnet Valley</text>
+  <text x="57" y="41" font-family="Arial, 'Liberation Sans', Helvetica, sans-serif" font-size="8.4" font-weight="700" fill="#1f3a5c" letter-spacing="2.7">MEDICAL CENTER</text>
+</svg>
+      <div class="ret">Patient Financial Services &middot; PO Box 6614 &middot; Brayford, OH 43066-6614</div>
+    </div>
+    <div class="docid">
+      <div class="title">Itemized Statement</div>
+      <div class="sub">Hospital services &middot; Statement date 10/07/2026</div>
+      <div class="pageno">Page 1 of 3</div>
+    </div>
+  </header>
+
+  <div class="top">
+    <div class="col-l">
+      <h2 class="label">Account information</h2>
+      <table class="kv">
+        <tr><th>Guarantor</th><td>Daniel R. Kessler</td></tr>
+        <tr><th>Guarantor account no.</th><td><b>3041872296</b></td></tr>
+        <tr><th>Patient</th><td>Daniel R. Kessler</td></tr>
+        <tr><th>Hospital account no.</th><td>5002611873</td></tr>
+        <tr><th>Date of service</th><td>09/14/2026</td></tr>
+        <tr><th>Patient type</th><td>Emergency (outpatient) &middot; Emergency Department</td></tr>
+        <tr><th>Primary insurance</th><td>Pellridge Health Plan</td></tr>
+        <tr><th>Member ID / Group no.</th><td>PLR482917365 / 0471163</td></tr>
+        <tr><th>Insurance status</th><td>Billed 09/16/2026 &middot; Processed 10/01/2026</td></tr>
+      </table>
+
+      <div class="msg">
+        <h2 class="label">Message about your account</h2>
+        <p>Pellridge Health Plan has processed the claim for this visit. After the insurance payment and adjustment
+        posted on 10/05/2026, the remaining balance is your responsibility. Please pay the amount due
+        by 11/02/2026, or call us to set up an interest-free payment plan.</p>
+      </div>
+    </div>
+
+    <div class="col-r">
+      <div class="due-box">
+        <div class="due-band">Amount due</div>
+        <div class="due-amt num">$1,563.35</div>
+        <div class="due-date">Please pay by <b>11/02/2026</b></div>
+      </div>
+
+      <h2 class="label">Account summary</h2>
+      <table class="summary">
+        <tr><th>Total charges</th><td class="num">9,149.50</td></tr>
+        <tr><th>Insurance payments</th><td class="num">-1,691.70</td></tr>
+        <tr><th>Insurance adjustments</th><td class="num">-5,894.45</td></tr>
+        <tr><th>Patient payments</th><td class="num">0.00</td></tr>
+        <tr class="bal"><th>Balance due</th><td class="num">$1,563.35</td></tr>
+      </table>
+      <p class="fine">Charges, payments and adjustments are itemized on page 2.</p>
+
+      <h2 class="label aging-label">Account aging</h2>
+      <table class="aging">
+        <tr><th>Current</th><th>31&ndash;60 days</th><th>61&ndash;90 days</th><th>Over 90 days</th></tr>
+        <tr><td class="num">1,563.35</td><td class="num">0.00</td><td class="num">0.00</td><td class="num">0.00</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="ways">
+    <h2 class="label">Ways to pay</h2>
+    <div class="ways-grid">
+      <div class="w online">
+        <div class="qr"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 37 37" class="qr"><path fill="#fff" d="M0 0h37v37h-37z"/><path class="qrline" stroke="#000" d="M2 2.5h7m3 0h3m1 0h1m1 0h1m1 0h6m2 0h7m-33 1h1m5 0h1m8 0h2m1 0h1m7 0h1m5 0h1m-33 1h1m1 0h3m1 0h1m1 0h1m1 0h2m2 0h1m1 0h1m2 0h3m4 0h1m1 0h3m1 0h1m-33 1h1m1 0h3m1 0h1m1 0h1m2 0h2m5 0h2m6 0h1m1 0h3m1 0h1m-33 1h1m1 0h3m1 0h1m1 0h1m1 0h1m1 0h1m1 0h3m3 0h5m1 0h1m1 0h3m1 0h1m-33 1h1m5 0h1m1 0h1m10 0h1m1 0h2m3 0h1m5 0h1m-33 1h7m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h7m-25 1h3m1 0h1m3 0h1m2 0h3m1 0h1m-24 1h1m1 0h5m3 0h5m2 0h1m1 0h1m2 0h1m1 0h1m1 0h5m-31 1h2m1 0h2m4 0h2m1 0h2m3 0h1m1 0h1m1 0h3m2 0h2m1 0h2m1 0h1m-33 1h8m1 0h9m2 0h1m3 0h1m3 0h1m1 0h2m-32 1h1m2 0h1m3 0h3m2 0h2m1 0h4m2 0h1m1 0h1m1 0h2m1 0h5m-32 1h2m2 0h2m1 0h3m1 0h1m1 0h3m2 0h2m2 0h1m4 0h2m1 0h2m-30 1h1m4 0h4m1 0h1m1 0h1m1 0h2m2 0h7m2 0h3m-31 1h1m3 0h2m1 0h1m1 0h1m3 0h2m1 0h1m1 0h1m1 0h1m1 0h3m2 0h3m-32 1h5m4 0h1m1 0h1m1 0h3m2 0h1m2 0h1m2 0h3m1 0h3m-31 1h2m1 0h1m2 0h1m3 0h1m1 0h1m2 0h1m1 0h1m2 0h1m1 0h4m1 0h2m3 0h1m-28 1h1m4 0h2m1 0h1m2 0h1m1 0h3m2 0h1m2 0h2m1 0h4m-32 1h1m3 0h2m2 0h2m1 0h1m1 0h2m2 0h1m1 0h2m2 0h1m2 0h2m1 0h1m-31 1h1m1 0h3m4 0h2m1 0h2m1 0h2m3 0h4m3 0h5m-31 1h1m4 0h4m1 0h4m3 0h1m4 0h1m4 0h2m2 0h1m-33 1h1m2 0h1m3 0h1m1 0h2m1 0h1m1 0h3m3 0h8m2 0h1m1 0h1m-33 1h1m1 0h1m1 0h1m1 0h1m2 0h2m7 0h2m1 0h1m3 0h3m1 0h1m1 0h1m-32 1h1m4 0h1m2 0h2m1 0h1m4 0h1m2 0h4m1 0h1m4 0h2m-31 1h1m1 0h1m2 0h2m1 0h3m2 0h1m3 0h1m1 0h1m2 0h1m1 0h5m-21 1h3m2 0h1m2 0h6m2 0h1m3 0h1m1 0h3m-33 1h7m3 0h2m1 0h1m1 0h1m1 0h1m4 0h3m1 0h1m1 0h1m1 0h2m-32 1h1m5 0h1m1 0h1m1 0h3m2 0h1m1 0h2m1 0h2m1 0h2m3 0h4m-32 1h1m1 0h3m1 0h1m1 0h2m1 0h2m2 0h2m2 0h1m1 0h1m2 0h6m-30 1h1m1 0h3m1 0h1m1 0h1m2 0h1m1 0h1m1 0h1m1 0h2m4 0h3m2 0h1m1 0h3m-33 1h1m1 0h3m1 0h1m1 0h2m1 0h1m2 0h3m4 0h2m3 0h2m1 0h1m-30 1h1m5 0h1m2 0h3m2 0h2m5 0h1m1 0h1m1 0h1m2 0h3m-31 1h7m1 0h1m1 0h1m3 0h4m4 0h1m1 0h1m2 0h1m1 0h1m1 0h1"/></svg></div>
+        <div><b>Online</b><br>linnetvalley.example/pay<br>or scan the code with your phone camera</div>
+      </div>
+      <div class="w"><b>By phone</b><br><span class="nowrap">(614) 555-0143</span> (TTY 711)<br>Monday&ndash;Friday<br>8 a.m.&ndash;6 p.m. ET</div>
+      <div class="w"><b>By mail</b><br>Mail the lower portion with your check. Write your account no. on the check.</div>
+      <div class="w"><b>In person</b><br>Cashier, Main Lobby<br>Monday&ndash;Friday<br>7:30 a.m.&ndash;5 p.m.</div>
+    </div>
+  </div>
+
+  <div class="fa">
+    <h2>Need help paying your bill? Financial assistance is available.</h2>
+    <p>You may qualify for free or discounted care under the Linnet Valley Medical Center Financial Assistance
+    Policy, based on your household income and size, even if you have insurance. Call Financial Counseling at
+    <b><span class="nowrap">(614) 555-0147</span></b> (Monday–Friday, 8 a.m.–4:30 p.m. ET) for help with the application, or get the policy,
+    the application and a plain language summary free of charge at <b>linnetvalley.example/financial-assistance</b>.
+    A summary is on page 3. Questions about this statement? Call Patient Financial Services at <b><span class="nowrap">(614) 555-0143</span></b>.</p>
+  </div>
+  <p class="physician-note"><b>Please note:</b> This statement includes hospital charges only. Physicians who treated you during this
+  visit, such as the emergency physician and the radiologist who read your imaging, bill separately for their professional services.</p>
+
+  <!-- ---------- tear line at the lower third (tri-fold) ---------- -->
+  <div class="perf"><span>Please detach and return the lower portion with your payment. Keep the upper portion for your records.</span></div>
+
+  <div class="coupon">
+    <div class="c-left">
+      <div class="c-ret">
+        <svg class="logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 262 50" role="img" aria-label="Linnet Valley Medical Center">
+  <defs>
+    <clipPath id="lvmc-disc-2"><circle cx="24" cy="25" r="22.5"/></clipPath>
+  </defs>
+  <circle cx="24" cy="25" r="22.5" fill="#1f3a5c"/>
+  <g clip-path="url(#lvmc-disc-2)">
+    <path d="M0 35.5 C7 27.5 14.5 26 22.5 33 C28 27.6 36.5 25.6 49 31 L49 50 L0 50 Z" fill="#fff"/>
+    <path d="M0 41 C9 35.5 17 35.8 24.5 40.5 C32 36 40 35.2 49 38.6 L49 50 L0 50 Z" fill="#8fa6bf"/>
+  </g>
+  <path d="M25.5 15.6 q3.2 -3.4 6.4 0 q3.2 -3.4 6.4 0" fill="none" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="56" y="25.5" font-family="Georgia, 'Times New Roman', serif" font-size="22.5" fill="#1f3a5c" letter-spacing="0.2">Linnet Valley</text>
+  <text x="57" y="41" font-family="Arial, 'Liberation Sans', Helvetica, sans-serif" font-size="8.4" font-weight="700" fill="#1f3a5c" letter-spacing="2.7">MEDICAL CENTER</text>
+</svg>
+        <div class="c-ret-addr">PO BOX 6614<br>BRAYFORD OH 43066-6614</div>
+        <div class="endorse">ELECTRONIC SERVICE REQUESTED</div>
+      </div>
+    </div>
+    <div class="c-addr">
+      <div class="presort">AUTO**5-DIGIT 43066 T4 P1 B014</div>
+      <svg class="imb" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2932.0 145" style="width:2.932in;height:0.145in" aria-hidden="true"><rect x="0.0" y="47.5" width="20" height="50.0"/><rect x="45.5" y="47.5" width="20" height="97.5"/><rect x="91.0" y="0.0" width="20" height="145.0"/><rect x="136.5" y="0.0" width="20" height="97.5"/><rect x="182.0" y="47.5" width="20" height="50.0"/><rect x="227.5" y="47.5" width="20" height="50.0"/><rect x="273.0" y="47.5" width="20" height="97.5"/><rect x="318.5" y="47.5" width="20" height="50.0"/><rect x="364.0" y="47.5" width="20" height="50.0"/><rect x="409.5" y="0.0" width="20" height="97.5"/><rect x="455.0" y="0.0" width="20" height="145.0"/><rect x="500.5" y="47.5" width="20" height="50.0"/><rect x="546.0" y="0.0" width="20" height="97.5"/><rect x="591.5" y="47.5" width="20" height="50.0"/><rect x="637.0" y="0.0" width="20" height="145.0"/><rect x="682.5" y="0.0" width="20" height="145.0"/><rect x="728.0" y="47.5" width="20" height="97.5"/><rect x="773.5" y="0.0" width="20" height="145.0"/><rect x="819.0" y="0.0" width="20" height="145.0"/><rect x="864.5" y="0.0" width="20" height="97.5"/><rect x="910.0" y="0.0" width="20" height="145.0"/><rect x="955.5" y="0.0" width="20" height="145.0"/><rect x="1001.0" y="47.5" width="20" height="50.0"/><rect x="1046.5" y="0.0" width="20" height="97.5"/><rect x="1092.0" y="0.0" width="20" height="97.5"/><rect x="1137.5" y="0.0" width="20" height="145.0"/><rect x="1183.0" y="47.5" width="20" height="97.5"/><rect x="1228.5" y="0.0" width="20" height="97.5"/><rect x="1274.0" y="47.5" width="20" height="50.0"/><rect x="1319.5" y="47.5" width="20" height="50.0"/><rect x="1365.0" y="47.5" width="20" height="97.5"/><rect x="1410.5" y="47.5" width="20" height="97.5"/><rect x="1456.0" y="0.0" width="20" height="97.5"/><rect x="1501.5" y="47.5" width="20" height="50.0"/><rect x="1547.0" y="0.0" width="20" height="145.0"/><rect x="1592.5" y="0.0" width="20" height="97.5"/><rect x="1638.0" y="0.0" width="20" height="97.5"/><rect x="1683.5" y="0.0" width="20" height="145.0"/><rect x="1729.0" y="47.5" width="20" height="50.0"/><rect x="1774.5" y="0.0" width="20" height="97.5"/><rect x="1820.0" y="47.5" width="20" height="97.5"/><rect x="1865.5" y="47.5" width="20" height="50.0"/><rect x="1911.0" y="47.5" width="20" height="50.0"/><rect x="1956.5" y="0.0" width="20" height="145.0"/><rect x="2002.0" y="47.5" width="20" height="50.0"/><rect x="2047.5" y="0.0" width="20" height="145.0"/><rect x="2093.0" y="47.5" width="20" height="50.0"/><rect x="2138.5" y="0.0" width="20" height="97.5"/><rect x="2184.0" y="47.5" width="20" height="97.5"/><rect x="2229.5" y="0.0" width="20" height="145.0"/><rect x="2275.0" y="0.0" width="20" height="97.5"/><rect x="2320.5" y="0.0" width="20" height="97.5"/><rect x="2366.0" y="0.0" width="20" height="97.5"/><rect x="2411.5" y="47.5" width="20" height="97.5"/><rect x="2457.0" y="47.5" width="20" height="50.0"/><rect x="2502.5" y="0.0" width="20" height="145.0"/><rect x="2548.0" y="0.0" width="20" height="97.5"/><rect x="2593.5" y="47.5" width="20" height="97.5"/><rect x="2639.0" y="0.0" width="20" height="145.0"/><rect x="2684.5" y="47.5" width="20" height="97.5"/><rect x="2730.0" y="0.0" width="20" height="145.0"/><rect x="2775.5" y="47.5" width="20" height="50.0"/><rect x="2821.0" y="0.0" width="20" height="145.0"/><rect x="2866.5" y="0.0" width="20" height="97.5"/><rect x="2912.0" y="47.5" width="20" height="50.0"/></svg>
+      <div class="addr">DANIEL R KESSLER<br>418 COTTONWOOD RUN APT 3B<br>BRAYFORD OH 43066-2817</div>
+    </div>
+
+    <div class="c-right">
+      <table class="c-grid">
+        <colgroup><col style="width:30%"><col style="width:36%"><col style="width:34%"></colgroup>
+        <tr><th>Statement date</th><th>Account no.</th><th>Due date</th></tr>
+        <tr><td>10/07/2026</td><td>3041872296</td><td>11/02/2026</td></tr>
+        <tr><th colspan="2">Amount due</th><th>Amount enclosed</th></tr>
+        <tr class="amt"><td colspan="2" class="num">$1,563.35</td><td class="enclosed">$</td></tr>
+      </table>
+
+      <table class="card">
+        <tr><td colspan="2" class="ct">Paying by card? Check one: <span class="cb"></span>VISA <span class="cb"></span>MASTERCARD <span class="cb"></span>DISCOVER <span class="cb"></span>AMEX</td></tr>
+        <tr><td class="w68"><span class="l">Card number</span></td><td><span class="l">Exp. date</span></td></tr>
+        <tr><td colspan="2"><span class="l">Signature</span></td></tr>
+      </table>
+      <div class="change"><span class="cb"></span>Address or insurance changed? Check here and complete the form on page 3.</div>
+    </div>
+
+    <div class="remit">
+      <div class="remit-h">Make checks payable to:</div>
+      <div class="addr">LINNET VALLEY MEDICAL CENTER<br>PO BOX 2290<br>BRAYFORD OH 43066-2290</div>
+    </div>
+
+    <div class="scanline ocr">3041872296 0000156335 2</div>
+  </div>
+
+  <div class="specimen">SPECIMEN · Synthetic document for product demonstration · All names and numbers are fictional</div>
+</section>
+
+<!-- ============================== PAGE 2: itemized detail ============================== -->
+<section class="page p2">
+  <header class="hdr run">
+    <div class="brand"><svg class="logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 262 50" role="img" aria-label="Linnet Valley Medical Center">
+  <defs>
+    <clipPath id="lvmc-disc-1"><circle cx="24" cy="25" r="22.5"/></clipPath>
+  </defs>
+  <circle cx="24" cy="25" r="22.5" fill="#1f3a5c"/>
+  <g clip-path="url(#lvmc-disc-1)">
+    <path d="M0 35.5 C7 27.5 14.5 26 22.5 33 C28 27.6 36.5 25.6 49 31 L49 50 L0 50 Z" fill="#fff"/>
+    <path d="M0 41 C9 35.5 17 35.8 24.5 40.5 C32 36 40 35.2 49 38.6 L49 50 L0 50 Z" fill="#8fa6bf"/>
+  </g>
+  <path d="M25.5 15.6 q3.2 -3.4 6.4 0 q3.2 -3.4 6.4 0" fill="none" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="56" y="25.5" font-family="Georgia, 'Times New Roman', serif" font-size="22.5" fill="#1f3a5c" letter-spacing="0.2">Linnet Valley</text>
+  <text x="57" y="41" font-family="Arial, 'Liberation Sans', Helvetica, sans-serif" font-size="8.4" font-weight="700" fill="#1f3a5c" letter-spacing="2.7">MEDICAL CENTER</text>
+</svg></div>
+    <div class="docid">
+      <div class="title">Itemized Statement</div>
+      <div class="sub">Guarantor account no. 3041872296 &middot; Statement date 10/07/2026</div>
+      <div class="pageno">Page 2 of 3</div>
+    </div>
+  </header>
+
+  <table class="visit">
+    <tr>
+      <th>Patient</th><th>Hospital account no.</th><th>Admit / service date</th><th>Discharge date</th><th>Patient type</th><th>Primary insurance</th>
+    </tr>
+    <tr>
+      <td>Daniel R. Kessler</td><td>5002611873</td><td>09/14/2026</td><td>09/14/2026</td><td>Emergency (outpatient)</td><td>Pellridge Health Plan</td>
+    </tr>
+  </table>
+
+  <h2 class="section">Itemized detail of charges</h2>
+  <p class="intro">Hospital charges for this visit, before insurance, listed by revenue code (the hospital department) and
+  CPT/HCPCS code (the service, drug or supply), with any billing modifier (Mod). Units are the number billed for that line.</p>
+
+  <table class="items">
+    <thead>
+      <tr><th class="d">Service date</th><th class="rev">Rev code</th><th class="cpt">CPT/HCPCS</th><th class="mod">Mod</th><th class="desc">Description</th><th class="u num">Units</th><th class="amt num">Charges</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>09/14/2026</td><td>0258</td><td class="cpt">J7030</td><td class="mod"></td><td>HC SODIUM CHLORIDE 0.9% 1000 ML</td><td class="num">1</td><td class="num">118.00</td></tr>
+      <tr><td>09/14/2026</td><td>0260</td><td class="cpt">96374</td><td class="mod"></td><td>HC IV PUSH SINGLE/INITIAL DRUG</td><td class="num">1</td><td class="num">486.00</td></tr>
+      <tr><td>09/14/2026</td><td>0260</td><td class="cpt">96375</td><td class="mod"></td><td>HC IV PUSH EA ADDL SEQ NEW DRUG</td><td class="num">1</td><td class="num">214.00</td></tr>
+      <tr><td>09/14/2026</td><td>0260</td><td class="cpt">96361</td><td class="mod"></td><td>HC IV HYDRATION EA ADDL HOUR</td><td class="num">1</td><td class="num">158.00</td></tr>
+      <tr><td>09/14/2026</td><td>0270</td><td class="cpt none"></td><td class="mod"></td><td>HC MED/SURG SUPPLIES MISC</td><td class="num">1</td><td class="num">486.50</td></tr>
+      <tr><td>09/14/2026</td><td>0300</td><td class="cpt">36415</td><td class="mod"></td><td>HC VENIPUNCTURE ROUTINE</td><td class="num">1</td><td class="num">38.00</td></tr>
+      <tr><td>09/14/2026</td><td>0301</td><td class="cpt">80053</td><td class="mod"></td><td>HC COMPREHENSIVE METABOLIC PANEL</td><td class="num">1</td><td class="num">268.00</td></tr>
+      <tr><td>09/14/2026</td><td>0301</td><td class="cpt">80053</td><td class="mod"></td><td>HC COMPREHENSIVE METABOLIC PANEL</td><td class="num">1</td><td class="num">268.00</td></tr>
+      <tr><td>09/14/2026</td><td>0301</td><td class="cpt">83690</td><td class="mod"></td><td>HC LIPASE</td><td class="num">1</td><td class="num">146.00</td></tr>
+      <tr><td>09/14/2026</td><td>0305</td><td class="cpt">85025</td><td class="mod"></td><td>HC CBC W/AUTO DIFF</td><td class="num">1</td><td class="num">164.00</td></tr>
+      <tr><td>09/14/2026</td><td>0307</td><td class="cpt">81003</td><td class="mod"></td><td>HC URINALYSIS AUTO W/O MICRO</td><td class="num">1</td><td class="num">74.00</td></tr>
+      <tr><td>09/14/2026</td><td>0350</td><td class="cpt">74177</td><td class="mod"></td><td>HC CT ABD &amp; PELVIS W/CONTRAST</td><td class="num">1</td><td class="num">4,182.00</td></tr>
+      <tr><td>09/14/2026</td><td>0450</td><td class="cpt">99284</td><td class="mod">25</td><td>HC ED FACILITY LEVEL 4</td><td class="num">1</td><td class="num">2,148.00</td></tr>
+      <tr><td>09/14/2026</td><td>0636</td><td class="cpt">J2405</td><td class="mod"></td><td>HC ONDANSETRON HCL INJ 1 MG</td><td class="num">4</td><td class="num">88.00</td></tr>
+      <tr><td>09/14/2026</td><td>0636</td><td class="cpt">J2270</td><td class="mod"></td><td>HC MORPHINE SULFATE INJ UP TO 10 MG</td><td class="num">1</td><td class="num">71.00</td></tr>
+      <tr><td>09/14/2026</td><td>0636</td><td class="cpt">Q9967</td><td class="mod"></td><td>HC LOCM 300-399 MG/ML IODINE PER ML</td><td class="num">100</td><td class="num">240.00</td></tr>
+    </tbody>
+    <tfoot>
+      <tr><td colspan="5">Total charges &middot; 16 lines</td><td></td><td class="num">9,149.50</td></tr>
+    </tfoot>
+  </table>
+
+  <h2 class="section">Payments and adjustments</h2>
+  <table class="activity">
+    <thead><tr><th class="d">Posted</th><th class="desc">Description</th><th class="amt num">Amount</th></tr></thead>
+    <tbody>
+      <tr><td>10/05/2026</td><td>Insurance payment &ndash; Pellridge Health Plan</td><td class="num">-1,691.70</td></tr>
+      <tr><td>10/05/2026</td><td>Insurance contractual adjustment &ndash; Pellridge Health Plan</td><td class="num">-5,894.45</td></tr>
+    </tbody>
+    <tfoot><tr><td></td><td>Total payments and adjustments</td><td class="num">-7,586.15</td></tr></tfoot>
+  </table>
+
+  <table class="balance">
+    <tr><th>Total charges</th><td class="num">9,149.50</td></tr>
+    <tr><th>Insurance payments</th><td class="num">-1,691.70</td></tr>
+    <tr><th>Insurance adjustments</th><td class="num">-5,894.45</td></tr>
+    <tr><th>Patient payments</th><td class="num">0.00</td></tr>
+    <tr class="bal"><th>Balance due by 11/02/2026</th><td class="num">$1,563.35</td></tr>
+  </table>
+
+  <div class="terms">
+    <h3>About these charges</h3>
+    <p><b>Rev code</b> is the hospital department that provided the item or service, such as 0301 for chemistry
+    lab tests or 0450 for the emergency department. <b>CPT/HCPCS</b> identifies the specific service, drug or supply.
+    <b>Insurance adjustments</b> are the amounts your insurer&rsquo;s contract does not allow the hospital to collect.
+    Compare this statement with the Explanation of Benefits from your insurer; if they do not match, call us at
+    <span class="nowrap">(614) 555-0143</span> before you pay. You may ask for an itemized statement at any time at no charge.</p>
+  </div>
+
+  <div class="form-id">LVMC-PFS-ITM 06/26</div>
+  <div class="specimen">SPECIMEN · Synthetic document for product demonstration · All names and numbers are fictional</div>
+</section>
+
+<!-- ============================== PAGE 3: notices ============================== -->
+<section class="page p3">
+  <header class="hdr run">
+    <div class="brand"><svg class="logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 262 50" role="img" aria-label="Linnet Valley Medical Center">
+  <defs>
+    <clipPath id="lvmc-disc-1"><circle cx="24" cy="25" r="22.5"/></clipPath>
+  </defs>
+  <circle cx="24" cy="25" r="22.5" fill="#1f3a5c"/>
+  <g clip-path="url(#lvmc-disc-1)">
+    <path d="M0 35.5 C7 27.5 14.5 26 22.5 33 C28 27.6 36.5 25.6 49 31 L49 50 L0 50 Z" fill="#fff"/>
+    <path d="M0 41 C9 35.5 17 35.8 24.5 40.5 C32 36 40 35.2 49 38.6 L49 50 L0 50 Z" fill="#8fa6bf"/>
+  </g>
+  <path d="M25.5 15.6 q3.2 -3.4 6.4 0 q3.2 -3.4 6.4 0" fill="none" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="56" y="25.5" font-family="Georgia, 'Times New Roman', serif" font-size="22.5" fill="#1f3a5c" letter-spacing="0.2">Linnet Valley</text>
+  <text x="57" y="41" font-family="Arial, 'Liberation Sans', Helvetica, sans-serif" font-size="8.4" font-weight="700" fill="#1f3a5c" letter-spacing="2.7">MEDICAL CENTER</text>
+</svg></div>
+    <div class="docid">
+      <div class="title">Important information</div>
+      <div class="sub">Guarantor account no. 3041872296 &middot; Statement date 10/07/2026</div>
+      <div class="pageno">Page 3 of 3</div>
+    </div>
+  </header>
+
+  <div class="cols">
+    <div class="col">
+      <h2 class="section">Financial assistance: plain language summary</h2>
+      <p>Linnet Valley Medical Center provides free or discounted emergency and other medically necessary care to
+      patients who qualify under our Financial Assistance Policy. You can apply whether or not you have insurance.</p>
+      <table class="fpl">
+        <thead><tr><th>Household income, as a percent of the Federal Poverty Guidelines</th><th class="num">Discount on your balance</th></tr></thead>
+        <tbody>
+          <tr><td>Up to 200%</td><td class="num">100% (free care)</td></tr>
+          <tr><td>201% to 300%</td><td class="num">75%</td></tr>
+          <tr><td>301% to 400%</td><td class="num">50%</td></tr>
+        </tbody>
+      </table>
+      <p>Patients who qualify will not be charged more for emergency or other medically necessary care than the
+      amounts generally billed to people who have insurance covering that care.</p>
+      <h3>How to apply</h3>
+      <ul>
+        <li>Online at linnetvalley.example/financial-assistance, or by phone at <span class="nowrap">(614) 555-0147</span>.</li>
+        <li>In person at Financial Counseling, Main Lobby, 2600 Linnet Valley Parkway, Brayford.</li>
+        <li>By mail: Financial Counseling, PO Box 6614, Brayford, OH 43066-6614.</li>
+      </ul>
+      <p>Include proof of household income, such as recent pay stubs or a tax return. You may apply up to 240 days
+      after the date of your first statement for this visit. We will not send your account to a collection agency
+      while your application is being reviewed. Copies of the policy, the application and this summary are free,
+      and are available in Spanish and other languages.</p>
+
+      <h2 class="section">Questions about your bill</h2>
+      <p>Call Patient Financial Services at <span class="nowrap">(614) 555-0143</span> (TTY 711), Monday–Friday, 8 a.m.–6 p.m. ET. Please have your
+      guarantor account number ready.</p>
+      <h3>If you think a charge is wrong</h3>
+      <p>Call us, or write to Billing Review, Patient Financial Services, PO Box 6614, Brayford, OH
+      43066-6614. Include your guarantor account number, the date of service, the charge you are
+      questioning and the reason. We will place your account on hold while we review it.</p>
+      <h3>Payment plans</h3>
+      <p>If you cannot pay the full balance by the due date, call us to set up an interest-free monthly payment plan.
+      Balances with no payment or payment plan may be placed with a collection agency, but not until at least 120
+      days after your first statement.</p>
+    </div>
+
+    <div class="col">
+      <h2 class="section">Insurance</h2>
+      <p>We bill your insurance for you. Your insurer sends you an Explanation of Benefits (EOB) that shows what it
+      paid and what you may owe. The balance on this statement should match the amount your EOB lists as your
+      responsibility.</p>
+
+      <h2 class="section">Protection from surprise medical bills</h2>
+      <p>Federal law protects you from surprise bills (balance billing) for emergency care and for care from
+      out-of-network providers at an in-network hospital: you should not be charged more than your plan&rsquo;s
+      copayment, coinsurance and deductible. Wrongly billed? Call <span class="nowrap">(614) 555-0143</span>. Full notice:
+      linnetvalley.example/surprise-billing.</p>
+
+      <h2 class="section">Address or insurance changes</h2>
+      <p class="fine">Complete this form and return it with the lower portion of page 1, or call us.</p>
+      <table class="form">
+        <tr><td colspan="2"><span>Name</span></td></tr>
+        <tr><td colspan="2"><span>Street address</span></td></tr>
+        <tr><td><span>City, state, ZIP</span></td><td class="w40"><span>Phone</span></td></tr>
+        <tr><td><span>Insurance company</span></td><td class="w40"><span>Member ID</span></td></tr>
+        <tr><td><span>Policyholder name</span></td><td class="w40"><span>Group no.</span></td></tr>
+      </table>
+
+      <h2 class="section">Notice of nondiscrimination</h2>
+      <p>Linnet Valley Medical Center complies with applicable Federal civil rights laws and does not discriminate on
+      the basis of race, color, national origin, age, disability, or sex. We provide free aids and services to people
+      with disabilities to communicate effectively with us, such as qualified sign language interpreters and written
+      information in other formats, and free language services to people whose primary language is not English, such
+      as qualified interpreters and information written in other languages. To request these services, call
+      <span class="nowrap">(614) 555-0143</span> (TTY 711). If you believe we have failed to provide these services or discriminated in
+      another way, you can file a grievance with our Civil Rights Coordinator at <span class="nowrap">(614) 555-0151</span>, or by mail
+      at PO Box 6614, Brayford, OH 43066-6614. You can also file a civil rights
+      complaint with the U.S. Department of Health and Human Services, Office for Civil Rights.</p>
+    </div>
+  </div>
+
+  <div class="lang">
+    <h2 class="section">Language assistance</h2>
+    <p class="lang-en">ATTENTION: If you speak a language other than English, language assistance services, free of charge, are
+    available to you. Call <span class="nowrap">(614) 555-0143</span> (TTY: 711).</p>
+    <div class="taglines">
+      <p class="tl" lang="es"><span class="ln">Español (Spanish)</span><br>ATENCIÓN: si habla español, tiene a su disposición servicios gratuitos de asistencia lingüística. Llame al <span class="nowrap">(614) 555-0143</span> (TTY: 711).</p>
+      <p class="tl" lang="zh-Hant"><span class="ln">繁體中文 (Chinese)</span><br>注意：如果您使用繁體中文，您可以免費獲得語言援助服務。請致電 <span class="nowrap">(614) 555-0143</span>（TTY：711）。</p>
+      <p class="tl" lang="vi"><span class="ln">Tiếng Việt (Vietnamese)</span><br>CHÚ Ý: Nếu bạn nói Tiếng Việt, có các dịch vụ hỗ trợ ngôn ngữ miễn phí dành cho bạn. Gọi số <span class="nowrap">(614) 555-0143</span> (TTY: 711).</p>
+      <p class="tl" lang="ko"><span class="ln">한국어 (Korean)</span><br>주의: 한국어를 사용하시는 경우, 언어 지원 서비스를 무료로 이용하실 수 있습니다. <span class="nowrap">(614) 555-0143</span> (TTY: 711)번으로 전화해 주십시오.</p>
+      <p class="tl" lang="tl"><span class="ln">Tagalog (Tagalog – Filipino)</span><br>PAUNAWA: Kung nagsasalita ka ng Tagalog, maaari kang gumamit ng mga serbisyo ng tulong sa wika nang walang bayad. Tumawag sa <span class="nowrap">(614) 555-0143</span> (TTY: 711).</p>
+      <p class="tl" lang="ru"><span class="ln">Русский (Russian)</span><br>ВНИМАНИЕ: Если вы говорите на русском языке, то вам доступны бесплатные услуги перевода. Звоните <span class="nowrap">(614) 555-0143</span> (телетайп: 711).</p>
+      <p class="tl" lang="ar" dir="rtl"><span class="ln">العربية (Arabic)</span><br>ملحوظة: إذا كنت تتحدث اللغة العربية، فإن خدمات المساعدة اللغوية تتوافر لك بالمجان. اتصل برقم <span dir="ltr"><span class="nowrap">(614) 555-0143</span></span> (رقم هاتف الصم والبكم: <span dir="ltr">711</span>).</p>
+      <p class="tl" lang="fr"><span class="ln">Français (French)</span><br>ATTENTION : Si vous parlez français, des services d’aide linguistique vous sont proposés gratuitement. Appelez le <span class="nowrap">(614) 555-0143</span> (ATS : 711).</p>
+      <p class="tl" lang="ht"><span class="ln">Kreyòl Ayisyen (French Creole)</span><br>ATANSYON: Si w pale Kreyòl Ayisyen, gen sèvis èd pou lang ki disponib gratis pou ou. Rele <span class="nowrap">(614) 555-0143</span> (TTY: 711).</p>
+      <p class="tl" lang="pt"><span class="ln">Português (Portuguese)</span><br>ATENÇÃO: Se fala português, encontram-se disponíveis serviços linguísticos, grátis. Ligue para <span class="nowrap">(614) 555-0143</span> (TTY: 711).</p>
+      <p class="tl" lang="it"><span class="ln">Italiano (Italian)</span><br>ATTENZIONE: In caso la lingua parlata sia l’italiano, sono disponibili servizi di assistenza linguistica gratuiti. Chiamare il numero <span class="nowrap">(614) 555-0143</span> (TTY: 711).</p>
+      <p class="tl" lang="pl"><span class="ln">Polski (Polish)</span><br>UWAGA: Jeżeli mówisz po polsku, możesz skorzystać z bezpłatnej pomocy językowej. Zadzwoń pod numer <span class="nowrap">(614) 555-0143</span> (TTY: 711).</p>
+      <p class="tl" lang="de"><span class="ln">Deutsch (German)</span><br>ACHTUNG: Wenn Sie Deutsch sprechen, stehen Ihnen kostenlos sprachliche Hilfsdienstleistungen zur Verfügung. Rufnummer: <span class="nowrap">(614) 555-0143</span> (TTY: 711).</p>
+      <p class="tl" lang="ja"><span class="ln">日本語 (Japanese)</span><br>注意事項：日本語を話される場合、無料の言語支援をご利用いただけます。<span class="nowrap">(614) 555-0143</span>（TTY: 711）まで、お電話にてご連絡ください。</p>
+      <p class="tl" lang="hi"><span class="ln">हिंदी (Hindi)</span><br>ध्यान दें: यदि आप हिंदी बोलते हैं तो आपके लिए मुफ्त में भाषा सहायता सेवाएं उपलब्ध हैं। <span class="nowrap">(614) 555-0143</span> (TTY: 711) पर कॉल करें।</p>
+    </div>
+  </div>
+
+  <div class="form-id">LVMC-PFS-ITM 06/26</div>
+  <div class="specimen">SPECIMEN · Synthetic document for product demonstration · All names and numbers are fictional</div>
+</section>
+
+</body>
+</html>

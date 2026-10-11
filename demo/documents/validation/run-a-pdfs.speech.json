@@ -1,0 +1,17 @@
+{
+  "run": "run-a-pdfs",
+  "audit_id": "4caed0f7-3cf9-4b57-84eb-dcf77253e751",
+  "http_status": 200,
+  "seconds": 3.39,
+  "audio_bytes": 1161971,
+  "speech": {
+    "ok": true,
+    "audio_url": "/api/v1/voice/audio/d1ccb2812f70cf99a2e60d48df182b19",
+    "mime_type": "audio/mpeg",
+    "voice": "matilda",
+    "streaming": false,
+    "text": "You received a bill from Linnet Valley Medical Center for nine thousand one hundred forty-nine dollars and fifty cents for an emergency visit. Your insurance paid one thousand six hundred ninety-one dollars and seventy cents. The hospital says you owe one thousand five hundred sixty-three dollars and thirty-five cents, but your insurance paper says you only owe eight hundred eight dollars and eighty-five cents. Please call the hospital before paying because they may have billed you for duplicate and non-covered items by mistake. I also compared the charges with Medicare's national rates. CT scan of belly and pelvis with contrast dye was billed about 13.9 times Medicare's national rate. Additional IV medicine injection was billed about 13.6 times Medicare's national rate. 2 other charges also have a difference worth asking about. Medicare's rates are a reference, not proof of an error or a fair hospital price. For 1 charge, Medicare's reference covers only the doctor's part. The hospital's part is not included, so this cannot show whether those charges are high. Ask the billing office for an itemized explanation. It's worth asking the billing office about them.",
+    "error_code": null,
+    "error_message": null
+  }
+}

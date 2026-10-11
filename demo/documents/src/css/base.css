@@ -1,0 +1,71 @@
+/* Shared page mechanics for the Footnote demo documents.
+   Each .page is one US Letter sheet. The PDF is printed with @page margin 0, so all margins live inside .page
+   and every position below is in physical units (in / pt), exactly as it lands on paper. */
+
+@page { size: 8.5in 11in; margin: 0; }
+
+* { box-sizing: border-box; }
+
+html {
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+  -webkit-text-size-adjust: 100%;
+  font-kerning: normal;
+}
+
+body { margin: 0; background: #fff; color: #161616; }
+
+.page {
+  position: relative;
+  width: 8.5in;
+  height: 11in;
+  overflow: hidden;
+  background: #fff;
+  break-after: page;
+  page-break-after: always;
+}
+.page:last-of-type { break-after: auto; page-break-after: auto; }
+
+/* Screen preview only (out/html/*.html opened in a browser). */
+@media screen {
+  body { background: #7d8187; padding: 0.3in 0; }
+  .page { margin: 0 auto 0.3in; box-shadow: 0 1px 6px rgba(0, 0, 0, 0.35); }
+}
+
+/* The one-line specimen notice required on every page. Small, gray, out of the way. */
+.specimen {
+  position: absolute;
+  left: 0.5in;
+  right: 0.5in;
+  bottom: 0.3in;
+  font: 5.6pt/1 Arial, "Liberation Sans", Helvetica, sans-serif;
+  letter-spacing: 0.02em;
+  color: #8b8f94;
+  text-align: center;
+}
+.form-id {
+  position: absolute;
+  left: 0.5in;
+  bottom: 0.3in;
+  font: 5.6pt/1 Arial, "Liberation Sans", Helvetica, sans-serif;
+  color: #8b8f94;
+}
+
+.num { text-align: right; font-variant-numeric: tabular-nums lining-nums; white-space: nowrap; }
+.nowrap { white-space: nowrap; }
+.caps { text-transform: uppercase; }
+table { border-collapse: collapse; border-spacing: 0; }
+td, th { padding: 0; vertical-align: top; }
+p { margin: 0; }
+h1, h2, h3, h4 { margin: 0; font-weight: 700; }
+
+/* Intelligent Mail barcode and scan lines are drawn by build.py as inline SVG. */
+svg.imb { display: block; }
+svg.imb rect { fill: #000; }
+
+@font-face {
+  font-family: "OCR A Scan";
+  src: local("OCR A Extended"), local("OCRAExtended"), local("OCR A Std"), local("OCRAStd"),
+       url("file:///C:/Windows/Fonts/OCRAEXT.TTF");
+}
+.ocr { font-family: "OCR A Scan", "OCR A Extended", "OCR-A", "Courier New", monospace; letter-spacing: 0.02em; }

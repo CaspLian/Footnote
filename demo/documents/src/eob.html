@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>{{doc_title}}</title>
+<!-- Template. build.py fills every double-brace token from src/scenario.json (the adjudication is computed there)
+     and prints it with headless Chrome. Edit amounts in scenario.json, not here. -->
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/eob.css">
+</head>
+<body>
+
+<!-- ============================== PAGE 1: summary ============================== -->
+<section class="page p1">
+  <header class="hdr">
+    <div class="brand">
+      {{logo_html}}
+      <div class="ret">{{ins_name}} &middot; {{ins_po_box}} &middot; {{ins_city}}, {{ins_state}} {{ins_zip4}}</div>
+    </div>
+    <div class="docid">
+      <div class="title">Explanation of Benefits</div>
+      <div class="notbill">THIS IS NOT A BILL</div>
+      <div class="meta">Statement date <b>{{eob_statement_date_long}}</b></div>
+      <div class="pageno">Page 1 of {{page_count}}</div>
+    </div>
+  </header>
+
+  <div class="mail">
+    <div class="endorse">ADDRESS SERVICE REQUESTED</div>
+    <div class="presort">{{presort_line}}</div>
+    {{imb_member_html}}
+    <div class="addr">{{patient_mailing_name}}<br>{{patient_street_caps}}<br>{{patient_city_caps}} {{patient_state}} {{patient_zip4}}</div>
+  </div>
+
+  <div class="member">
+    <div class="band">Member information</div>
+    <table class="kv">
+      <tr><th>Member</th><td>{{patient_name}}</td></tr>
+      <tr><th>Member ID</th><td><b>{{member_id}}</b></td></tr>
+      <tr><th>Group no.</th><td>{{group_number}}</td></tr>
+      <tr><th>Group name</th><td>{{group_name}}</td></tr>
+      <tr><th>Plan</th><td>{{plan_name}}</td></tr>
+    </table>
+    <div class="help"><b>Questions?</b> Member Services <b>{{ins_phone_member_services}}</b> (TTY {{ins_tty}})<br>
+    {{ins_member_services_hours}} &middot; {{ins_website}}</div>
+  </div>
+
+  <p class="intro">This statement explains how your plan processed a claim from <b>{{hosp_name}}</b> for services on
+  {{date_of_service}}. <b>It is not a bill.</b> If you owe money, the provider will send you a bill. Before you pay,
+  check that the bill does not ask for more than the amount shown as <b>Your responsibility</b>.</p>
+
+  <div class="claimsum">
+    <table class="claimhead">
+      <tr><th>Patient</th><th>Provider</th><th>Service date</th><th>Claim no.</th><th>Processed</th></tr>
+      <tr><td>{{patient_name}} (self)</td><td>{{hosp_name}} &middot; {{network_status}}</td><td>{{date_of_service}}</td><td>{{claim_number}}</td><td>{{claim_processed_date}}</td></tr>
+    </table>
+    <table class="sumtable">
+      <tr><th>Amount billed</th><td class="num">{{t_billed_dollar}}</td><td class="why">What the provider charged for the {{line_count}} services on this claim.</td></tr>
+      <tr><th>Plan discount</th><td class="num">-{{t_discount}}</td><td class="why">Savings from Pellridge&rsquo;s contracted rates with this in-network provider. You do not owe this amount.</td></tr>
+      <tr><th>Not covered</th><td class="num">-{{t_not_covered}}</td><td class="why">Lines the plan did not pay: a duplicate line (code OA-18) and supplies included in the emergency room payment (code CO-97). You are not responsible for these amounts.</td></tr>
+      <tr class="sub"><th>Allowed amount</th><td class="num">{{t_allowed_dollar}}</td><td class="why">The amount the plan allows for the covered services.</td></tr>
+      <tr><th>Plan paid</th><td class="num">-{{t_plan_paid}}</td><td class="why">What Pellridge paid to the provider on {{payment_date}}.</td></tr>
+      <tr class="owe"><th>Your responsibility</th><td class="num">{{t_you_owe_dollar}}</td><td class="why">Deductible {{t_deductible_dollar}} + copay {{t_copay_dollar}} + coinsurance {{t_coinsurance_dollar}}. This is the most the provider may bill you for this claim. It does not show any payment you made at the time of service.</td></tr>
+    </table>
+  </div>
+
+  <div class="progress">
+    <h2 class="label">Your plan-year totals <span>{{plan_year_label}} &middot; {{coverage_tier}} &middot; In-network</span></h2>
+    <table class="acc">
+      <thead><tr><th></th><th class="num">Annual amount</th><th class="num">Applied to date</th><th class="num">Remaining</th><th class="barcol"></th></tr></thead>
+      <tbody>
+        <tr><th>Deductible</th><td class="num">{{deductible_annual}}</td><td class="num">{{deductible_applied}}</td><td class="num">{{deductible_remaining}}</td><td class="barcol"><div class="bar"><i style="width: {{deductible_pct}}%"></i></div></td></tr>
+        <tr><th>Out-of-pocket maximum</th><td class="num">{{oop_annual}}</td><td class="num">{{oop_applied}}</td><td class="num">{{oop_remaining}}</td><td class="barcol"><div class="bar"><i style="width: {{oop_pct}}%"></i></div></td></tr>
+      </tbody>
+    </table>
+    <p class="fine">Includes this claim: {{t_deductible_dollar}} applied to your deductible and {{t_you_owe_dollar}} applied to your out-of-pocket maximum. Totals include claims processed through {{claim_processed_date}}.</p>
+  </div>
+
+  <div class="paysum">
+    <h2 class="label">Payment summary</h2>
+    <table class="paytable">
+      <thead><tr><th>Patient</th><th>Paid to</th><th>Date sent</th><th>Method</th><th>Trace no.</th><th class="num">Amount paid</th></tr></thead>
+      <tbody><tr><td>{{patient_name}} (self)</td><td>{{hosp_name}}</td><td>{{payment_date}}</td><td>{{payment_method}}</td><td>{{payment_trace}}</td><td class="num">{{t_plan_paid_dollar}}</td></tr></tbody>
+    </table>
+  </div>
+
+  <div class="notes">
+    <h2 class="label">About this claim</h2>
+    <p>{{cost_sharing_note}}</p>
+    <p>Your provider agreed not to bill you for the plan discount or for lines marked not covered with codes OA-18 or CO-97.
+    If {{hosp_name}} bills you more than {{t_you_owe_dollar}} for this claim, call Member Services or the provider&rsquo;s billing office.
+    Doctors who treated you, such as the emergency physician, bill separately; each of their claims gets its own Explanation of Benefits.
+    Line-by-line details are on page 2. Your appeal rights are on page 3.</p>
+  </div>
+
+  <div class="form-id">{{ins_form_id}}</div>
+  <div class="specimen">{{specimen_footer}}</div>
+</section>
+
+<!-- ============================== PAGE 2: claim detail ============================== -->
+<section class="page p2">
+  <header class="hdr run">
+    <div class="brand">{{logo_html}}</div>
+    <div class="docid">
+      <div class="title">Explanation of Benefits</div>
+      <div class="meta"><b>THIS IS NOT A BILL</b> &middot; {{patient_name}} &middot; Member ID {{member_id}}</div>
+      <div class="pageno">Page 2 of {{page_count}}</div>
+    </div>
+  </header>
+
+  <h2 class="section">Claim details</h2>
+  <table class="claimband">
+    <tr><th>Patient</th><th>Claim no.</th><th>Provider</th><th>Provider account no.</th><th>Dates of service</th><th>Received</th><th>Processed</th></tr>
+    <tr><td>{{patient_name}} (self)</td><td>{{claim_number}}</td><td>{{hosp_name}}<br><span class="dim">Hospital outpatient &middot; {{network_status}}</span></td><td>{{hospital_account}}</td><td>{{date_of_service}}</td><td>{{claim_received_date}}</td><td>{{claim_processed_date}}</td></tr>
+  </table>
+
+  <table class="detail">
+    <colgroup>
+      <col class="c-svc"><col class="c-m"><col class="c-m"><col class="c-m"><col class="c-m"><col class="c-m"><col class="c-s"><col class="c-m"><col class="c-m"><col class="c-m"><col class="c-code">
+    </colgroup>
+    <thead>
+      <tr class="grp">
+        <th></th><th></th><th colspan="2">Not owed by you</th><th></th><th colspan="3">Your share</th><th></th><th></th><th></th>
+      </tr>
+      <tr>
+        <th class="l">Service, date and code</th><th>Amount billed</th><th>Plan discount</th><th>Not covered</th><th>Allowed amount</th><th>Deductible</th><th>Copay</th><th>Coinsurance</th><th>Plan paid</th><th>You owe</th><th class="l">Codes</th>
+      </tr>
+    </thead>
+    <tbody>
+{{eob_rows_html}}
+    </tbody>
+    <tfoot>
+      <tr><td class="l">Claim totals</td><td>{{t_billed}}</td><td>{{t_discount}}</td><td>{{t_not_covered}}</td><td>{{t_allowed}}</td><td>{{t_deductible}}</td><td>{{t_copay}}</td><td>{{t_coinsurance}}</td><td>{{t_plan_paid}}</td><td class="owe">{{t_you_owe}}</td><td></td></tr>
+    </tfoot>
+  </table>
+  <p class="tablenote">Amount billed &minus; plan discount &minus; not covered = allowed amount. Allowed amount = plan paid + your share (deductible, copay, coinsurance).</p>
+
+  <h2 class="section">What the codes on this claim mean</h2>
+  <table class="codes">
+    <thead><tr><th class="c1">Code</th><th>What it means</th><th class="c3">Who pays</th></tr></thead>
+    <tbody>
+{{code_rows_html}}
+    </tbody>
+  </table>
+  <p class="tablenote">Standard claim adjustment codes: CO = contractual obligation (provider writes it off), PR = patient responsibility, OA = other adjustment.</p>
+
+  <p class="codesnote">You may ask for the diagnosis and procedure codes for this claim, and their meanings, at no cost. Call Member Services at {{ins_phone_member_services}}.</p>
+
+  <div class="form-id">{{ins_form_id}}</div>
+  <div class="specimen">{{specimen_footer}}</div>
+</section>
+
+<!-- ============================== PAGE 3: rights and notices ============================== -->
+<section class="page p3">
+  <header class="hdr run">
+    <div class="brand">{{logo_html}}</div>
+    <div class="docid">
+      <div class="title">Your rights</div>
+      <div class="meta"><b>THIS IS NOT A BILL</b> &middot; {{patient_name}} &middot; Member ID {{member_id}}</div>
+      <div class="pageno">Page 3 of {{page_count}}</div>
+    </div>
+  </header>
+
+  <div class="cols">
+    <div class="col">
+      <h2 class="section">If you disagree with how we processed this claim</h2>
+      <h3>What if I need help understanding this statement?</h3>
+      <p>Call Member Services at {{ins_phone_member_services}} (TTY {{ins_tty}}), {{ins_member_services_hours}}. We can explain
+      any decision on this statement, including the codes on page 2.</p>
+      <h3>What if I don&rsquo;t agree with a decision?</h3>
+      <p>You have the right to appeal any decision not to pay for an item or service, in whole or in part. You must
+      file your appeal within <b>180 days</b> after you receive this statement.</p>
+      <h3>How do I file an appeal?</h3>
+      <p>Write to us at Pellridge Health Plan, Attn: Member Appeals, {{ins_appeals_po_box}}, {{ins_city}}, {{ins_state}}
+      {{ins_appeals_zip4}}, or fax {{ins_fax_appeals}}. Include your name, member ID, the claim number
+      ({{claim_number}}), the service you disagree with and why. You may send letters from your doctor, bills,
+      medical records or other information that supports your appeal.</p>
+      <h3>Who may file an appeal?</h3>
+      <p>You, or someone you name to act for you (an authorized representative). Call us for the form to name a representative.</p>
+      <h3>What if my situation is urgent?</h3>
+      <p>If waiting could seriously harm your health, ask for an expedited appeal. We will decide within 72 hours. You
+      may ask for an external review at the same time.</p>
+      <h3>Can I get copies of information about my claim?</h3>
+      <p>Yes, free of charge, including the claim documents, the plan rules we used, and the diagnosis and treatment
+      codes and their meanings. If you think a coding error caused a denial, ask for these codes.</p>
+      <h3>What happens next?</h3>
+      <p>We will review your appeal and send you a written decision. If we still deny payment, or do not decide in
+      time, you may ask for an external review by an independent review organization. You must ask within four
+      months after you receive our final decision. The independent reviewer&rsquo;s decision is binding on the plan.
+      If your plan is an employer plan covered by ERISA, you also have the right to bring a civil action under
+      section 502(a) of ERISA after we decide your appeal.</p>
+    </div>
+
+    <div class="col">
+      <h2 class="section">Questions and fraud</h2>
+      <p>Questions about this statement: Member Services, {{ins_phone_member_services}} (TTY {{ins_tty}}), or
+      {{ins_website}}. Please have your member ID ready. Keep this statement with your bills and receipts: you may
+      need it to check a provider&rsquo;s bill, to file an appeal, or for tax purposes.</p>
+      <p>If you think a provider billed for services you did not receive, call our fraud line at {{ins_phone_fraud}}.
+      You do not have to give your name.</p>
+
+      <h2 class="section">Protection from surprise medical bills</h2>
+      <p>When you get emergency care, or are treated by an out-of-network provider at an in-network hospital or
+      ambulatory surgical center, you are protected from balance billing: you should not be charged more than your
+      plan&rsquo;s copayment, coinsurance and deductible, and what you pay counts toward your in-network deductible
+      and out-of-pocket maximum. If you believe you have been wrongly billed, call Member Services or the federal
+      No Surprises Help Desk.</p>
+
+      <h2 class="section">Other help with your rights</h2>
+      <p>For help with your rights or with filing an appeal, you may also contact your state&rsquo;s department of
+      insurance or consumer assistance program, or, for an employer group health plan, the U.S. Department of
+      Labor&rsquo;s Employee Benefits Security Administration.</p>
+
+      <h2 class="section">Notice of nondiscrimination</h2>
+      <p>Pellridge Health Plan complies with applicable Federal civil rights laws and does not discriminate on the
+      basis of race, color, national origin, age, disability, or sex. Pellridge provides free aids and services to
+      people with disabilities to communicate effectively with us, such as qualified sign language interpreters and
+      written information in other formats, and free language services to people whose primary language is not
+      English, such as qualified interpreters and information written in other languages. If you need these
+      services, call {{ins_phone_member_services}} (TTY {{ins_tty}}).</p>
+      <p>If you believe that Pellridge has failed to provide these services or discriminated in another way, you can
+      file a grievance with our Civil Rights Coordinator by phone at {{ins_phone_civil_rights}}, by fax at
+      {{ins_fax_appeals}}, or by mail at {{ins_po_box}}, {{ins_city}}, {{ins_state}} {{ins_zip4}}. You can also file a civil
+      rights complaint with the U.S. Department of Health and Human Services, Office for Civil Rights.</p>
+    </div>
+  </div>
+
+  <div class="lang">
+    <h2 class="section">Language assistance</h2>
+    <p class="lang-en">ATTENTION: If you speak a language other than English, language assistance services, free of charge,
+    are available to you. Call {{ins_phone_member_services}} (TTY: {{ins_tty}}).</p>
+    <div class="taglines">
+{{taglines_html}}
+    </div>
+    <div class="aca">{{aca_taglines_html}}</div>
+  </div>
+
+  <div class="form-id">{{ins_form_id}}</div>
+  <div class="specimen">{{specimen_footer}}</div>
+</section>
+
+</body>
+</html>

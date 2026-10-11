@@ -1,0 +1,319 @@
+/* Linnet Valley Medical Center itemized statement. One brand color (navy) plus black; light gray fills;
+   square corners; Arial throughout, the default face of statement print vendors. */
+
+:root {
+  --navy: #1f3a5c;
+  --ink: #161616;
+  --muted: #4a5056;
+  --fill: #e7ebf0;
+  --zebra: #f3f5f7;
+  --rule: #8e98a3;
+  --rule-light: #cfd5dc;
+}
+
+body {
+  font-family: Arial, "Liberation Sans", "Helvetica Neue", Helvetica, "Microsoft JhengHei", "Malgun Gothic",
+               "Yu Gothic", "Nirmala UI", Ebrima, sans-serif;
+  font-size: 8.5pt;
+  line-height: 1.28;
+  color: var(--ink);
+}
+
+b, strong { font-weight: 700; }
+
+/* ---------- header (all pages) ---------- */
+.hdr {
+  position: absolute;
+  top: 0.42in;
+  left: 0.5in;
+  right: 0.5in;
+  height: 0.9in;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  border-bottom: 1.25pt solid var(--navy);
+}
+.hdr .brand svg.logo { display: block; height: 0.5in; width: auto; }
+.hdr .ret { margin-top: 4pt; font-size: 7pt; color: var(--muted); letter-spacing: 0.01em; }
+.hdr .docid { text-align: right; padding-top: 1pt; }
+.hdr .title { font-size: 15pt; font-weight: 700; color: var(--navy); letter-spacing: 0.005em; line-height: 1.1; }
+.hdr .sub { margin-top: 3pt; font-size: 8pt; }
+.hdr .pageno { margin-top: 3pt; font-size: 7.5pt; color: var(--muted); }
+.hdr.run { height: 0.78in; }
+.hdr.run .brand svg.logo { height: 0.44in; }
+
+h2.label {
+  font-size: 6.8pt;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--navy);
+  border-bottom: 0.75pt solid var(--navy);
+  padding-bottom: 2pt;
+  margin: 0 0 3pt;
+}
+
+/* ---------- page 1, upper two thirds ---------- */
+.p1 .top {
+  position: absolute;
+  top: 1.47in;
+  left: 0.5in;
+  right: 0.5in;
+  display: grid;
+  grid-template-columns: 4.38in 2.92in;
+  column-gap: 0.2in;
+}
+
+table.kv { width: 100%; }
+table.kv th, table.kv td { padding: 1.55pt 0; border-bottom: 0.5pt solid #e1e5ea; }
+table.kv th { width: 1.5in; text-align: left; font-weight: 400; color: var(--muted); }
+
+.msg { margin: 9pt 0 9pt; padding: 5pt 8pt 6pt; background: var(--fill); }
+.msg h2.label { border-bottom: 0; padding-bottom: 0; margin-bottom: 2pt; }
+
+.due-box { border: 1.25pt solid var(--navy); margin-bottom: 9pt; }
+.due-band {
+  background: var(--navy);
+  color: #fff;
+  font-size: 7.2pt;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 3pt 8pt;
+}
+.due-amt { font-size: 21pt; font-weight: 700; padding: 5pt 8pt 1pt; line-height: 1.05; }
+.due-date { text-align: right; padding: 0 8pt 6pt; font-size: 8pt; }
+
+table.summary { width: 100%; }
+table.summary th, table.summary td { padding: 2.1pt 0; border-bottom: 0.5pt solid #e1e5ea; }
+table.summary th { text-align: left; font-weight: 400; }
+table.summary tr.bal th, table.summary tr.bal td {
+  font-weight: 700;
+  border-top: 1pt solid var(--ink);
+  border-bottom: 2.4pt double var(--ink);
+  padding-top: 3pt;
+}
+.fine { margin-top: 3pt; font-size: 7pt; color: var(--muted); }
+
+/* account aging, under the account summary (as on most hospital statements) */
+h2.label.aging-label { margin-top: 8pt; }
+table.aging { width: 100%; table-layout: fixed; }
+table.aging th {
+  background: var(--fill);
+  font-size: 5.9pt;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  text-align: right;
+  padding: 2pt 4pt 1.6pt;
+  white-space: nowrap;
+}
+table.aging td { font-size: 8.2pt; padding: 2.2pt 4pt 2.4pt; border-bottom: 0.5pt solid #e1e5ea; }
+
+/* ways to pay band */
+.p1 .ways { position: absolute; top: 4.8in; left: 0.5in; right: 0.5in; }
+.ways-grid { display: grid; grid-template-columns: 2.2in 1.8in 1.85in 1.45in; font-size: 7.7pt; line-height: 1.3; }
+.ways-grid .w { padding: 1pt 8pt 0 0; }
+.ways-grid .w + .w { border-left: 0.5pt solid var(--rule-light); padding-left: 8pt; }
+.ways-grid .w b { font-size: 8pt; }
+.ways-grid .online { display: flex; gap: 7pt; align-items: flex-start; }
+.ways-grid .online .qr svg { display: block; width: 0.62in; height: 0.62in; }
+
+.p1 .fa {
+  position: absolute;
+  left: 0.5in;
+  right: 0.5in;
+  top: 5.8in;
+  border: 1pt solid var(--navy);
+  padding: 6pt 10pt 7pt;
+}
+.p1 .fa h2 { font-size: 9.4pt; color: var(--navy); margin-bottom: 2pt; }
+.p1 .fa p { font-size: 8.1pt; }
+.p1 .physician-note {
+  position: absolute;
+  left: 0.5in;
+  right: 0.5in;
+  top: 6.96in;
+  font-size: 7.4pt;
+  color: #2b2f33;
+}
+
+/* ---------- tear line and coupon (lower third, tri-fold at 7.33 in) ---------- */
+.perf {
+  position: absolute;
+  top: 7.33in;
+  left: 0;
+  right: 0;
+  border-top: 0.9pt dashed #4d4d4d;
+}
+.perf span {
+  display: block;
+  text-align: center;
+  font-size: 6.4pt;
+  color: #333;
+  margin-top: 2.5pt;
+}
+
+.coupon { position: absolute; top: 7.33in; left: 0; right: 0; bottom: 0; }
+
+.c-left { position: absolute; left: 0.5in; top: 0.32in; width: 3.6in; }
+.c-ret svg.logo { display: block; height: 0.3in; width: auto; }
+.c-ret-addr { margin-top: 3pt; font-size: 7.4pt; line-height: 1.22; letter-spacing: 0.01em; }
+.endorse { margin-top: 4pt; font-size: 6.5pt; font-weight: 700; letter-spacing: 0.03em; }
+
+/* lower window of a #10 double-window envelope */
+.c-addr { position: absolute; left: 0.85in; top: 1.66in; }
+.presort { font-size: 6.4pt; letter-spacing: 0.04em; margin-bottom: 2pt; }
+.c-addr svg.imb { margin: 0 0 4pt; }
+.addr { font-size: 9.2pt; line-height: 1.24; letter-spacing: 0.015em; text-transform: uppercase; }
+
+.c-right { position: absolute; left: 4.28in; right: 0.5in; top: 0.32in; }
+table.c-grid { width: 100%; border: 0.75pt solid var(--ink); table-layout: fixed; }
+table.c-grid th, table.c-grid td { border: 0.5pt solid var(--ink); }
+table.c-grid th {
+  background: var(--fill);
+  font-size: 5.9pt;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-align: left;
+  padding: 1.6pt 4pt;
+  white-space: nowrap;
+}
+table.c-grid td { font-size: 8.6pt; padding: 2.4pt 4pt 2.8pt; }
+table.c-grid tr.amt td { font-size: 11.5pt; font-weight: 700; padding: 3pt 4pt; height: 0.26in; vertical-align: middle; }
+table.c-grid td.enclosed { font-weight: 400; font-size: 10pt; text-align: left; }
+
+table.card { width: 100%; margin-top: 5pt; border: 0.75pt solid var(--ink); table-layout: fixed; }
+table.card td { position: relative; height: 0.235in; border: 0.5pt solid var(--ink); vertical-align: top; }
+table.card td > span.l { position: absolute; left: 3pt; top: 1.5pt; font-size: 5.6pt; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+table.card td.w68 { width: 68%; }
+table.card td.ct { height: auto; padding: 2.3pt 4pt; font-size: 6.3pt; letter-spacing: 0.02em; background: var(--fill); white-space: nowrap; }
+.cb {
+  display: inline-block;
+  width: 6.4pt;
+  height: 6.4pt;
+  border: 0.75pt solid var(--ink);
+  background: #fff;
+  vertical-align: -1pt;
+  margin: 0 2.5pt 0 4.6pt;
+}
+.change { margin-top: 4pt; font-size: 6.5pt; }
+.change .cb { margin-left: 0; }
+
+/* remit-to address, at the right of the coupon */
+.remit { position: absolute; left: 4.28in; top: 2.3in; }
+.remit-h { font-size: 6.2pt; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 2pt; }
+
+.scanline {
+  position: absolute;
+  right: 0.5in;
+  bottom: 0.5in;
+  font-size: 10pt;
+  letter-spacing: 0.06em;
+}
+
+/* ---------- pages 2 and 3: flowing content under the running header ---------- */
+.p2, .p3 { padding: 1.36in 0.5in 0.62in; }
+
+table.visit { width: 100%; background: var(--fill); }
+table.visit th {
+  text-align: left;
+  font-size: 6pt;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 4pt 6pt 1pt;
+}
+table.visit td { font-size: 8.4pt; padding: 0 6pt 5pt; }
+
+h2.section {
+  font-size: 9.4pt;
+  color: var(--navy);
+  margin: 13pt 0 2pt;
+}
+p.intro { font-size: 7.6pt; color: var(--muted); margin: 0 0 5pt; }
+
+table.items, table.activity { width: 100%; }
+table.items thead th, table.activity thead th {
+  background: var(--fill);
+  border-top: 1pt solid var(--navy);
+  border-bottom: 0.75pt solid var(--navy);
+  font-size: 6.4pt;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-align: left;
+  padding: 4pt 5pt 3.5pt;
+  white-space: nowrap;
+}
+table.items thead th.num, table.activity thead th.num { text-align: right; }
+table.items tbody td, table.activity tbody td { padding: 3pt 5pt; font-size: 8.5pt; }
+table.items tbody tr:nth-child(even) td, table.activity tbody tr:nth-child(even) td { background: var(--zebra); }
+table.items tbody tr:last-child td, table.activity tbody tr:last-child td { border-bottom: 0.75pt solid var(--rule); }
+table.items tfoot td, table.activity tfoot td { font-weight: 700; padding: 4pt 5pt; border-top: 1pt solid var(--ink); }
+table.items th.d { width: 0.84in; }
+table.items th.rev { width: 0.62in; }
+table.items th.cpt { width: 0.8in; }
+table.items th.mod { width: 0.46in; }
+table.items th.u { width: 0.5in; }
+table.items th.amt { width: 0.98in; }
+table.items td.cpt.none { color: var(--muted); }
+table.activity th.d { width: 0.84in; }
+table.activity th.amt { width: 0.98in; }
+
+table.balance { width: 3.4in; margin: 12pt 0 0 auto; }
+table.balance th, table.balance td { padding: 2.1pt 5pt; border-bottom: 0.5pt solid #e1e5ea; }
+table.balance th { text-align: left; font-weight: 400; }
+table.balance tr.bal th, table.balance tr.bal td {
+  font-weight: 700;
+  font-size: 9.5pt;
+  border-top: 1pt solid var(--ink);
+  border-bottom: 2.4pt double var(--ink);
+  padding-top: 3pt;
+}
+
+.terms { margin-top: 16pt; border-top: 0.75pt solid var(--rule-light); padding-top: 6pt; font-size: 7.5pt; color: #2b2f33; }
+.terms h3 { font-size: 6.8pt; letter-spacing: 0.08em; text-transform: uppercase; color: var(--navy); margin-bottom: 2pt; }
+
+/* ---------- page 3 ---------- */
+.p3 .cols { display: grid; grid-template-columns: 1fr 1fr; column-gap: 0.28in; font-size: 7.6pt; line-height: 1.3; }
+.p3 h2.section {
+  font-size: 7.4pt;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  border-bottom: 0.75pt solid var(--navy);
+  padding-bottom: 2pt;
+  margin: 10pt 0 4pt;
+}
+.p3 .col > h2.section:first-child { margin-top: 2pt; }
+.p3 h3 { font-size: 7.6pt; margin: 6pt 0 1pt; }
+.p3 p + p { margin-top: 3pt; }
+.p3 ul { margin: 1pt 0 3pt; padding-left: 11pt; }
+.p3 li { margin: 0.5pt 0; }
+
+table.fpl { width: 100%; margin: 4pt 0 5pt; font-size: 7.4pt; }
+table.fpl th { background: var(--fill); text-align: left; font-weight: 700; padding: 2.5pt 5pt; }
+table.fpl th.num { text-align: right; }
+table.fpl td { padding: 2pt 5pt; border-bottom: 0.5pt solid #dfe3e8; }
+
+table.form { width: 100%; margin-top: 3pt; table-layout: fixed; }
+table.form td { position: relative; height: 0.27in; border-bottom: 0.6pt solid #555; }
+table.form td.w40 { width: 40%; padding-left: 8pt; }
+table.form td span { position: absolute; top: 2pt; font-size: 5.8pt; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+
+.p3 .lang { margin-top: 2pt; }
+.p3 .lang h2.section { margin-top: 12pt; }
+.lang-en { font-size: 7.4pt; margin-bottom: 4pt; }
+.taglines { columns: 3; column-gap: 0.2in; font-size: 6.3pt; line-height: 1.3; }
+.taglines .tl { break-inside: avoid; margin: 0 0 3.2pt; }
+.taglines .tl .ln { font-weight: 700; }
+.taglines .tl[dir="rtl"] { text-align: right; }
+.taglines .tl:lang(ko) { word-break: keep-all; }
+
+/* CJK lines use a font made for that script (punctuation sits where readers expect it); digits stay in Arial. */
+:lang(zh-Hant) { font-family: Arial, "Liberation Sans", "Microsoft JhengHei", "PingFang TC", "Noto Sans CJK TC", sans-serif; }
+:lang(zh-Hans) { font-family: Arial, "Liberation Sans", "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", sans-serif; }
+:lang(ja) { font-family: Arial, "Liberation Sans", "Yu Gothic", "Meiryo", "Hiragino Sans", "Noto Sans CJK JP", sans-serif; }
+:lang(ko) { font-family: Arial, "Liberation Sans", "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans CJK KR", sans-serif; }

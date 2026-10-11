@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>{{doc_title}}</title>
+<!-- Template. build.py fills every double-brace token from src/scenario.json and prints it with headless Chrome.
+     Edit amounts in scenario.json, not here. -->
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/itemized-bill.css">
+</head>
+<body>
+
+<!-- ============================== PAGE 1: statement summary + coupon ============================== -->
+<section class="page p1">
+
+  <header class="hdr">
+    <div class="brand">
+      {{logo_html}}
+      <div class="ret">{{hosp_department}} &middot; {{hosp_correspondence_po_box}} &middot; {{hosp_city}}, {{hosp_state}} {{hosp_correspondence_zip4}}</div>
+    </div>
+    <div class="docid">
+      <div class="title">Itemized Statement</div>
+      <div class="sub">Hospital services &middot; Statement date {{statement_date}}</div>
+      <div class="pageno">Page 1 of {{page_count}}</div>
+    </div>
+  </header>
+
+  <div class="top">
+    <div class="col-l">
+      <h2 class="label">Account information</h2>
+      <table class="kv">
+        <tr><th>Guarantor</th><td>{{patient_name}}</td></tr>
+        <tr><th>Guarantor account no.</th><td><b>{{guarantor_account}}</b></td></tr>
+        <tr><th>Patient</th><td>{{patient_name}}</td></tr>
+        <tr><th>Hospital account no.</th><td>{{hospital_account}}</td></tr>
+        <tr><th>Date of service</th><td>{{date_of_service}}</td></tr>
+        <tr><th>Patient type</th><td>{{patient_type}} &middot; {{visit_location}}</td></tr>
+        <tr><th>Primary insurance</th><td>{{insurer_name}}</td></tr>
+        <tr><th>Member ID / Group no.</th><td>{{member_id}} / {{group_number}}</td></tr>
+        <tr><th>Insurance status</th><td>Billed {{insurance_billed_date}} &middot; Processed {{claim_processed_date}}</td></tr>
+      </table>
+
+      <div class="msg">
+        <h2 class="label">Message about your account</h2>
+        <p>{{insurer_name}} has processed the claim for this visit. After the insurance payment and adjustment
+        posted on {{payment_posted_date}}, the remaining balance is your responsibility. Please pay the amount due
+        by {{due_date}}, or call us to set up an interest-free payment plan.</p>
+      </div>
+    </div>
+
+    <div class="col-r">
+      <div class="due-box">
+        <div class="due-band">Amount due</div>
+        <div class="due-amt num">{{amount_due_dollar}}</div>
+        <div class="due-date">Please pay by <b>{{due_date}}</b></div>
+      </div>
+
+      <h2 class="label">Account summary</h2>
+      <table class="summary">
+        <tr><th>Total charges</th><td class="num">{{total_charges}}</td></tr>
+        <tr><th>Insurance payments</th><td class="num">-{{insurance_payments}}</td></tr>
+        <tr><th>Insurance adjustments</th><td class="num">-{{insurance_adjustments}}</td></tr>
+        <tr><th>Patient payments</th><td class="num">{{patient_payments_display}}</td></tr>
+        <tr class="bal"><th>Balance due</th><td class="num">{{balance_due_dollar}}</td></tr>
+      </table>
+      <p class="fine">Charges, payments and adjustments are itemized on page 2.</p>
+
+      <h2 class="label aging-label">Account aging</h2>
+      <table class="aging">
+        <tr><th>Current</th><th>31&ndash;60 days</th><th>61&ndash;90 days</th><th>Over 90 days</th></tr>
+        <tr><td class="num">{{aging_current}}</td><td class="num">0.00</td><td class="num">0.00</td><td class="num">0.00</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="ways">
+    <h2 class="label">Ways to pay</h2>
+    <div class="ways-grid">
+      <div class="w online">
+        <div class="qr">{{qr_html}}</div>
+        <div><b>Online</b><br>{{hosp_pay_url}}<br>or scan the code with your phone camera</div>
+      </div>
+      <div class="w"><b>By phone</b><br>{{hosp_phone_billing}} (TTY {{hosp_tty}})<br>Monday&ndash;Friday<br>8 a.m.&ndash;6 p.m. ET</div>
+      <div class="w"><b>By mail</b><br>Mail the lower portion with your check. Write your account no. on the check.</div>
+      <div class="w"><b>In person</b><br>Cashier, Main Lobby<br>Monday&ndash;Friday<br>7:30 a.m.&ndash;5 p.m.</div>
+    </div>
+  </div>
+
+  <div class="fa">
+    <h2>Need help paying your bill? Financial assistance is available.</h2>
+    <p>You may qualify for free or discounted care under the Linnet Valley Medical Center Financial Assistance
+    Policy, based on your household income and size, even if you have insurance. Call Financial Counseling at
+    <b>{{hosp_phone_financial_assistance}}</b> ({{hosp_financial_assistance_hours}}) for help with the application, or get the policy,
+    the application and a plain language summary free of charge at <b>{{hosp_financial_assistance_url}}</b>.
+    A summary is on page 3. Questions about this statement? Call {{hosp_department}} at <b>{{hosp_phone_billing}}</b>.</p>
+  </div>
+  <p class="physician-note"><b>Please note:</b> This statement includes hospital charges only. Physicians who treated you during this
+  visit, such as the emergency physician and the radiologist who read your imaging, bill separately for their professional services.</p>
+
+  <!-- ---------- tear line at the lower third (tri-fold) ---------- -->
+  <div class="perf"><span>Please detach and return the lower portion with your payment. Keep the upper portion for your records.</span></div>
+
+  <div class="coupon">
+    <div class="c-left">
+      <div class="c-ret">
+        {{logo_small_html}}
+        <div class="c-ret-addr">{{hosp_correspondence_po_box_caps}}<br>{{hosp_city_caps}} {{hosp_state}} {{hosp_correspondence_zip4}}</div>
+        <div class="endorse">ELECTRONIC SERVICE REQUESTED</div>
+      </div>
+    </div>
+    <div class="c-addr">
+      <div class="presort">{{presort_line}}</div>
+      {{imb_guarantor_html}}
+      <div class="addr">{{patient_mailing_name}}<br>{{patient_street_caps}}<br>{{patient_city_caps}} {{patient_state}} {{patient_zip4}}</div>
+    </div>
+
+    <div class="c-right">
+      <table class="c-grid">
+        <colgroup><col style="width:30%"><col style="width:36%"><col style="width:34%"></colgroup>
+        <tr><th>Statement date</th><th>Account no.</th><th>Due date</th></tr>
+        <tr><td>{{statement_date}}</td><td>{{guarantor_account}}</td><td>{{due_date}}</td></tr>
+        <tr><th colspan="2">Amount due</th><th>Amount enclosed</th></tr>
+        <tr class="amt"><td colspan="2" class="num">{{amount_due_dollar}}</td><td class="enclosed">$</td></tr>
+      </table>
+
+      <table class="card">
+        <tr><td colspan="2" class="ct">Paying by card? Check one: <span class="cb"></span>VISA <span class="cb"></span>MASTERCARD <span class="cb"></span>DISCOVER <span class="cb"></span>AMEX</td></tr>
+        <tr><td class="w68"><span class="l">Card number</span></td><td><span class="l">Exp. date</span></td></tr>
+        <tr><td colspan="2"><span class="l">Signature</span></td></tr>
+      </table>
+      <div class="change"><span class="cb"></span>Address or insurance changed? Check here and complete the form on page 3.</div>
+    </div>
+
+    <div class="remit">
+      <div class="remit-h">Make checks payable to:</div>
+      <div class="addr">LINNET VALLEY MEDICAL CENTER<br>{{hosp_remit_po_box_caps}}<br>{{hosp_city_caps}} {{hosp_state}} {{hosp_remit_zip4}}</div>
+    </div>
+
+    <div class="scanline ocr">{{scan_line}}</div>
+  </div>
+
+  <div class="specimen">{{specimen_footer}}</div>
+</section>
+
+<!-- ============================== PAGE 2: itemized detail ============================== -->
+<section class="page p2">
+  <header class="hdr run">
+    <div class="brand">{{logo_html}}</div>
+    <div class="docid">
+      <div class="title">Itemized Statement</div>
+      <div class="sub">Guarantor account no. {{guarantor_account}} &middot; Statement date {{statement_date}}</div>
+      <div class="pageno">Page 2 of {{page_count}}</div>
+    </div>
+  </header>
+
+  <table class="visit">
+    <tr>
+      <th>Patient</th><th>Hospital account no.</th><th>Admit / service date</th><th>Discharge date</th><th>Patient type</th><th>Primary insurance</th>
+    </tr>
+    <tr>
+      <td>{{patient_name}}</td><td>{{hospital_account}}</td><td>{{date_of_service}}</td><td>{{date_of_service}}</td><td>{{patient_type}}</td><td>{{insurer_name}}</td>
+    </tr>
+  </table>
+
+  <h2 class="section">Itemized detail of charges</h2>
+  <p class="intro">Hospital charges for this visit, before insurance, listed by revenue code (the hospital department) and
+  CPT/HCPCS code (the service, drug or supply), with any billing modifier (Mod). Units are the number billed for that line.</p>
+
+  <table class="items">
+    <thead>
+      <tr><th class="d">Service date</th><th class="rev">Rev code</th><th class="cpt">CPT/HCPCS</th><th class="mod">Mod</th><th class="desc">Description</th><th class="u num">Units</th><th class="amt num">Charges</th></tr>
+    </thead>
+    <tbody>
+{{itemized_rows_html}}
+    </tbody>
+    <tfoot>
+      <tr><td colspan="5">Total charges &middot; {{line_count}} lines</td><td></td><td class="num">{{total_charges}}</td></tr>
+    </tfoot>
+  </table>
+
+  <h2 class="section">Payments and adjustments</h2>
+  <table class="activity">
+    <thead><tr><th class="d">Posted</th><th class="desc">Description</th><th class="amt num">Amount</th></tr></thead>
+    <tbody>
+{{activity_rows_html}}
+    </tbody>
+    <tfoot><tr><td></td><td>Total payments and adjustments</td><td class="num">-{{total_credits}}</td></tr></tfoot>
+  </table>
+
+  <table class="balance">
+    <tr><th>Total charges</th><td class="num">{{total_charges}}</td></tr>
+    <tr><th>Insurance payments</th><td class="num">-{{insurance_payments}}</td></tr>
+    <tr><th>Insurance adjustments</th><td class="num">-{{insurance_adjustments}}</td></tr>
+    <tr><th>Patient payments</th><td class="num">{{patient_payments_display}}</td></tr>
+    <tr class="bal"><th>Balance due by {{due_date}}</th><td class="num">{{balance_due_dollar}}</td></tr>
+  </table>
+
+  <div class="terms">
+    <h3>About these charges</h3>
+    <p><b>Rev code</b> is the hospital department that provided the item or service, such as 0301 for chemistry
+    lab tests or 0450 for the emergency department. <b>CPT/HCPCS</b> identifies the specific service, drug or supply.
+    <b>Insurance adjustments</b> are the amounts your insurer&rsquo;s contract does not allow the hospital to collect.
+    Compare this statement with the Explanation of Benefits from your insurer; if they do not match, call us at
+    {{hosp_phone_billing}} before you pay. You may ask for an itemized statement at any time at no charge.</p>
+  </div>
+
+  <div class="form-id">{{hosp_form_id}}</div>
+  <div class="specimen">{{specimen_footer}}</div>
+</section>
+
+<!-- ============================== PAGE 3: notices ============================== -->
+<section class="page p3">
+  <header class="hdr run">
+    <div class="brand">{{logo_html}}</div>
+    <div class="docid">
+      <div class="title">Important information</div>
+      <div class="sub">Guarantor account no. {{guarantor_account}} &middot; Statement date {{statement_date}}</div>
+      <div class="pageno">Page 3 of {{page_count}}</div>
+    </div>
+  </header>
+
+  <div class="cols">
+    <div class="col">
+      <h2 class="section">Financial assistance: plain language summary</h2>
+      <p>Linnet Valley Medical Center provides free or discounted emergency and other medically necessary care to
+      patients who qualify under our Financial Assistance Policy. You can apply whether or not you have insurance.</p>
+      <table class="fpl">
+        <thead><tr><th>Household income, as a percent of the Federal Poverty Guidelines</th><th class="num">Discount on your balance</th></tr></thead>
+        <tbody>
+          <tr><td>Up to 200%</td><td class="num">100% (free care)</td></tr>
+          <tr><td>201% to 300%</td><td class="num">75%</td></tr>
+          <tr><td>301% to 400%</td><td class="num">50%</td></tr>
+        </tbody>
+      </table>
+      <p>Patients who qualify will not be charged more for emergency or other medically necessary care than the
+      amounts generally billed to people who have insurance covering that care.</p>
+      <h3>How to apply</h3>
+      <ul>
+        <li>Online at {{hosp_financial_assistance_url}}, or by phone at {{hosp_phone_financial_assistance}}.</li>
+        <li>In person at Financial Counseling, Main Lobby, {{hosp_street}}, {{hosp_city}}.</li>
+        <li>By mail: Financial Counseling, {{hosp_correspondence_po_box}}, {{hosp_city}}, {{hosp_state}} {{hosp_correspondence_zip4}}.</li>
+      </ul>
+      <p>Include proof of household income, such as recent pay stubs or a tax return. You may apply up to 240 days
+      after the date of your first statement for this visit. We will not send your account to a collection agency
+      while your application is being reviewed. Copies of the policy, the application and this summary are free,
+      and are available in Spanish and other languages.</p>
+
+      <h2 class="section">Questions about your bill</h2>
+      <p>Call {{hosp_department}} at {{hosp_phone_billing}} (TTY {{hosp_tty}}), {{hosp_billing_hours}}. Please have your
+      guarantor account number ready.</p>
+      <h3>If you think a charge is wrong</h3>
+      <p>Call us, or write to Billing Review, {{hosp_department}}, {{hosp_correspondence_po_box}}, {{hosp_city}}, {{hosp_state}}
+      {{hosp_correspondence_zip4}}. Include your guarantor account number, the date of service, the charge you are
+      questioning and the reason. We will place your account on hold while we review it.</p>
+      <h3>Payment plans</h3>
+      <p>If you cannot pay the full balance by the due date, call us to set up an interest-free monthly payment plan.
+      Balances with no payment or payment plan may be placed with a collection agency, but not until at least 120
+      days after your first statement.</p>
+    </div>
+
+    <div class="col">
+      <h2 class="section">Insurance</h2>
+      <p>We bill your insurance for you. Your insurer sends you an Explanation of Benefits (EOB) that shows what it
+      paid and what you may owe. The balance on this statement should match the amount your EOB lists as your
+      responsibility.</p>
+
+      <h2 class="section">Protection from surprise medical bills</h2>
+      <p>Federal law protects you from surprise bills (balance billing) for emergency care and for care from
+      out-of-network providers at an in-network hospital: you should not be charged more than your plan&rsquo;s
+      copayment, coinsurance and deductible. Wrongly billed? Call {{hosp_phone_billing}}. Full notice:
+      {{hosp_surprise_billing_url}}.</p>
+
+      <h2 class="section">Address or insurance changes</h2>
+      <p class="fine">Complete this form and return it with the lower portion of page 1, or call us.</p>
+      <table class="form">
+        <tr><td colspan="2"><span>Name</span></td></tr>
+        <tr><td colspan="2"><span>Street address</span></td></tr>
+        <tr><td><span>City, state, ZIP</span></td><td class="w40"><span>Phone</span></td></tr>
+        <tr><td><span>Insurance company</span></td><td class="w40"><span>Member ID</span></td></tr>
+        <tr><td><span>Policyholder name</span></td><td class="w40"><span>Group no.</span></td></tr>
+      </table>
+
+      <h2 class="section">Notice of nondiscrimination</h2>
+      <p>Linnet Valley Medical Center complies with applicable Federal civil rights laws and does not discriminate on
+      the basis of race, color, national origin, age, disability, or sex. We provide free aids and services to people
+      with disabilities to communicate effectively with us, such as qualified sign language interpreters and written
+      information in other formats, and free language services to people whose primary language is not English, such
+      as qualified interpreters and information written in other languages. To request these services, call
+      {{hosp_phone_billing}} (TTY {{hosp_tty}}). If you believe we have failed to provide these services or discriminated in
+      another way, you can file a grievance with our Civil Rights Coordinator at {{hosp_phone_civil_rights}}, or by mail
+      at {{hosp_correspondence_po_box}}, {{hosp_city}}, {{hosp_state}} {{hosp_correspondence_zip4}}. You can also file a civil rights
+      complaint with the U.S. Department of Health and Human Services, Office for Civil Rights.</p>
+    </div>
+  </div>
+
+  <div class="lang">
+    <h2 class="section">Language assistance</h2>
+    <p class="lang-en">ATTENTION: If you speak a language other than English, language assistance services, free of charge, are
+    available to you. Call {{hosp_phone_billing}} (TTY: {{hosp_tty}}).</p>
+    <div class="taglines">
+{{taglines_html}}
+    </div>
+  </div>
+
+  <div class="form-id">{{hosp_form_id}}</div>
+  <div class="specimen">{{specimen_footer}}</div>
+</section>
+
+</body>
+</html>

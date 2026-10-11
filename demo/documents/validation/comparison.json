@@ -1,0 +1,4243 @@
+{
+  "benchmarks_route": {
+    "36415": {
+      "medicare_rate": null,
+      "setting": null,
+      "source": "snowflake"
+    },
+    "74177": {
+      "medicare_rate": 300.27,
+      "setting": "non-facility",
+      "source": "snowflake"
+    },
+    "80053": {
+      "medicare_rate": null,
+      "setting": null,
+      "source": "snowflake"
+    },
+    "81003": {
+      "medicare_rate": null,
+      "setting": null,
+      "source": "snowflake"
+    },
+    "83690": {
+      "medicare_rate": null,
+      "setting": null,
+      "source": "snowflake"
+    },
+    "85025": {
+      "medicare_rate": null,
+      "setting": null,
+      "source": "snowflake"
+    },
+    "96361": {
+      "medicare_rate": 13.03,
+      "setting": "non-facility",
+      "source": "snowflake"
+    },
+    "96374": {
+      "medicare_rate": 37.74,
+      "setting": "non-facility",
+      "source": "snowflake"
+    },
+    "96375": {
+      "medicare_rate": 15.7,
+      "setting": "non-facility",
+      "source": "snowflake"
+    },
+    "99284": {
+      "medicare_rate": 118.24,
+      "setting": "facility",
+      "source": "snowflake"
+    },
+    "J2270": {
+      "medicare_rate": null,
+      "setting": null,
+      "source": "snowflake"
+    },
+    "J2405": {
+      "medicare_rate": null,
+      "setting": null,
+      "source": "snowflake"
+    },
+    "J7030": {
+      "medicare_rate": null,
+      "setting": null,
+      "source": "snowflake"
+    },
+    "Q9967": {
+      "medicare_rate": null,
+      "setting": null,
+      "source": "snowflake"
+    }
+  },
+  "runs": [
+    {
+      "run": "run-a-pdfs",
+      "seconds": 15.4,
+      "http_status": 200,
+      "model_named_in_response": "gemini-3.5-flash",
+      "model_that_answered": "gemini-3.5-flash",
+      "gemini_calls": [
+        "POST v1beta/models/gemini-3.5-flash:generateContent \"HTTP/1.1 200 OK\""
+      ],
+      "mock": false,
+      "audit": {
+        "saved": true,
+        "audit_id": "4caed0f7-3cf9-4b57-84eb-dcf77253e751",
+        "error": null
+      },
+      "documents": {
+        "expected": {
+          "1": "hospital_bill",
+          "2": "eob"
+        },
+        "got": {
+          "1": "hospital_bill",
+          "2": "eob"
+        },
+        "correct": 2,
+        "of": 2,
+        "overall_document_type": "hospital_bill"
+      },
+      "lines": {
+        "expected": 16,
+        "extracted": 16,
+        "matched": 16,
+        "code_exact": 16,
+        "amount_exact": 16,
+        "date_exact": 16,
+        "description_exact": 16,
+        "document_index_ok": 16,
+        "source_page_ok": 16,
+        "source_pages_seen": [
+          "2"
+        ],
+        "in_order": true,
+        "extras": [],
+        "lines_with_issues": {
+          "5": [
+            "Vague fee without a medical code. Insurance listed this as not covered."
+          ],
+          "7": [
+            "Possible duplicate charge listed twice on the bill."
+          ],
+          "8": [
+            "Possible duplicate charge. Insurance denied this second line as an exact duplicate."
+          ]
+        },
+        "rows": [
+          {
+            "line": 1,
+            "expected_code": "J7030",
+            "got_code": "J7030",
+            "got_index": 0,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": true,
+            "issues": []
+          },
+          {
+            "line": 2,
+            "expected_code": "96374",
+            "got_code": "96374",
+            "got_index": 1,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": true,
+            "issues": []
+          },
+          {
+            "line": 3,
+            "expected_code": "96375",
+            "got_code": "96375",
+            "got_index": 2,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": true,
+            "issues": []
+          },
+          {
+            "line": 4,
+            "expected_code": "96361",
+            "got_code": "96361",
+            "got_index": 3,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": true,
+            "issues": []
+          },
+          {
+            "line": 5,
+            "expected_code": null,
+            "got_code": null,
+            "got_index": 4,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": true,
+            "issues": [
+              "Vague fee without a medical code. Insurance listed this as not covered."
+            ]
+          },
+          {
+            "line": 6,
+            "expected_code": "36415",
+            "got_code": "36415",
+            "got_index": 5,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": true,
+            "issues": []
+          },
+          {
+            "line": 7,
+            "expected_code": "80053",
+            "got_code": "80053",
+            "got_index": 6,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": true,
+            "issues": [
+              "Possible duplicate charge listed twice on the bill."
+            ]
+          },
+          {
+            "line": 8,
+            "expected_code": "80053",
+            "got_code": "80053",
+            "got_index": 7,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": true,
+            "issues": [
+              "Possible duplicate charge. Insurance denied this second line as an exact duplicate."
+            ]
+          },
+          {
+            "line": 9,
+            "expected_code": "83690",
+            "got_code": "83690",
+            "got_index": 8,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": true,
+            "issues": []
+          },
+          {
+            "line": 10,
+            "expected_code": "85025",
+            "got_code": "85025",
+            "got_index": 9,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": true,
+            "issues": []
+          },
+          {
+            "line": 11,
+            "expected_code": "81003",
+            "got_code": "81003",
+            "got_index": 10,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": true,
+            "issues": []
+          },
+          {
+            "line": 12,
+            "expected_code": "74177",
+            "got_code": "74177",
+            "got_index": 11,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": true,
+            "issues": []
+          },
+          {
+            "line": 13,
+            "expected_code": "99284",
+            "got_code": "99284",
+            "got_index": 12,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": true,
+            "issues": []
+          },
+          {
+            "line": 14,
+            "expected_code": "J2405",
+            "got_code": "J2405",
+            "got_index": 13,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": true,
+            "issues": []
+          },
+          {
+            "line": 15,
+            "expected_code": "J2270",
+            "got_code": "J2270",
+            "got_index": 14,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": true,
+            "issues": []
+          },
+          {
+            "line": 16,
+            "expected_code": "Q9967",
+            "got_code": "Q9967",
+            "got_index": 15,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": true,
+            "issues": []
+          }
+        ]
+      },
+      "financials": {
+        "fields": {
+          "statement_billed": {
+            "expected": 9149.5,
+            "got": 9149.5,
+            "exact": true
+          },
+          "bill_adjustments": {
+            "expected": 5894.45,
+            "got": 5894.45,
+            "exact": true
+          },
+          "after_bill_adjustments": {
+            "expected": null,
+            "got": 3255.05,
+            "exact": false
+          },
+          "statement_insurer_paid": {
+            "expected": 1691.7,
+            "got": 1691.7,
+            "exact": true
+          },
+          "prior_patient_payment": {
+            "expected": 0.0,
+            "got": 0.0,
+            "exact": true
+          },
+          "statement_balance": {
+            "expected": 1563.35,
+            "got": 1563.35,
+            "exact": true
+          },
+          "eob_billed": {
+            "expected": 9149.5,
+            "got": 9149.5,
+            "exact": true
+          },
+          "eob_allowed": {
+            "expected": 2500.55,
+            "got": 2500.55,
+            "exact": true
+          },
+          "eob_insurer_paid": {
+            "expected": 1691.7,
+            "got": 1691.7,
+            "exact": true
+          },
+          "eob_patient_responsibility": {
+            "expected": 808.85,
+            "got": 808.85,
+            "exact": true
+          },
+          "deductible": {
+            "expected": 320.0,
+            "got": 320.0,
+            "exact": true
+          },
+          "coinsurance": {
+            "expected": 238.85,
+            "got": 238.85,
+            "exact": true
+          },
+          "copayment": {
+            "expected": 250.0,
+            "got": 250.0,
+            "exact": true
+          },
+          "copay_coinsurance": {
+            "expected": null,
+            "got": null,
+            "exact": true
+          }
+        },
+        "exact": 13,
+        "of": 14,
+        "top_level": {
+          "provider_name": {
+            "expected": "Linnet Valley Medical Center",
+            "got": "Linnet Valley Medical Center",
+            "exact": true
+          },
+          "total_billed": {
+            "expected": 9149.5,
+            "got": 9149.5,
+            "exact": true
+          },
+          "amount_patient_owes": {
+            "expected": 1563.35,
+            "got": 1563.35,
+            "exact": true
+          },
+          "due_date": {
+            "expected": "2026-11-02",
+            "got": "2026-11-02",
+            "exact": true
+          }
+        },
+        "top_level_exact": 4,
+        "top_level_of": 4
+      },
+      "documents_match": {
+        "expected": true,
+        "got": false,
+        "reason": "The insurance explanation shows you only owe eight hundred eight dollars and eighty-five cents, but the hospital bill asks for one thousand five hundred sixty-three dollars and thirty-five cents. This happens because the hospital billed you for items the insurance plan marked as not covered or fully written off."
+      },
+      "price": {
+        "lines_ok": 16,
+        "of": 16,
+        "flagged": [
+          [
+            2,
+            "96374",
+            "far_above_typical",
+            12.9
+          ],
+          [
+            3,
+            "96375",
+            "far_above_typical",
+            13.6
+          ],
+          [
+            4,
+            "96361",
+            "far_above_typical",
+            12.1
+          ],
+          [
+            12,
+            "74177",
+            "far_above_typical",
+            13.9
+          ],
+          [
+            13,
+            "99284",
+            "far_above_typical",
+            18.2
+          ]
+        ],
+        "summary": {
+          "source": "snowflake",
+          "items_checked": 5,
+          "items_flagged": 5,
+          "billed_total_checked": 7188.0,
+          "medicare_total_checked": 484.98,
+          "error": null
+        },
+        "summary_ok": true,
+        "rows": [
+          {
+            "line": 1,
+            "code": "J7030",
+            "expected_flag": "no_benchmark",
+            "got_flag": "no_benchmark",
+            "expected_times": null,
+            "got_times": null,
+            "ok": true,
+            "note": "No Medicare reference price for this code (common for lab tests and supplies)."
+          },
+          {
+            "line": 2,
+            "code": "96374",
+            "expected_flag": "far_above_typical",
+            "got_flag": "far_above_typical",
+            "expected_times": 12.9,
+            "got_times": 12.9,
+            "ok": true,
+            "note": "Billed $486.00, about 12.9x Medicare's $37.74. Far above typical; ask for a review or a discount."
+          },
+          {
+            "line": 3,
+            "code": "96375",
+            "expected_flag": "far_above_typical",
+            "got_flag": "far_above_typical",
+            "expected_times": 13.6,
+            "got_times": 13.6,
+            "ok": true,
+            "note": "Billed $214.00, about 13.6x Medicare's $15.70. Far above typical; ask for a review or a discount."
+          },
+          {
+            "line": 4,
+            "code": "96361",
+            "expected_flag": "far_above_typical",
+            "got_flag": "far_above_typical",
+            "expected_times": 12.1,
+            "got_times": 12.1,
+            "ok": true,
+            "note": "Billed $158.00, about 12.1x Medicare's $13.03. Far above typical; ask for a review or a discount."
+          },
+          {
+            "line": 5,
+            "code": null,
+            "expected_flag": "no_code",
+            "got_flag": "no_code",
+            "expected_times": null,
+            "got_times": null,
+            "ok": true,
+            "note": "No billing code on this line. Ask for an itemized bill that lists the code."
+          },
+          {
+            "line": 6,
+            "code": "36415",
+            "expected_flag": "no_benchmark",
+            "got_flag": "no_benchmark",
+            "expected_times": null,
+            "got_times": null,
+            "ok": true,
+            "note": "No Medicare reference price for this code (common for lab tests and supplies)."
+          },
+          {
+            "line": 7,
+            "code": "80053",
+            "expected_flag": "no_benchmark",
+            "got_flag": "no_benchmark",
+            "expected_times": null,
+            "got_times": null,
+            "ok": true,
+            "note": "No Medicare reference price for this code (common for lab tests and supplies)."
+          },
+          {
+            "line": 8,
+            "code": "80053",
+            "expected_flag": "no_benchmark",
+            "got_flag": "no_benchmark",
+            "expected_times": null,
+            "got_times": null,
+            "ok": true,
+            "note": "No Medicare reference price for this code (common for lab tests and supplies)."
+          },
+          {
+            "line": 9,
+            "code": "83690",
+            "expected_flag": "no_benchmark",
+            "got_flag": "no_benchmark",
+            "expected_times": null,
+            "got_times": null,
+            "ok": true,
+            "note": "No Medicare reference price for this code (common for lab tests and supplies)."
+          },
+          {
+            "line": 10,
+            "code": "85025",
+            "expected_flag": "no_benchmark",
+            "got_flag": "no_benchmark",
+            "expected_times": null,
+            "got_times": null,
+            "ok": true,
+            "note": "No Medicare reference price for this code (common for lab tests and supplies)."
+          },
+          {
+            "line": 11,
+            "code": "81003",
+            "expected_flag": "no_benchmark",
+            "got_flag": "no_benchmark",
+            "expected_times": null,
+            "got_times": null,
+            "ok": true,
+            "note": "No Medicare reference price for this code (common for lab tests and supplies)."
+          },
+          {
+            "line": 12,
+            "code": "74177",
+            "expected_flag": "far_above_typical",
+            "got_flag": "far_above_typical",
+            "expected_times": 13.9,
+            "got_times": 13.9,
+            "ok": true,
+            "note": "Billed $4,182.00, about 13.9x Medicare's $300.27. Far above typical; ask for a review or a discount."
+          },
+          {
+            "line": 13,
+            "code": "99284",
+            "expected_flag": "far_above_typical",
+            "got_flag": "far_above_typical",
+            "expected_times": 18.2,
+            "got_times": 18.2,
+            "ok": true,
+            "note": "Billed $2,148.00, about 18.2x Medicare's $118.24. Far above typical; ask for a review or a discount. Medicare's rate here covers only the doctor's fee; hospitals also bill a separate facility fee, so some difference is expected."
+          },
+          {
+            "line": 14,
+            "code": "J2405",
+            "expected_flag": "no_benchmark",
+            "got_flag": "no_benchmark",
+            "expected_times": null,
+            "got_times": null,
+            "ok": true,
+            "note": "No Medicare reference price for this code (common for lab tests and supplies)."
+          },
+          {
+            "line": 15,
+            "code": "J2270",
+            "expected_flag": "no_benchmark",
+            "got_flag": "no_benchmark",
+            "expected_times": null,
+            "got_times": null,
+            "ok": true,
+            "note": "No Medicare reference price for this code (common for lab tests and supplies)."
+          },
+          {
+            "line": 16,
+            "code": "Q9967",
+            "expected_flag": "no_benchmark",
+            "got_flag": "no_benchmark",
+            "expected_times": null,
+            "got_times": null,
+            "ok": true,
+            "note": "No Medicare reference price for this code (common for lab tests and supplies)."
+          }
+        ]
+      },
+      "mentions": {
+        "duplicate": [
+          "plain_summary",
+          "spoken_summary",
+          "questions_to_ask",
+          "possible_issues"
+        ],
+        "bundled_supply": [
+          "plain_summary",
+          "questions_to_ask"
+        ],
+        "balance_difference": [
+          "plain_summary",
+          "spoken_summary",
+          "questions_to_ask",
+          "document_mismatch_reason"
+        ],
+        "difference_amount_754_50": []
+      },
+      "safety_sentences": {
+        "spoken_summary": [
+          "Please call the hospital before paying because they may have billed you for duplicate and non-covered items by mistake."
+        ]
+      },
+      "texts": {
+        "plain_summary": "This document is a hospital bill from Linnet Valley Medical Center for emergency room services on September 14, 2026. The total billed amount was $9,149.50. Your insurance plan paid $1,691.70, and the statement asks you to pay $1,563.35 by November 2, 2026. However, your insurance explanation sheet shows your real responsibility should only be $808.85. The difference comes from extra fees for supplies and a duplicate blood test that the hospital did not write off properly.",
+        "spoken_summary": "You received a bill from Linnet Valley Medical Center for nine thousand one hundred forty-nine dollars and fifty cents for an emergency visit. Your insurance paid one thousand six hundred ninety-one dollars and seventy cents. The hospital says you owe one thousand five hundred sixty-three dollars and thirty-five cents, but your insurance paper says you only owe eight hundred eight dollars and eighty-five cents. Please call the hospital before paying because they may have billed you for duplicate and non-covered items by mistake.",
+        "questions_to_ask": [
+          "Why does this bill ask for $1,563.35 when my insurance explanation shows I only owe $808.85?",
+          "Why was I billed twice for the comprehensive metabolic panel test on September 14, 2026?",
+          "Can you remove the $486.50 charge for miscellaneous supplies that my insurance marked as non-covered under code CO-97?"
+        ],
+        "document_mismatch_reason": "The insurance explanation shows you only owe eight hundred eight dollars and eighty-five cents, but the hospital bill asks for one thousand five hundred sixty-three dollars and thirty-five cents. This happens because the hospital billed you for items the insurance plan marked as not covered or fully written off."
+      },
+      "app_review_findings": [
+        {
+          "line": 2,
+          "kind": "price",
+          "title": "HC IV PUSH SINGLE/INITIAL DRUG is billed at about 13 times Medicare's rate",
+          "question": "Can you explain how the charge for code 96374 was priced, and send an itemized statement?"
+        },
+        {
+          "line": 3,
+          "kind": "price",
+          "title": "HC IV PUSH EA ADDL SEQ NEW DRUG is billed at about 14 times Medicare's rate",
+          "question": "Can you explain how the charge for code 96375 was priced, and send an itemized statement?"
+        },
+        {
+          "line": 4,
+          "kind": "price",
+          "title": "HC IV HYDRATION EA ADDL HOUR is billed at about 12 times Medicare's rate",
+          "question": "Can you explain how the charge for code 96361 was priced, and send an itemized statement?"
+        },
+        {
+          "line": 5,
+          "kind": "note",
+          "title": "Vague fee without a medical code. Insurance listed this as not covered.",
+          "question": "Can you explain this line on my statement: \"2026-09-14 · HC MED/SURG SUPPLIES MISC · $486.50\"?"
+        },
+        {
+          "line": 7,
+          "kind": "note",
+          "title": "Possible duplicate charge listed twice on the bill.",
+          "question": "Can you explain this line on my statement: \"2026-09-14 · 80053 · HC COMPREHENSIVE METABOLIC PANEL · $268.00\"?"
+        },
+        {
+          "line": 8,
+          "kind": "note",
+          "title": "Possible duplicate charge. Insurance denied this second line as an exact duplicate.",
+          "question": "Can you explain this line on my statement: \"2026-09-14 · 80053 · HC COMPREHENSIVE METABOLIC PANEL · $268.00\"?"
+        },
+        {
+          "line": 12,
+          "kind": "price",
+          "title": "HC CT ABD & PELVIS W/CONTRAST is billed at about 14 times Medicare's rate",
+          "question": "Can you explain how the charge for code 74177 was priced, and send an itemized statement?"
+        },
+        {
+          "line": 13,
+          "kind": "doctor_part_only",
+          "title": "HC ED FACILITY LEVEL 4: Medicare's reference covers only the doctor's part",
+          "question": "Can you separate the doctor's charge and the hospital's charge for code 99284 on an itemized statement?"
+        }
+      ]
+    },
+    {
+      "run": "run-b-photos",
+      "seconds": 34.01,
+      "http_status": 200,
+      "model_named_in_response": "gemini-3.5-flash",
+      "model_that_answered": "gemini-3.5-flash",
+      "gemini_calls": [
+        "POST v1beta/models/gemini-3.5-flash:generateContent \"HTTP/1.1 200 OK\""
+      ],
+      "mock": false,
+      "audit": {
+        "saved": true,
+        "audit_id": "f44393ef-7e49-4000-b54f-49927d06a1dc",
+        "error": null
+      },
+      "documents": {
+        "expected": {
+          "1": "hospital_bill",
+          "2": "hospital_bill",
+          "3": "hospital_bill",
+          "4": "eob",
+          "5": "eob",
+          "6": "eob"
+        },
+        "got": {
+          "1": "hospital_bill",
+          "2": "hospital_bill",
+          "3": "hospital_bill",
+          "4": "eob",
+          "5": "eob",
+          "6": "eob"
+        },
+        "correct": 6,
+        "of": 6,
+        "overall_document_type": "hospital_bill"
+      },
+      "lines": {
+        "expected": 16,
+        "extracted": 16,
+        "matched": 16,
+        "code_exact": 16,
+        "amount_exact": 16,
+        "date_exact": 16,
+        "description_exact": 16,
+        "document_index_ok": 16,
+        "source_page_ok": 0,
+        "source_pages_seen": [
+          "2"
+        ],
+        "in_order": true,
+        "extras": [],
+        "lines_with_issues": {
+          "5": [
+            "Vague miscellaneous supply charge without a CPT code."
+          ],
+          "8": [
+            "Duplicate line item listed on the bill for the same blood test."
+          ]
+        },
+        "rows": [
+          {
+            "line": 1,
+            "expected_code": "J7030",
+            "got_code": "J7030",
+            "got_index": 0,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": false,
+            "issues": []
+          },
+          {
+            "line": 2,
+            "expected_code": "96374",
+            "got_code": "96374",
+            "got_index": 1,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": false,
+            "issues": []
+          },
+          {
+            "line": 3,
+            "expected_code": "96375",
+            "got_code": "96375",
+            "got_index": 2,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": false,
+            "issues": []
+          },
+          {
+            "line": 4,
+            "expected_code": "96361",
+            "got_code": "96361",
+            "got_index": 3,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": false,
+            "issues": []
+          },
+          {
+            "line": 5,
+            "expected_code": null,
+            "got_code": null,
+            "got_index": 4,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": false,
+            "issues": [
+              "Vague miscellaneous supply charge without a CPT code."
+            ]
+          },
+          {
+            "line": 6,
+            "expected_code": "36415",
+            "got_code": "36415",
+            "got_index": 5,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": false,
+            "issues": []
+          },
+          {
+            "line": 7,
+            "expected_code": "80053",
+            "got_code": "80053",
+            "got_index": 6,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": false,
+            "issues": []
+          },
+          {
+            "line": 8,
+            "expected_code": "80053",
+            "got_code": "80053",
+            "got_index": 7,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": false,
+            "issues": [
+              "Duplicate line item listed on the bill for the same blood test."
+            ]
+          },
+          {
+            "line": 9,
+            "expected_code": "83690",
+            "got_code": "83690",
+            "got_index": 8,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": false,
+            "issues": []
+          },
+          {
+            "line": 10,
+            "expected_code": "85025",
+            "got_code": "85025",
+            "got_index": 9,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": false,
+            "issues": []
+          },
+          {
+            "line": 11,
+            "expected_code": "81003",
+            "got_code": "81003",
+            "got_index": 10,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": false,
+            "issues": []
+          },
+          {
+            "line": 12,
+            "expected_code": "74177",
+            "got_code": "74177",
+            "got_index": 11,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": false,
+            "issues": []
+          },
+          {
+            "line": 13,
+            "expected_code": "99284",
+            "got_code": "99284",
+            "got_index": 12,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": false,
+            "issues": []
+          },
+          {
+            "line": 14,
+            "expected_code": "J2405",
+            "got_code": "J2405",
+            "got_index": 13,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": false,
+            "issues": []
+          },
+          {
+            "line": 15,
+            "expected_code": "J2270",
+            "got_code": "J2270",
+            "got_index": 14,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": false,
+            "issues": []
+          },
+          {
+            "line": 16,
+            "expected_code": "Q9967",
+            "got_code": "Q9967",
+            "got_index": 15,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": false,
+            "issues": []
+          }
+        ]
+      },
+      "financials": {
+        "fields": {
+          "statement_billed": {
+            "expected": 9149.5,
+            "got": 9149.5,
+            "exact": true
+          },
+          "bill_adjustments": {
+            "expected": 5894.45,
+            "got": 5894.45,
+            "exact": true
+          },
+          "after_bill_adjustments": {
+            "expected": null,
+            "got": 3255.05,
+            "exact": false
+          },
+          "statement_insurer_paid": {
+            "expected": 1691.7,
+            "got": 1691.7,
+            "exact": true
+          },
+          "prior_patient_payment": {
+            "expected": 0.0,
+            "got": 0.0,
+            "exact": true
+          },
+          "statement_balance": {
+            "expected": 1563.35,
+            "got": 1563.35,
+            "exact": true
+          },
+          "eob_billed": {
+            "expected": 9149.5,
+            "got": 9149.5,
+            "exact": true
+          },
+          "eob_allowed": {
+            "expected": 2500.55,
+            "got": 2500.55,
+            "exact": true
+          },
+          "eob_insurer_paid": {
+            "expected": 1691.7,
+            "got": 1691.7,
+            "exact": true
+          },
+          "eob_patient_responsibility": {
+            "expected": 808.85,
+            "got": 808.85,
+            "exact": true
+          },
+          "deductible": {
+            "expected": 320.0,
+            "got": 320.0,
+            "exact": true
+          },
+          "coinsurance": {
+            "expected": 238.85,
+            "got": 238.85,
+            "exact": true
+          },
+          "copayment": {
+            "expected": 250.0,
+            "got": 250.0,
+            "exact": true
+          },
+          "copay_coinsurance": {
+            "expected": null,
+            "got": null,
+            "exact": true
+          }
+        },
+        "exact": 13,
+        "of": 14,
+        "top_level": {
+          "provider_name": {
+            "expected": "Linnet Valley Medical Center",
+            "got": "Linnet Valley Medical Center",
+            "exact": true
+          },
+          "total_billed": {
+            "expected": 9149.5,
+            "got": 9149.5,
+            "exact": true
+          },
+          "amount_patient_owes": {
+            "expected": 1563.35,
+            "got": 1563.35,
+            "exact": true
+          },
+          "due_date": {
+            "expected": "2026-11-02",
+            "got": "2026-11-02",
+            "exact": true
+          }
+        },
+        "top_level_exact": 4,
+        "top_level_of": 4
+      },
+      "documents_match": {
+        "expected": true,
+        "got": true,
+        "reason": "The hospital bill states a balance due of $1,563.35, but the Explanation of Benefits (EOB) shows a patient responsibility of $808.85. The bill did not write off $754.50 in non-covered and duplicate charges that your insurance plan marked as not owed by you."
+      },
+      "price": {
+        "lines_ok": 16,
+        "of": 16,
+        "flagged": [
+          [
+            2,
+            "96374",
+            "far_above_typical",
+            12.9
+          ],
+          [
+            3,
+            "96375",
+            "far_above_typical",
+            13.6
+          ],
+          [
+            4,
+            "96361",
+            "far_above_typical",
+            12.1
+          ],
+          [
+            12,
+            "74177",
+            "far_above_typical",
+            13.9
+          ],
+          [
+            13,
+            "99284",
+            "far_above_typical",
+            18.2
+          ]
+        ],
+        "summary": {
+          "source": "snowflake",
+          "items_checked": 5,
+          "items_flagged": 5,
+          "billed_total_checked": 7188.0,
+          "medicare_total_checked": 484.98,
+          "error": null
+        },
+        "summary_ok": true,
+        "rows": [
+          {
+            "line": 1,
+            "code": "J7030",
+            "expected_flag": "no_benchmark",
+            "got_flag": "no_benchmark",
+            "expected_times": null,
+            "got_times": null,
+            "ok": true,
+            "note": "No Medicare reference price for this code (common for lab tests and supplies)."
+          },
+          {
+            "line": 2,
+            "code": "96374",
+            "expected_flag": "far_above_typical",
+            "got_flag": "far_above_typical",
+            "expected_times": 12.9,
+            "got_times": 12.9,
+            "ok": true,
+            "note": "Billed $486.00, about 12.9x Medicare's $37.74. Far above typical; ask for a review or a discount."
+          },
+          {
+            "line": 3,
+            "code": "96375",
+            "expected_flag": "far_above_typical",
+            "got_flag": "far_above_typical",
+            "expected_times": 13.6,
+            "got_times": 13.6,
+            "ok": true,
+            "note": "Billed $214.00, about 13.6x Medicare's $15.70. Far above typical; ask for a review or a discount."
+          },
+          {
+            "line": 4,
+            "code": "96361",
+            "expected_flag": "far_above_typical",
+            "got_flag": "far_above_typical",
+            "expected_times": 12.1,
+            "got_times": 12.1,
+            "ok": true,
+            "note": "Billed $158.00, about 12.1x Medicare's $13.03. Far above typical; ask for a review or a discount."
+          },
+          {
+            "line": 5,
+            "code": null,
+            "expected_flag": "no_code",
+            "got_flag": "no_code",
+            "expected_times": null,
+            "got_times": null,
+            "ok": true,
+            "note": "No billing code on this line. Ask for an itemized bill that lists the code."
+          },
+          {
+            "line": 6,
+            "code": "36415",
+            "expected_flag": "no_benchmark",
+            "got_flag": "no_benchmark",
+            "expected_times": null,
+            "got_times": null,
+            "ok": true,
+            "note": "No Medicare reference price for this code (common for lab tests and supplies)."
+          },
+          {
+            "line": 7,
+            "code": "80053",
+            "expected_flag": "no_benchmark",
+            "got_flag": "no_benchmark",
+            "expected_times": null,
+            "got_times": null,
+            "ok": true,
+            "note": "No Medicare reference price for this code (common for lab tests and supplies)."
+          },
+          {
+            "line": 8,
+            "code": "80053",
+            "expected_flag": "no_benchmark",
+            "got_flag": "no_benchmark",
+            "expected_times": null,
+            "got_times": null,
+            "ok": true,
+            "note": "No Medicare reference price for this code (common for lab tests and supplies)."
+          },
+          {
+            "line": 9,
+            "code": "83690",
+            "expected_flag": "no_benchmark",
+            "got_flag": "no_benchmark",
+            "expected_times": null,
+            "got_times": null,
+            "ok": true,
+            "note": "No Medicare reference price for this code (common for lab tests and supplies)."
+          },
+          {
+            "line": 10,
+            "code": "85025",
+            "expected_flag": "no_benchmark",
+            "got_flag": "no_benchmark",
+            "expected_times": null,
+            "got_times": null,
+            "ok": true,
+            "note": "No Medicare reference price for this code (common for lab tests and supplies)."
+          },
+          {
+            "line": 11,
+            "code": "81003",
+            "expected_flag": "no_benchmark",
+            "got_flag": "no_benchmark",
+            "expected_times": null,
+            "got_times": null,
+            "ok": true,
+            "note": "No Medicare reference price for this code (common for lab tests and supplies)."
+          },
+          {
+            "line": 12,
+            "code": "74177",
+            "expected_flag": "far_above_typical",
+            "got_flag": "far_above_typical",
+            "expected_times": 13.9,
+            "got_times": 13.9,
+            "ok": true,
+            "note": "Billed $4,182.00, about 13.9x Medicare's $300.27. Far above typical; ask for a review or a discount."
+          },
+          {
+            "line": 13,
+            "code": "99284",
+            "expected_flag": "far_above_typical",
+            "got_flag": "far_above_typical",
+            "expected_times": 18.2,
+            "got_times": 18.2,
+            "ok": true,
+            "note": "Billed $2,148.00, about 18.2x Medicare's $118.24. Far above typical; ask for a review or a discount. Medicare's rate here covers only the doctor's fee; hospitals also bill a separate facility fee, so some difference is expected."
+          },
+          {
+            "line": 14,
+            "code": "J2405",
+            "expected_flag": "no_benchmark",
+            "got_flag": "no_benchmark",
+            "expected_times": null,
+            "got_times": null,
+            "ok": true,
+            "note": "No Medicare reference price for this code (common for lab tests and supplies)."
+          },
+          {
+            "line": 15,
+            "code": "J2270",
+            "expected_flag": "no_benchmark",
+            "got_flag": "no_benchmark",
+            "expected_times": null,
+            "got_times": null,
+            "ok": true,
+            "note": "No Medicare reference price for this code (common for lab tests and supplies)."
+          },
+          {
+            "line": 16,
+            "code": "Q9967",
+            "expected_flag": "no_benchmark",
+            "got_flag": "no_benchmark",
+            "expected_times": null,
+            "got_times": null,
+            "ok": true,
+            "note": "No Medicare reference price for this code (common for lab tests and supplies)."
+          }
+        ]
+      },
+      "mentions": {
+        "duplicate": [
+          "plain_summary",
+          "spoken_summary",
+          "questions_to_ask",
+          "document_mismatch_reason",
+          "possible_issues"
+        ],
+        "bundled_supply": [
+          "plain_summary",
+          "possible_issues"
+        ],
+        "balance_difference": [
+          "plain_summary",
+          "spoken_summary",
+          "questions_to_ask",
+          "document_mismatch_reason"
+        ],
+        "difference_amount_754_50": [
+          "plain_summary",
+          "spoken_summary",
+          "questions_to_ask",
+          "document_mismatch_reason"
+        ]
+      },
+      "safety_sentences": {
+        "plain_summary": [
+          "50 in non-covered duplicate charges and bundled supplies that you do not owe."
+        ],
+        "spoken_summary": [
+          "The hospital forgot to remove seven hundred fifty-four dollars and fifty cents in duplicate and non-covered charges."
+        ],
+        "document_mismatch_reason": [
+          "50 in non-covered and duplicate charges that your insurance plan marked as not owed by you."
+        ]
+      },
+      "texts": {
+        "plain_summary": "This document set includes an itemized bill from Linnet Valley Medical Center and an Explanation of Benefits (EOB) from Pellridge Health Plan for emergency care on September 14, 2026. The total hospital bill was $9,149.50. Your insurance plan negotiated discounts and paid $1,691.70. Your EOB states that your share is $808.85, consisting of a $320.00 deductible, a $250.00 emergency room copay, and $238.85 in coinsurance. However, the hospital bill asks for $1,563.35 because it did not subtract $754.50 in non-covered duplicate charges and bundled supplies that you do not owe. You should call the hospital billing office before paying to update your statement to match your EOB.",
+        "spoken_summary": "You received a hospital bill and an insurance statement for emergency care from September fourteenth, twenty twenty-six. The total charge was nine thousand one hundred forty-nine dollars and fifty cents. Your insurance statement says you only owe eight hundred eight dollars and eighty-five cents. However, the hospital billed you one thousand five hundred sixty-three dollars and thirty-five cents. The hospital forgot to remove seven hundred fifty-four dollars and fifty cents in duplicate and non-covered charges. Please call the hospital billing department before paying.",
+        "questions_to_ask": [
+          "Why does my bill state I owe $1,563.35 when my insurance Explanation of Benefits shows my patient responsibility is only $808.85?",
+          "Can you please adjust my account balance to credit the $754.50 in non-covered and duplicate charges (codes CO-97 and OA-18) identified by my insurer?",
+          "Why was a duplicate charge for a comprehensive metabolic panel billed twice on my itemized statement?"
+        ],
+        "document_mismatch_reason": "The hospital bill states a balance due of $1,563.35, but the Explanation of Benefits (EOB) shows a patient responsibility of $808.85. The bill did not write off $754.50 in non-covered and duplicate charges that your insurance plan marked as not owed by you."
+      },
+      "app_review_findings": [
+        {
+          "line": 2,
+          "kind": "price",
+          "title": "HC IV PUSH SINGLE/INITIAL DRUG is billed at about 13 times Medicare's rate",
+          "question": "Can you explain how the charge for code 96374 was priced, and send an itemized statement?"
+        },
+        {
+          "line": 3,
+          "kind": "price",
+          "title": "HC IV PUSH EA ADDL SEQ NEW DRUG is billed at about 14 times Medicare's rate",
+          "question": "Can you explain how the charge for code 96375 was priced, and send an itemized statement?"
+        },
+        {
+          "line": 4,
+          "kind": "price",
+          "title": "HC IV HYDRATION EA ADDL HOUR is billed at about 12 times Medicare's rate",
+          "question": "Can you explain how the charge for code 96361 was priced, and send an itemized statement?"
+        },
+        {
+          "line": 5,
+          "kind": "note",
+          "title": "Vague miscellaneous supply charge without a CPT code.",
+          "question": "Can you explain this line on my statement: \"2026-09-14 · HC MED/SURG SUPPLIES MISC · $486.50\"?"
+        },
+        {
+          "line": 8,
+          "kind": "note",
+          "title": "Duplicate line item listed on the bill for the same blood test.",
+          "question": "Can you explain this line on my statement: \"2026-09-14 · 80053 · HC COMPREHENSIVE METABOLIC PANEL · $268.00\"?"
+        },
+        {
+          "line": 12,
+          "kind": "price",
+          "title": "HC CT ABD & PELVIS W/CONTRAST is billed at about 14 times Medicare's rate",
+          "question": "Can you explain how the charge for code 74177 was priced, and send an itemized statement?"
+        },
+        {
+          "line": 13,
+          "kind": "doctor_part_only",
+          "title": "HC ED FACILITY LEVEL 4: Medicare's reference covers only the doctor's part",
+          "question": "Can you separate the doctor's charge and the hospital's charge for code 99284 on an itemized statement?"
+        }
+      ]
+    },
+    {
+      "run": "run-c-bill-pdf",
+      "seconds": 12.28,
+      "http_status": 200,
+      "model_named_in_response": "gemini-3.5-flash",
+      "model_that_answered": "gemini-3.5-flash",
+      "gemini_calls": [
+        "POST v1beta/models/gemini-3.5-flash:generateContent \"HTTP/1.1 200 OK\""
+      ],
+      "mock": false,
+      "audit": {
+        "saved": true,
+        "audit_id": "40029e6c-6780-4094-9406-1fa039da7c2d",
+        "error": null
+      },
+      "documents": {
+        "expected": {
+          "1": "hospital_bill"
+        },
+        "got": {
+          "1": "hospital_bill"
+        },
+        "correct": 1,
+        "of": 1,
+        "overall_document_type": "hospital_bill"
+      },
+      "lines": {
+        "expected": 16,
+        "extracted": 16,
+        "matched": 16,
+        "code_exact": 16,
+        "amount_exact": 16,
+        "date_exact": 16,
+        "description_exact": 16,
+        "document_index_ok": 16,
+        "source_page_ok": 16,
+        "source_pages_seen": [
+          "2"
+        ],
+        "in_order": true,
+        "extras": [],
+        "lines_with_issues": {
+          "5": [
+            "Vague miscellaneous supplies fee without a specific procedure code"
+          ],
+          "7": [
+            "Duplicate line item charge for CPT 80053"
+          ],
+          "8": [
+            "Duplicate line item charge for CPT 80053"
+          ]
+        },
+        "rows": [
+          {
+            "line": 1,
+            "expected_code": "J7030",
+            "got_code": "J7030",
+            "got_index": 0,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": true,
+            "issues": []
+          },
+          {
+            "line": 2,
+            "expected_code": "96374",
+            "got_code": "96374",
+            "got_index": 1,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": true,
+            "issues": []
+          },
+          {
+            "line": 3,
+            "expected_code": "96375",
+            "got_code": "96375",
+            "got_index": 2,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": true,
+            "issues": []
+          },
+          {
+            "line": 4,
+            "expected_code": "96361",
+            "got_code": "96361",
+            "got_index": 3,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": true,
+            "issues": []
+          },
+          {
+            "line": 5,
+            "expected_code": null,
+            "got_code": null,
+            "got_index": 4,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": true,
+            "issues": [
+              "Vague miscellaneous supplies fee without a specific procedure code"
+            ]
+          },
+          {
+            "line": 6,
+            "expected_code": "36415",
+            "got_code": "36415",
+            "got_index": 5,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": true,
+            "issues": []
+          },
+          {
+            "line": 7,
+            "expected_code": "80053",
+            "got_code": "80053",
+            "got_index": 6,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": true,
+            "issues": [
+              "Duplicate line item charge for CPT 80053"
+            ]
+          },
+          {
+            "line": 8,
+            "expected_code": "80053",
+            "got_code": "80053",
+            "got_index": 7,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": true,
+            "issues": [
+              "Duplicate line item charge for CPT 80053"
+            ]
+          },
+          {
+            "line": 9,
+            "expected_code": "83690",
+            "got_code": "83690",
+            "got_index": 8,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": true,
+            "issues": []
+          },
+          {
+            "line": 10,
+            "expected_code": "85025",
+            "got_code": "85025",
+            "got_index": 9,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": true,
+            "issues": []
+          },
+          {
+            "line": 11,
+            "expected_code": "81003",
+            "got_code": "81003",
+            "got_index": 10,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": true,
+            "issues": []
+          },
+          {
+            "line": 12,
+            "expected_code": "74177",
+            "got_code": "74177",
+            "got_index": 11,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": true,
+            "issues": []
+          },
+          {
+            "line": 13,
+            "expected_code": "99284",
+            "got_code": "99284",
+            "got_index": 12,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": true,
+            "issues": []
+          },
+          {
+            "line": 14,
+            "expected_code": "J2405",
+            "got_code": "J2405",
+            "got_index": 13,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": true,
+            "issues": []
+          },
+          {
+            "line": 15,
+            "expected_code": "J2270",
+            "got_code": "J2270",
+            "got_index": 14,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": true,
+            "issues": []
+          },
+          {
+            "line": 16,
+            "expected_code": "Q9967",
+            "got_code": "Q9967",
+            "got_index": 15,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": true,
+            "issues": []
+          }
+        ]
+      },
+      "financials": {
+        "fields": {
+          "statement_billed": {
+            "expected": 9149.5,
+            "got": 9149.5,
+            "exact": true
+          },
+          "bill_adjustments": {
+            "expected": 5894.45,
+            "got": 5894.45,
+            "exact": true
+          },
+          "after_bill_adjustments": {
+            "expected": null,
+            "got": 3255.05,
+            "exact": false
+          },
+          "statement_insurer_paid": {
+            "expected": 1691.7,
+            "got": 1691.7,
+            "exact": true
+          },
+          "prior_patient_payment": {
+            "expected": 0.0,
+            "got": 0.0,
+            "exact": true
+          },
+          "statement_balance": {
+            "expected": 1563.35,
+            "got": 1563.35,
+            "exact": true
+          },
+          "eob_billed": {
+            "expected": null,
+            "got": null,
+            "exact": true
+          },
+          "eob_allowed": {
+            "expected": null,
+            "got": null,
+            "exact": true
+          },
+          "eob_insurer_paid": {
+            "expected": null,
+            "got": null,
+            "exact": true
+          },
+          "eob_patient_responsibility": {
+            "expected": null,
+            "got": null,
+            "exact": true
+          },
+          "deductible": {
+            "expected": null,
+            "got": null,
+            "exact": true
+          },
+          "coinsurance": {
+            "expected": null,
+            "got": null,
+            "exact": true
+          },
+          "copayment": {
+            "expected": null,
+            "got": null,
+            "exact": true
+          },
+          "copay_coinsurance": {
+            "expected": null,
+            "got": null,
+            "exact": true
+          }
+        },
+        "exact": 13,
+        "of": 14,
+        "top_level": {
+          "provider_name": {
+            "expected": "Linnet Valley Medical Center",
+            "got": "Linnet Valley Medical Center",
+            "exact": true
+          },
+          "total_billed": {
+            "expected": 9149.5,
+            "got": 9149.5,
+            "exact": true
+          },
+          "amount_patient_owes": {
+            "expected": 1563.35,
+            "got": 1563.35,
+            "exact": true
+          },
+          "due_date": {
+            "expected": "2026-11-02",
+            "got": "2026-11-02",
+            "exact": true
+          }
+        },
+        "top_level_exact": 4,
+        "top_level_of": 4
+      },
+      "documents_match": {
+        "expected": null,
+        "got": null,
+        "reason": null
+      },
+      "price": {
+        "lines_ok": 16,
+        "of": 16,
+        "flagged": [
+          [
+            2,
+            "96374",
+            "far_above_typical",
+            12.9
+          ],
+          [
+            3,
+            "96375",
+            "far_above_typical",
+            13.6
+          ],
+          [
+            4,
+            "96361",
+            "far_above_typical",
+            12.1
+          ],
+          [
+            12,
+            "74177",
+            "far_above_typical",
+            13.9
+          ],
+          [
+            13,
+            "99284",
+            "far_above_typical",
+            18.2
+          ]
+        ],
+        "summary": {
+          "source": "snowflake",
+          "items_checked": 5,
+          "items_flagged": 5,
+          "billed_total_checked": 7188.0,
+          "medicare_total_checked": 484.98,
+          "error": null
+        },
+        "summary_ok": true,
+        "rows": [
+          {
+            "line": 1,
+            "code": "J7030",
+            "expected_flag": "no_benchmark",
+            "got_flag": "no_benchmark",
+            "expected_times": null,
+            "got_times": null,
+            "ok": true,
+            "note": "No Medicare reference price for this code (common for lab tests and supplies)."
+          },
+          {
+            "line": 2,
+            "code": "96374",
+            "expected_flag": "far_above_typical",
+            "got_flag": "far_above_typical",
+            "expected_times": 12.9,
+            "got_times": 12.9,
+            "ok": true,
+            "note": "Billed $486.00, about 12.9x Medicare's $37.74. Far above typical; ask for a review or a discount."
+          },
+          {
+            "line": 3,
+            "code": "96375",
+            "expected_flag": "far_above_typical",
+            "got_flag": "far_above_typical",
+            "expected_times": 13.6,
+            "got_times": 13.6,
+            "ok": true,
+            "note": "Billed $214.00, about 13.6x Medicare's $15.70. Far above typical; ask for a review or a discount."
+          },
+          {
+            "line": 4,
+            "code": "96361",
+            "expected_flag": "far_above_typical",
+            "got_flag": "far_above_typical",
+            "expected_times": 12.1,
+            "got_times": 12.1,
+            "ok": true,
+            "note": "Billed $158.00, about 12.1x Medicare's $13.03. Far above typical; ask for a review or a discount."
+          },
+          {
+            "line": 5,
+            "code": null,
+            "expected_flag": "no_code",
+            "got_flag": "no_code",
+            "expected_times": null,
+            "got_times": null,
+            "ok": true,
+            "note": "No billing code on this line. Ask for an itemized bill that lists the code."
+          },
+          {
+            "line": 6,
+            "code": "36415",
+            "expected_flag": "no_benchmark",
+            "got_flag": "no_benchmark",
+            "expected_times": null,
+            "got_times": null,
+            "ok": true,
+            "note": "No Medicare reference price for this code (common for lab tests and supplies)."
+          },
+          {
+            "line": 7,
+            "code": "80053",
+            "expected_flag": "no_benchmark",
+            "got_flag": "no_benchmark",
+            "expected_times": null,
+            "got_times": null,
+            "ok": true,
+            "note": "No Medicare reference price for this code (common for lab tests and supplies)."
+          },
+          {
+            "line": 8,
+            "code": "80053",
+            "expected_flag": "no_benchmark",
+            "got_flag": "no_benchmark",
+            "expected_times": null,
+            "got_times": null,
+            "ok": true,
+            "note": "No Medicare reference price for this code (common for lab tests and supplies)."
+          },
+          {
+            "line": 9,
+            "code": "83690",
+            "expected_flag": "no_benchmark",
+            "got_flag": "no_benchmark",
+            "expected_times": null,
+            "got_times": null,
+            "ok": true,
+            "note": "No Medicare reference price for this code (common for lab tests and supplies)."
+          },
+          {
+            "line": 10,
+            "code": "85025",
+            "expected_flag": "no_benchmark",
+            "got_flag": "no_benchmark",
+            "expected_times": null,
+            "got_times": null,
+            "ok": true,
+            "note": "No Medicare reference price for this code (common for lab tests and supplies)."
+          },
+          {
+            "line": 11,
+            "code": "81003",
+            "expected_flag": "no_benchmark",
+            "got_flag": "no_benchmark",
+            "expected_times": null,
+            "got_times": null,
+            "ok": true,
+            "note": "No Medicare reference price for this code (common for lab tests and supplies)."
+          },
+          {
+            "line": 12,
+            "code": "74177",
+            "expected_flag": "far_above_typical",
+            "got_flag": "far_above_typical",
+            "expected_times": 13.9,
+            "got_times": 13.9,
+            "ok": true,
+            "note": "Billed $4,182.00, about 13.9x Medicare's $300.27. Far above typical; ask for a review or a discount."
+          },
+          {
+            "line": 13,
+            "code": "99284",
+            "expected_flag": "far_above_typical",
+            "got_flag": "far_above_typical",
+            "expected_times": 18.2,
+            "got_times": 18.2,
+            "ok": true,
+            "note": "Billed $2,148.00, about 18.2x Medicare's $118.24. Far above typical; ask for a review or a discount. Medicare's rate here covers only the doctor's fee; hospitals also bill a separate facility fee, so some difference is expected."
+          },
+          {
+            "line": 14,
+            "code": "J2405",
+            "expected_flag": "no_benchmark",
+            "got_flag": "no_benchmark",
+            "expected_times": null,
+            "got_times": null,
+            "ok": true,
+            "note": "No Medicare reference price for this code (common for lab tests and supplies)."
+          },
+          {
+            "line": 15,
+            "code": "J2270",
+            "expected_flag": "no_benchmark",
+            "got_flag": "no_benchmark",
+            "expected_times": null,
+            "got_times": null,
+            "ok": true,
+            "note": "No Medicare reference price for this code (common for lab tests and supplies)."
+          },
+          {
+            "line": 16,
+            "code": "Q9967",
+            "expected_flag": "no_benchmark",
+            "got_flag": "no_benchmark",
+            "expected_times": null,
+            "got_times": null,
+            "ok": true,
+            "note": "No Medicare reference price for this code (common for lab tests and supplies)."
+          }
+        ]
+      },
+      "mentions": {
+        "duplicate": [
+          "questions_to_ask",
+          "possible_issues"
+        ],
+        "bundled_supply": [
+          "questions_to_ask",
+          "possible_issues"
+        ],
+        "balance_difference": [],
+        "difference_amount_754_50": []
+      },
+      "safety_sentences": {},
+      "texts": {
+        "plain_summary": "This is an itemized bill from Linnet Valley Medical Center for emergency department hospital care on September 14, 2026. The total hospital charges were $9,149.50. Your health insurance, Pellridge Health Plan, paid $1,691.70 and adjusted off $5,894.45 based on their contract. You owe a final balance of $1,563.35, due by November 2, 2026. Please note that doctor fees, such as emergency doctors or radiologists, will be billed separately.",
+        "spoken_summary": "This is a hospital bill from Linnet Valley Medical Center for an emergency room visit on September fourteenth, 2026. Total charges were nine thousand one hundred forty-nine dollars and fifty cents. Your insurance paid one thousand six hundred ninety-one dollars and seventy cents and reduced the bill by five thousand eight hundred ninety-four dollars and forty-five cents. You owe one thousand five hundred sixty-three dollars and thirty-five cents, due by November second, 2026.",
+        "questions_to_ask": [
+          "I see two charges for code 80053, the Comprehensive Metabolic Panel, for $268.00 each on September 14. Was this test actually performed twice, or is one charge a duplicate?",
+          "Could you provide a detailed breakdown for the $486.50 charge listed under 'HC MED/SURG SUPPLIES MISC'?",
+          "Can you verify if my Explanation of Benefits from Pellridge Health Plan matches the $1,563.35 balance shown on this statement?"
+        ],
+        "document_mismatch_reason": null
+      },
+      "app_review_findings": [
+        {
+          "line": 2,
+          "kind": "price",
+          "title": "HC IV PUSH SINGLE/INITIAL DRUG is billed at about 13 times Medicare's rate",
+          "question": "Can you explain how the charge for code 96374 was priced, and send an itemized statement?"
+        },
+        {
+          "line": 3,
+          "kind": "price",
+          "title": "HC IV PUSH EA ADDL SEQ NEW DRUG is billed at about 14 times Medicare's rate",
+          "question": "Can you explain how the charge for code 96375 was priced, and send an itemized statement?"
+        },
+        {
+          "line": 4,
+          "kind": "price",
+          "title": "HC IV HYDRATION EA ADDL HOUR is billed at about 12 times Medicare's rate",
+          "question": "Can you explain how the charge for code 96361 was priced, and send an itemized statement?"
+        },
+        {
+          "line": 5,
+          "kind": "note",
+          "title": "Vague miscellaneous supplies fee without a specific procedure code",
+          "question": "Can you explain this line on my statement: \"2026-09-14 · HC MED/SURG SUPPLIES MISC · $486.50\"?"
+        },
+        {
+          "line": 7,
+          "kind": "note",
+          "title": "Duplicate line item charge for CPT 80053",
+          "question": "Can you explain this line on my statement: \"2026-09-14 · 80053 · HC COMPREHENSIVE METABOLIC PANEL · $268.00\"?"
+        },
+        {
+          "line": 8,
+          "kind": "note",
+          "title": "Duplicate line item charge for CPT 80053",
+          "question": "Can you explain this line on my statement: \"2026-09-14 · 80053 · HC COMPREHENSIVE METABOLIC PANEL · $268.00\"?"
+        },
+        {
+          "line": 12,
+          "kind": "price",
+          "title": "HC CT ABD & PELVIS W/CONTRAST is billed at about 14 times Medicare's rate",
+          "question": "Can you explain how the charge for code 74177 was priced, and send an itemized statement?"
+        },
+        {
+          "line": 13,
+          "kind": "doctor_part_only",
+          "title": "HC ED FACILITY LEVEL 4: Medicare's reference covers only the doctor's part",
+          "question": "Can you separate the doctor's charge and the hospital's charge for code 99284 on an itemized statement?"
+        }
+      ]
+    },
+    {
+      "run": "run-b4-photos-key-pages",
+      "seconds": 24.86,
+      "http_status": 200,
+      "model_named_in_response": "gemini-3.5-flash",
+      "model_that_answered": "gemini-3.5-flash",
+      "gemini_calls": [
+        "POST v1beta/models/gemini-3.5-flash:generateContent \"HTTP/1.1 200 OK\""
+      ],
+      "mock": false,
+      "audit": {
+        "saved": true,
+        "audit_id": "94616429-d828-4717-992e-776547e15ea0",
+        "error": null
+      },
+      "documents": {
+        "expected": {
+          "1": "hospital_bill",
+          "2": "hospital_bill",
+          "3": "eob",
+          "4": "eob"
+        },
+        "got": {
+          "1": "hospital_bill",
+          "2": "hospital_bill",
+          "3": "eob",
+          "4": "eob"
+        },
+        "correct": 4,
+        "of": 4,
+        "overall_document_type": "hospital_bill"
+      },
+      "lines": {
+        "expected": 16,
+        "extracted": 16,
+        "matched": 16,
+        "code_exact": 16,
+        "amount_exact": 16,
+        "date_exact": 16,
+        "description_exact": 16,
+        "document_index_ok": 16,
+        "source_page_ok": 0,
+        "source_pages_seen": [
+          "2"
+        ],
+        "in_order": true,
+        "extras": [],
+        "lines_with_issues": {
+          "5": [
+            "Vague fee without CPT code",
+            "Insurance marked this charge as included in the room visit and not owed by patient"
+          ],
+          "8": [
+            "Possible duplicate charge for the same blood test on the same day",
+            "Insurance marked this second test as an exact duplicate not owed by patient"
+          ]
+        },
+        "rows": [
+          {
+            "line": 1,
+            "expected_code": "J7030",
+            "got_code": "J7030",
+            "got_index": 0,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": false,
+            "issues": []
+          },
+          {
+            "line": 2,
+            "expected_code": "96374",
+            "got_code": "96374",
+            "got_index": 1,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": false,
+            "issues": []
+          },
+          {
+            "line": 3,
+            "expected_code": "96375",
+            "got_code": "96375",
+            "got_index": 2,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": false,
+            "issues": []
+          },
+          {
+            "line": 4,
+            "expected_code": "96361",
+            "got_code": "96361",
+            "got_index": 3,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": false,
+            "issues": []
+          },
+          {
+            "line": 5,
+            "expected_code": null,
+            "got_code": null,
+            "got_index": 4,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": false,
+            "issues": [
+              "Vague fee without CPT code",
+              "Insurance marked this charge as included in the room visit and not owed by patient"
+            ]
+          },
+          {
+            "line": 6,
+            "expected_code": "36415",
+            "got_code": "36415",
+            "got_index": 5,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": false,
+            "issues": []
+          },
+          {
+            "line": 7,
+            "expected_code": "80053",
+            "got_code": "80053",
+            "got_index": 6,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": false,
+            "issues": []
+          },
+          {
+            "line": 8,
+            "expected_code": "80053",
+            "got_code": "80053",
+            "got_index": 7,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": false,
+            "issues": [
+              "Possible duplicate charge for the same blood test on the same day",
+              "Insurance marked this second test as an exact duplicate not owed by patient"
+            ]
+          },
+          {
+            "line": 9,
+            "expected_code": "83690",
+            "got_code": "83690",
+            "got_index": 8,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": false,
+            "issues": []
+          },
+          {
+            "line": 10,
+            "expected_code": "85025",
+            "got_code": "85025",
+            "got_index": 9,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": false,
+            "issues": []
+          },
+          {
+            "line": 11,
+            "expected_code": "81003",
+            "got_code": "81003",
+            "got_index": 10,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": false,
+            "issues": []
+          },
+          {
+            "line": 12,
+            "expected_code": "74177",
+            "got_code": "74177",
+            "got_index": 11,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": false,
+            "issues": []
+          },
+          {
+            "line": 13,
+            "expected_code": "99284",
+            "got_code": "99284",
+            "got_index": 12,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": false,
+            "issues": []
+          },
+          {
+            "line": 14,
+            "expected_code": "J2405",
+            "got_code": "J2405",
+            "got_index": 13,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": false,
+            "issues": []
+          },
+          {
+            "line": 15,
+            "expected_code": "J2270",
+            "got_code": "J2270",
+            "got_index": 14,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": false,
+            "issues": []
+          },
+          {
+            "line": 16,
+            "expected_code": "Q9967",
+            "got_code": "Q9967",
+            "got_index": 15,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": false,
+            "issues": []
+          }
+        ]
+      },
+      "financials": {
+        "fields": {
+          "statement_billed": {
+            "expected": 9149.5,
+            "got": 9149.5,
+            "exact": true
+          },
+          "bill_adjustments": {
+            "expected": 5894.45,
+            "got": 5894.45,
+            "exact": true
+          },
+          "after_bill_adjustments": {
+            "expected": null,
+            "got": 3255.05,
+            "exact": false
+          },
+          "statement_insurer_paid": {
+            "expected": 1691.7,
+            "got": 1691.7,
+            "exact": true
+          },
+          "prior_patient_payment": {
+            "expected": 0.0,
+            "got": 0.0,
+            "exact": true
+          },
+          "statement_balance": {
+            "expected": 1563.35,
+            "got": 1563.35,
+            "exact": true
+          },
+          "eob_billed": {
+            "expected": 9149.5,
+            "got": 9149.5,
+            "exact": true
+          },
+          "eob_allowed": {
+            "expected": 2500.55,
+            "got": 2500.55,
+            "exact": true
+          },
+          "eob_insurer_paid": {
+            "expected": 1691.7,
+            "got": 1691.7,
+            "exact": true
+          },
+          "eob_patient_responsibility": {
+            "expected": 808.85,
+            "got": 808.85,
+            "exact": true
+          },
+          "deductible": {
+            "expected": 320.0,
+            "got": 320.0,
+            "exact": true
+          },
+          "coinsurance": {
+            "expected": 238.85,
+            "got": 238.85,
+            "exact": true
+          },
+          "copayment": {
+            "expected": 250.0,
+            "got": 250.0,
+            "exact": true
+          },
+          "copay_coinsurance": {
+            "expected": null,
+            "got": null,
+            "exact": true
+          }
+        },
+        "exact": 13,
+        "of": 14,
+        "top_level": {
+          "provider_name": {
+            "expected": "Linnet Valley Medical Center",
+            "got": "Linnet Valley Medical Center",
+            "exact": true
+          },
+          "total_billed": {
+            "expected": 9149.5,
+            "got": 9149.5,
+            "exact": true
+          },
+          "amount_patient_owes": {
+            "expected": 1563.35,
+            "got": 1563.35,
+            "exact": true
+          },
+          "due_date": {
+            "expected": "2026-11-02",
+            "got": "2026-11-02",
+            "exact": true
+          }
+        },
+        "top_level_exact": 4,
+        "top_level_of": 4
+      },
+      "documents_match": {
+        "expected": true,
+        "got": false,
+        "reason": "The hospital bill charges $1,563.35, but the insurance explanation of benefits states the patient only owes $808.85. The bill appears to include $754.50 in charges for duplicate testing and medical supplies that the insurance company marked as non-payable write-offs."
+      },
+      "price": {
+        "lines_ok": 16,
+        "of": 16,
+        "flagged": [
+          [
+            2,
+            "96374",
+            "far_above_typical",
+            12.9
+          ],
+          [
+            3,
+            "96375",
+            "far_above_typical",
+            13.6
+          ],
+          [
+            4,
+            "96361",
+            "far_above_typical",
+            12.1
+          ],
+          [
+            12,
+            "74177",
+            "far_above_typical",
+            13.9
+          ],
+          [
+            13,
+            "99284",
+            "far_above_typical",
+            18.2
+          ]
+        ],
+        "summary": {
+          "source": "snowflake",
+          "items_checked": 5,
+          "items_flagged": 5,
+          "billed_total_checked": 7188.0,
+          "medicare_total_checked": 484.98,
+          "error": null
+        },
+        "summary_ok": true,
+        "rows": [
+          {
+            "line": 1,
+            "code": "J7030",
+            "expected_flag": "no_benchmark",
+            "got_flag": "no_benchmark",
+            "expected_times": null,
+            "got_times": null,
+            "ok": true,
+            "note": "No Medicare reference price for this code (common for lab tests and supplies)."
+          },
+          {
+            "line": 2,
+            "code": "96374",
+            "expected_flag": "far_above_typical",
+            "got_flag": "far_above_typical",
+            "expected_times": 12.9,
+            "got_times": 12.9,
+            "ok": true,
+            "note": "Billed $486.00, about 12.9x Medicare's $37.74. Far above typical; ask for a review or a discount."
+          },
+          {
+            "line": 3,
+            "code": "96375",
+            "expected_flag": "far_above_typical",
+            "got_flag": "far_above_typical",
+            "expected_times": 13.6,
+            "got_times": 13.6,
+            "ok": true,
+            "note": "Billed $214.00, about 13.6x Medicare's $15.70. Far above typical; ask for a review or a discount."
+          },
+          {
+            "line": 4,
+            "code": "96361",
+            "expected_flag": "far_above_typical",
+            "got_flag": "far_above_typical",
+            "expected_times": 12.1,
+            "got_times": 12.1,
+            "ok": true,
+            "note": "Billed $158.00, about 12.1x Medicare's $13.03. Far above typical; ask for a review or a discount."
+          },
+          {
+            "line": 5,
+            "code": null,
+            "expected_flag": "no_code",
+            "got_flag": "no_code",
+            "expected_times": null,
+            "got_times": null,
+            "ok": true,
+            "note": "No billing code on this line. Ask for an itemized bill that lists the code."
+          },
+          {
+            "line": 6,
+            "code": "36415",
+            "expected_flag": "no_benchmark",
+            "got_flag": "no_benchmark",
+            "expected_times": null,
+            "got_times": null,
+            "ok": true,
+            "note": "No Medicare reference price for this code (common for lab tests and supplies)."
+          },
+          {
+            "line": 7,
+            "code": "80053",
+            "expected_flag": "no_benchmark",
+            "got_flag": "no_benchmark",
+            "expected_times": null,
+            "got_times": null,
+            "ok": true,
+            "note": "No Medicare reference price for this code (common for lab tests and supplies)."
+          },
+          {
+            "line": 8,
+            "code": "80053",
+            "expected_flag": "no_benchmark",
+            "got_flag": "no_benchmark",
+            "expected_times": null,
+            "got_times": null,
+            "ok": true,
+            "note": "No Medicare reference price for this code (common for lab tests and supplies)."
+          },
+          {
+            "line": 9,
+            "code": "83690",
+            "expected_flag": "no_benchmark",
+            "got_flag": "no_benchmark",
+            "expected_times": null,
+            "got_times": null,
+            "ok": true,
+            "note": "No Medicare reference price for this code (common for lab tests and supplies)."
+          },
+          {
+            "line": 10,
+            "code": "85025",
+            "expected_flag": "no_benchmark",
+            "got_flag": "no_benchmark",
+            "expected_times": null,
+            "got_times": null,
+            "ok": true,
+            "note": "No Medicare reference price for this code (common for lab tests and supplies)."
+          },
+          {
+            "line": 11,
+            "code": "81003",
+            "expected_flag": "no_benchmark",
+            "got_flag": "no_benchmark",
+            "expected_times": null,
+            "got_times": null,
+            "ok": true,
+            "note": "No Medicare reference price for this code (common for lab tests and supplies)."
+          },
+          {
+            "line": 12,
+            "code": "74177",
+            "expected_flag": "far_above_typical",
+            "got_flag": "far_above_typical",
+            "expected_times": 13.9,
+            "got_times": 13.9,
+            "ok": true,
+            "note": "Billed $4,182.00, about 13.9x Medicare's $300.27. Far above typical; ask for a review or a discount."
+          },
+          {
+            "line": 13,
+            "code": "99284",
+            "expected_flag": "far_above_typical",
+            "got_flag": "far_above_typical",
+            "expected_times": 18.2,
+            "got_times": 18.2,
+            "ok": true,
+            "note": "Billed $2,148.00, about 18.2x Medicare's $118.24. Far above typical; ask for a review or a discount. Medicare's rate here covers only the doctor's fee; hospitals also bill a separate facility fee, so some difference is expected."
+          },
+          {
+            "line": 14,
+            "code": "J2405",
+            "expected_flag": "no_benchmark",
+            "got_flag": "no_benchmark",
+            "expected_times": null,
+            "got_times": null,
+            "ok": true,
+            "note": "No Medicare reference price for this code (common for lab tests and supplies)."
+          },
+          {
+            "line": 15,
+            "code": "J2270",
+            "expected_flag": "no_benchmark",
+            "got_flag": "no_benchmark",
+            "expected_times": null,
+            "got_times": null,
+            "ok": true,
+            "note": "No Medicare reference price for this code (common for lab tests and supplies)."
+          },
+          {
+            "line": 16,
+            "code": "Q9967",
+            "expected_flag": "no_benchmark",
+            "got_flag": "no_benchmark",
+            "expected_times": null,
+            "got_times": null,
+            "ok": true,
+            "note": "No Medicare reference price for this code (common for lab tests and supplies)."
+          }
+        ]
+      },
+      "mentions": {
+        "duplicate": [
+          "plain_summary",
+          "questions_to_ask",
+          "document_mismatch_reason",
+          "possible_issues"
+        ],
+        "bundled_supply": [
+          "plain_summary",
+          "questions_to_ask",
+          "document_mismatch_reason"
+        ],
+        "balance_difference": [
+          "plain_summary",
+          "spoken_summary",
+          "questions_to_ask",
+          "document_mismatch_reason"
+        ],
+        "difference_amount_754_50": [
+          "document_mismatch_reason"
+        ]
+      },
+      "safety_sentences": {
+        "possible_issues": [
+          "Vague fee without CPT code || Insurance marked this charge as included in the room visit and not owed by patient || Possible duplicate charge for the same blood test on the same day || Insurance marked this second test as an exact duplicate not owed by patient"
+        ]
+      },
+      "texts": {
+        "plain_summary": "You received a hospital bill and an Explanation of Benefits for emergency room services on September 14, 2026. The total billed amount was $9,149.50. Your health insurance processed the claim and paid $1,691.70 to the hospital. Your insurance calculated that your personal share is $808.85 based on your deductible, copay, and coinsurance. However, the hospital bill asks for $1,563.35 because it appears to charge you for supplies and a duplicate lab test that insurance disallowed. You should contact the hospital billing office before paying to ensure you are only billed for your $808.85 insurance responsibility.",
+        "spoken_summary": "You have a hospital bill and insurance statement for an emergency room visit on September 14th, 2026. Total charges were nine thousand one hundred forty-nine dollars and fifty cents. Your insurance paid one thousand six hundred ninety-one dollars and seventy cents and determined your share is eight hundred eight dollars and eighty-five cents. However, the hospital bill asks for one thousand five hundred sixty-three dollars and thirty-five cents. The hospital appears to be billing you for write-offs. Please call the hospital before paying.",
+        "questions_to_ask": [
+          "Why does my bill balance of $1,563.35 differ from the Explanation of Benefits patient responsibility of $808.85?",
+          "Why am I being billed for the duplicate metabolic panel (code 80053) that insurance marked as an exact duplicate?",
+          "Are the miscellaneous medical supplies ($486.50) write-offs that should not be billed to me under my insurance contract?"
+        ],
+        "document_mismatch_reason": "The hospital bill charges $1,563.35, but the insurance explanation of benefits states the patient only owes $808.85. The bill appears to include $754.50 in charges for duplicate testing and medical supplies that the insurance company marked as non-payable write-offs."
+      },
+      "app_review_findings": [
+        {
+          "line": 2,
+          "kind": "price",
+          "title": "HC IV PUSH SINGLE/INITIAL DRUG is billed at about 13 times Medicare's rate",
+          "question": "Can you explain how the charge for code 96374 was priced, and send an itemized statement?"
+        },
+        {
+          "line": 3,
+          "kind": "price",
+          "title": "HC IV PUSH EA ADDL SEQ NEW DRUG is billed at about 14 times Medicare's rate",
+          "question": "Can you explain how the charge for code 96375 was priced, and send an itemized statement?"
+        },
+        {
+          "line": 4,
+          "kind": "price",
+          "title": "HC IV HYDRATION EA ADDL HOUR is billed at about 12 times Medicare's rate",
+          "question": "Can you explain how the charge for code 96361 was priced, and send an itemized statement?"
+        },
+        {
+          "line": 5,
+          "kind": "note",
+          "title": "Vague fee without CPT code",
+          "question": "Can you explain this line on my statement: \"2026-09-14 · HC MED/SURG SUPPLIES MISC · $486.50\"?"
+        },
+        {
+          "line": 8,
+          "kind": "note",
+          "title": "Possible duplicate charge for the same blood test on the same day",
+          "question": "Can you explain this line on my statement: \"2026-09-14 · 80053 · HC COMPREHENSIVE METABOLIC PANEL · $268.00\"?"
+        },
+        {
+          "line": 12,
+          "kind": "price",
+          "title": "HC CT ABD & PELVIS W/CONTRAST is billed at about 14 times Medicare's rate",
+          "question": "Can you explain how the charge for code 74177 was priced, and send an itemized statement?"
+        },
+        {
+          "line": 13,
+          "kind": "doctor_part_only",
+          "title": "HC ED FACILITY LEVEL 4: Medicare's reference covers only the doctor's part",
+          "question": "Can you separate the doctor's charge and the hospital's charge for code 99284 on an itemized statement?"
+        }
+      ]
+    },
+    {
+      "run": "run-a-pdfs-flash-lite",
+      "seconds": 11.38,
+      "http_status": 200,
+      "model_named_in_response": "gemini-3.5-flash-lite",
+      "model_that_answered": "gemini-3.5-flash-lite",
+      "gemini_calls": [
+        "POST v1beta/models/gemini-3.5-flash-lite:generateContent \"HTTP/1.1 200 OK\""
+      ],
+      "mock": false,
+      "audit": {
+        "saved": true,
+        "audit_id": "21368c66-30c0-4948-b1fd-bfe9d7a4dc5a",
+        "error": null
+      },
+      "documents": {
+        "expected": {
+          "1": "hospital_bill",
+          "2": "eob"
+        },
+        "got": {
+          "1": "hospital_bill",
+          "2": "eob"
+        },
+        "correct": 2,
+        "of": 2,
+        "overall_document_type": "hospital_bill"
+      },
+      "lines": {
+        "expected": 16,
+        "extracted": 16,
+        "matched": 16,
+        "code_exact": 16,
+        "amount_exact": 16,
+        "date_exact": 16,
+        "description_exact": 16,
+        "document_index_ok": 16,
+        "source_page_ok": 15,
+        "source_pages_seen": [
+          "2",
+          "5"
+        ],
+        "in_order": true,
+        "extras": [],
+        "lines_with_issues": {
+          "5": [
+            "Vague fee without a specific code"
+          ],
+          "8": [
+            "Possible duplicate charge"
+          ]
+        },
+        "rows": [
+          {
+            "line": 1,
+            "expected_code": "J7030",
+            "got_code": "J7030",
+            "got_index": 0,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": true,
+            "issues": []
+          },
+          {
+            "line": 2,
+            "expected_code": "96374",
+            "got_code": "96374",
+            "got_index": 1,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": true,
+            "issues": []
+          },
+          {
+            "line": 3,
+            "expected_code": "96375",
+            "got_code": "96375",
+            "got_index": 2,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": true,
+            "issues": []
+          },
+          {
+            "line": 4,
+            "expected_code": "96361",
+            "got_code": "96361",
+            "got_index": 3,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": true,
+            "issues": []
+          },
+          {
+            "line": 5,
+            "expected_code": null,
+            "got_code": null,
+            "got_index": 4,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": true,
+            "issues": [
+              "Vague fee without a specific code"
+            ]
+          },
+          {
+            "line": 6,
+            "expected_code": "36415",
+            "got_code": "36415",
+            "got_index": 5,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": true,
+            "issues": []
+          },
+          {
+            "line": 7,
+            "expected_code": "80053",
+            "got_code": "80053",
+            "got_index": 6,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": true,
+            "issues": []
+          },
+          {
+            "line": 8,
+            "expected_code": "80053",
+            "got_code": "80053",
+            "got_index": 7,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": true,
+            "issues": [
+              "Possible duplicate charge"
+            ]
+          },
+          {
+            "line": 9,
+            "expected_code": "83690",
+            "got_code": "83690",
+            "got_index": 8,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": true,
+            "issues": []
+          },
+          {
+            "line": 10,
+            "expected_code": "85025",
+            "got_code": "85025",
+            "got_index": 9,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": true,
+            "issues": []
+          },
+          {
+            "line": 11,
+            "expected_code": "81003",
+            "got_code": "81003",
+            "got_index": 10,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": true,
+            "issues": []
+          },
+          {
+            "line": 12,
+            "expected_code": "74177",
+            "got_code": "74177",
+            "got_index": 11,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": true,
+            "issues": []
+          },
+          {
+            "line": 13,
+            "expected_code": "99284",
+            "got_code": "99284",
+            "got_index": 12,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": true,
+            "issues": []
+          },
+          {
+            "line": 14,
+            "expected_code": "J2405",
+            "got_code": "J2405",
+            "got_index": 13,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": true,
+            "issues": []
+          },
+          {
+            "line": 15,
+            "expected_code": "J2270",
+            "got_code": "J2270",
+            "got_index": 14,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 5,
+            "source_page_ok": false,
+            "issues": []
+          },
+          {
+            "line": 16,
+            "expected_code": "Q9967",
+            "got_code": "Q9967",
+            "got_index": 15,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": true,
+            "issues": []
+          }
+        ]
+      },
+      "financials": {
+        "fields": {
+          "statement_billed": {
+            "expected": 9149.5,
+            "got": 9149.5,
+            "exact": true
+          },
+          "bill_adjustments": {
+            "expected": 5894.45,
+            "got": 5894.45,
+            "exact": true
+          },
+          "after_bill_adjustments": {
+            "expected": null,
+            "got": 3255.05,
+            "exact": false
+          },
+          "statement_insurer_paid": {
+            "expected": 1691.7,
+            "got": 1691.7,
+            "exact": true
+          },
+          "prior_patient_payment": {
+            "expected": 0.0,
+            "got": 0.0,
+            "exact": true
+          },
+          "statement_balance": {
+            "expected": 1563.35,
+            "got": 1563.35,
+            "exact": true
+          },
+          "eob_billed": {
+            "expected": 9149.5,
+            "got": 9149.5,
+            "exact": true
+          },
+          "eob_allowed": {
+            "expected": 2500.55,
+            "got": 2500.55,
+            "exact": true
+          },
+          "eob_insurer_paid": {
+            "expected": 1691.7,
+            "got": 1691.7,
+            "exact": true
+          },
+          "eob_patient_responsibility": {
+            "expected": 808.85,
+            "got": 808.85,
+            "exact": true
+          },
+          "deductible": {
+            "expected": 320.0,
+            "got": 320.0,
+            "exact": true
+          },
+          "coinsurance": {
+            "expected": 238.85,
+            "got": 238.85,
+            "exact": true
+          },
+          "copayment": {
+            "expected": 250.0,
+            "got": 250.0,
+            "exact": true
+          },
+          "copay_coinsurance": {
+            "expected": null,
+            "got": null,
+            "exact": true
+          }
+        },
+        "exact": 13,
+        "of": 14,
+        "top_level": {
+          "provider_name": {
+            "expected": "Linnet Valley Medical Center",
+            "got": "Linnet Valley Medical Center",
+            "exact": true
+          },
+          "total_billed": {
+            "expected": 9149.5,
+            "got": 9149.5,
+            "exact": true
+          },
+          "amount_patient_owes": {
+            "expected": 1563.35,
+            "got": 1563.35,
+            "exact": true
+          },
+          "due_date": {
+            "expected": "2026-11-02",
+            "got": "2026-11-02",
+            "exact": true
+          }
+        },
+        "top_level_exact": 4,
+        "top_level_of": 4
+      },
+      "documents_match": {
+        "expected": true,
+        "got": false,
+        "reason": "The hospital bill balance due is 1563.35, while the EOB patient responsibility is 808.85. The bill appears to include additional charges or a different total patient responsibility than what the insurance EOB calculated."
+      },
+      "price": {
+        "lines_ok": 16,
+        "of": 16,
+        "flagged": [
+          [
+            2,
+            "96374",
+            "far_above_typical",
+            12.9
+          ],
+          [
+            3,
+            "96375",
+            "far_above_typical",
+            13.6
+          ],
+          [
+            4,
+            "96361",
+            "far_above_typical",
+            12.1
+          ],
+          [
+            12,
+            "74177",
+            "far_above_typical",
+            13.9
+          ],
+          [
+            13,
+            "99284",
+            "far_above_typical",
+            18.2
+          ]
+        ],
+        "summary": {
+          "source": "snowflake",
+          "items_checked": 5,
+          "items_flagged": 5,
+          "billed_total_checked": 7188.0,
+          "medicare_total_checked": 484.98,
+          "error": null
+        },
+        "summary_ok": true,
+        "rows": [
+          {
+            "line": 1,
+            "code": "J7030",
+            "expected_flag": "no_benchmark",
+            "got_flag": "no_benchmark",
+            "expected_times": null,
+            "got_times": null,
+            "ok": true,
+            "note": "No Medicare reference price for this code (common for lab tests and supplies)."
+          },
+          {
+            "line": 2,
+            "code": "96374",
+            "expected_flag": "far_above_typical",
+            "got_flag": "far_above_typical",
+            "expected_times": 12.9,
+            "got_times": 12.9,
+            "ok": true,
+            "note": "Billed $486.00, about 12.9x Medicare's $37.74. Far above typical; ask for a review or a discount."
+          },
+          {
+            "line": 3,
+            "code": "96375",
+            "expected_flag": "far_above_typical",
+            "got_flag": "far_above_typical",
+            "expected_times": 13.6,
+            "got_times": 13.6,
+            "ok": true,
+            "note": "Billed $214.00, about 13.6x Medicare's $15.70. Far above typical; ask for a review or a discount."
+          },
+          {
+            "line": 4,
+            "code": "96361",
+            "expected_flag": "far_above_typical",
+            "got_flag": "far_above_typical",
+            "expected_times": 12.1,
+            "got_times": 12.1,
+            "ok": true,
+            "note": "Billed $158.00, about 12.1x Medicare's $13.03. Far above typical; ask for a review or a discount."
+          },
+          {
+            "line": 5,
+            "code": null,
+            "expected_flag": "no_code",
+            "got_flag": "no_code",
+            "expected_times": null,
+            "got_times": null,
+            "ok": true,
+            "note": "No billing code on this line. Ask for an itemized bill that lists the code."
+          },
+          {
+            "line": 6,
+            "code": "36415",
+            "expected_flag": "no_benchmark",
+            "got_flag": "no_benchmark",
+            "expected_times": null,
+            "got_times": null,
+            "ok": true,
+            "note": "No Medicare reference price for this code (common for lab tests and supplies)."
+          },
+          {
+            "line": 7,
+            "code": "80053",
+            "expected_flag": "no_benchmark",
+            "got_flag": "no_benchmark",
+            "expected_times": null,
+            "got_times": null,
+            "ok": true,
+            "note": "No Medicare reference price for this code (common for lab tests and supplies)."
+          },
+          {
+            "line": 8,
+            "code": "80053",
+            "expected_flag": "no_benchmark",
+            "got_flag": "no_benchmark",
+            "expected_times": null,
+            "got_times": null,
+            "ok": true,
+            "note": "No Medicare reference price for this code (common for lab tests and supplies)."
+          },
+          {
+            "line": 9,
+            "code": "83690",
+            "expected_flag": "no_benchmark",
+            "got_flag": "no_benchmark",
+            "expected_times": null,
+            "got_times": null,
+            "ok": true,
+            "note": "No Medicare reference price for this code (common for lab tests and supplies)."
+          },
+          {
+            "line": 10,
+            "code": "85025",
+            "expected_flag": "no_benchmark",
+            "got_flag": "no_benchmark",
+            "expected_times": null,
+            "got_times": null,
+            "ok": true,
+            "note": "No Medicare reference price for this code (common for lab tests and supplies)."
+          },
+          {
+            "line": 11,
+            "code": "81003",
+            "expected_flag": "no_benchmark",
+            "got_flag": "no_benchmark",
+            "expected_times": null,
+            "got_times": null,
+            "ok": true,
+            "note": "No Medicare reference price for this code (common for lab tests and supplies)."
+          },
+          {
+            "line": 12,
+            "code": "74177",
+            "expected_flag": "far_above_typical",
+            "got_flag": "far_above_typical",
+            "expected_times": 13.9,
+            "got_times": 13.9,
+            "ok": true,
+            "note": "Billed $4,182.00, about 13.9x Medicare's $300.27. Far above typical; ask for a review or a discount."
+          },
+          {
+            "line": 13,
+            "code": "99284",
+            "expected_flag": "far_above_typical",
+            "got_flag": "far_above_typical",
+            "expected_times": 18.2,
+            "got_times": 18.2,
+            "ok": true,
+            "note": "Billed $2,148.00, about 18.2x Medicare's $118.24. Far above typical; ask for a review or a discount. Medicare's rate here covers only the doctor's fee; hospitals also bill a separate facility fee, so some difference is expected."
+          },
+          {
+            "line": 14,
+            "code": "J2405",
+            "expected_flag": "no_benchmark",
+            "got_flag": "no_benchmark",
+            "expected_times": null,
+            "got_times": null,
+            "ok": true,
+            "note": "No Medicare reference price for this code (common for lab tests and supplies)."
+          },
+          {
+            "line": 15,
+            "code": "J2270",
+            "expected_flag": "no_benchmark",
+            "got_flag": "no_benchmark",
+            "expected_times": null,
+            "got_times": null,
+            "ok": true,
+            "note": "No Medicare reference price for this code (common for lab tests and supplies)."
+          },
+          {
+            "line": 16,
+            "code": "Q9967",
+            "expected_flag": "no_benchmark",
+            "got_flag": "no_benchmark",
+            "expected_times": null,
+            "got_times": null,
+            "ok": true,
+            "note": "No Medicare reference price for this code (common for lab tests and supplies)."
+          }
+        ]
+      },
+      "mentions": {
+        "duplicate": [
+          "questions_to_ask",
+          "possible_issues"
+        ],
+        "bundled_supply": [],
+        "balance_difference": [
+          "plain_summary",
+          "spoken_summary",
+          "questions_to_ask",
+          "document_mismatch_reason"
+        ],
+        "difference_amount_754_50": []
+      },
+      "safety_sentences": {},
+      "texts": {
+        "plain_summary": "This bill is from Linnet Valley Medical Center for an emergency room visit on September 14, 2026. The total amount charged for all services was nine thousand one hundred forty-nine dollars and fifty cents. Your health insurance paid some of the cost and gave a discount, leaving a balance due of one thousand five hundred sixty-three dollars and thirty-five cents. However, your insurance company letter says you only owe eight hundred eight dollars and eighty-five cents. You should call the billing office to find out why the bill amount does not match your insurance papers.",
+        "spoken_summary": "You have a medical bill from Linnet Valley Medical Center for an emergency room visit. The total charges were over nine thousand dollars. Your insurance paid part of it, but the hospital says you owe one thousand five hundred sixty-three dollars and thirty-five cents. Your insurance statement says you only owe eight hundred eight dollars and eighty-five cents. You should call your insurance company and the hospital billing department to ask why the two amounts are different before you make a payment.",
+        "questions_to_ask": [
+          "Why does the hospital bill ask for one thousand five hundred sixty-three dollars and thirty-five cents when my insurance company's explanation of benefits says I only owe eight hundred eight dollars and eighty-five cents?",
+          "Can you provide an itemized breakdown showing if any extra charges were added after the insurance company processed the claim?",
+          "Are there duplicate lab charges on this bill that were supposed to be written off?"
+        ],
+        "document_mismatch_reason": "The hospital bill balance due is 1563.35, while the EOB patient responsibility is 808.85. The bill appears to include additional charges or a different total patient responsibility than what the insurance EOB calculated."
+      },
+      "app_review_findings": [
+        {
+          "line": 2,
+          "kind": "price",
+          "title": "HC IV PUSH SINGLE/INITIAL DRUG is billed at about 13 times Medicare's rate",
+          "question": "Can you explain how the charge for code 96374 was priced, and send an itemized statement?"
+        },
+        {
+          "line": 3,
+          "kind": "price",
+          "title": "HC IV PUSH EA ADDL SEQ NEW DRUG is billed at about 14 times Medicare's rate",
+          "question": "Can you explain how the charge for code 96375 was priced, and send an itemized statement?"
+        },
+        {
+          "line": 4,
+          "kind": "price",
+          "title": "HC IV HYDRATION EA ADDL HOUR is billed at about 12 times Medicare's rate",
+          "question": "Can you explain how the charge for code 96361 was priced, and send an itemized statement?"
+        },
+        {
+          "line": 5,
+          "kind": "note",
+          "title": "Vague fee without a specific code",
+          "question": "Can you explain this line on my statement: \"2026-09-14 · HC MED/SURG SUPPLIES MISC · $486.50\"?"
+        },
+        {
+          "line": 8,
+          "kind": "note",
+          "title": "Possible duplicate charge",
+          "question": "Can you explain this line on my statement: \"2026-09-14 · 80053 · HC COMPREHENSIVE METABOLIC PANEL · $268.00\"?"
+        },
+        {
+          "line": 12,
+          "kind": "price",
+          "title": "HC CT ABD & PELVIS W/CONTRAST is billed at about 14 times Medicare's rate",
+          "question": "Can you explain how the charge for code 74177 was priced, and send an itemized statement?"
+        },
+        {
+          "line": 13,
+          "kind": "doctor_part_only",
+          "title": "HC ED FACILITY LEVEL 4: Medicare's reference covers only the doctor's part",
+          "question": "Can you separate the doctor's charge and the hospital's charge for code 99284 on an itemized statement?"
+        }
+      ]
+    },
+    {
+      "run": "run-b-photos-flash-lite",
+      "seconds": 15.53,
+      "http_status": 200,
+      "model_named_in_response": "gemini-3.5-flash-lite",
+      "model_that_answered": "gemini-3.5-flash-lite",
+      "gemini_calls": [
+        "POST v1beta/models/gemini-3.5-flash-lite:generateContent \"HTTP/1.1 200 OK\""
+      ],
+      "mock": false,
+      "audit": {
+        "saved": true,
+        "audit_id": "71ecad0c-408c-47fc-875e-e66055b13b66",
+        "error": null
+      },
+      "documents": {
+        "expected": {
+          "1": "hospital_bill",
+          "2": "hospital_bill",
+          "3": "hospital_bill",
+          "4": "eob",
+          "5": "eob",
+          "6": "eob"
+        },
+        "got": {
+          "1": "hospital_bill",
+          "2": "hospital_bill",
+          "3": "hospital_bill",
+          "4": "eob",
+          "5": "eob",
+          "6": "eob"
+        },
+        "correct": 6,
+        "of": 6,
+        "overall_document_type": "hospital_bill"
+      },
+      "lines": {
+        "expected": 16,
+        "extracted": 16,
+        "matched": 16,
+        "code_exact": 16,
+        "amount_exact": 16,
+        "date_exact": 16,
+        "description_exact": 16,
+        "document_index_ok": 16,
+        "source_page_ok": 0,
+        "source_pages_seen": [
+          "2"
+        ],
+        "in_order": true,
+        "extras": [],
+        "lines_with_issues": {
+          "5": [
+            "Vague fee without a specific code"
+          ],
+          "8": [
+            "Possible duplicate charge"
+          ]
+        },
+        "rows": [
+          {
+            "line": 1,
+            "expected_code": "J7030",
+            "got_code": "J7030",
+            "got_index": 0,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": false,
+            "issues": []
+          },
+          {
+            "line": 2,
+            "expected_code": "96374",
+            "got_code": "96374",
+            "got_index": 1,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": false,
+            "issues": []
+          },
+          {
+            "line": 3,
+            "expected_code": "96375",
+            "got_code": "96375",
+            "got_index": 2,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": false,
+            "issues": []
+          },
+          {
+            "line": 4,
+            "expected_code": "96361",
+            "got_code": "96361",
+            "got_index": 3,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": false,
+            "issues": []
+          },
+          {
+            "line": 5,
+            "expected_code": null,
+            "got_code": null,
+            "got_index": 4,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": false,
+            "issues": [
+              "Vague fee without a specific code"
+            ]
+          },
+          {
+            "line": 6,
+            "expected_code": "36415",
+            "got_code": "36415",
+            "got_index": 5,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": false,
+            "issues": []
+          },
+          {
+            "line": 7,
+            "expected_code": "80053",
+            "got_code": "80053",
+            "got_index": 6,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": false,
+            "issues": []
+          },
+          {
+            "line": 8,
+            "expected_code": "80053",
+            "got_code": "80053",
+            "got_index": 7,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": false,
+            "issues": [
+              "Possible duplicate charge"
+            ]
+          },
+          {
+            "line": 9,
+            "expected_code": "83690",
+            "got_code": "83690",
+            "got_index": 8,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": false,
+            "issues": []
+          },
+          {
+            "line": 10,
+            "expected_code": "85025",
+            "got_code": "85025",
+            "got_index": 9,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": false,
+            "issues": []
+          },
+          {
+            "line": 11,
+            "expected_code": "81003",
+            "got_code": "81003",
+            "got_index": 10,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": false,
+            "issues": []
+          },
+          {
+            "line": 12,
+            "expected_code": "74177",
+            "got_code": "74177",
+            "got_index": 11,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": false,
+            "issues": []
+          },
+          {
+            "line": 13,
+            "expected_code": "99284",
+            "got_code": "99284",
+            "got_index": 12,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": false,
+            "issues": []
+          },
+          {
+            "line": 14,
+            "expected_code": "J2405",
+            "got_code": "J2405",
+            "got_index": 13,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": false,
+            "issues": []
+          },
+          {
+            "line": 15,
+            "expected_code": "J2270",
+            "got_code": "J2270",
+            "got_index": 14,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": false,
+            "issues": []
+          },
+          {
+            "line": 16,
+            "expected_code": "Q9967",
+            "got_code": "Q9967",
+            "got_index": 15,
+            "matched": true,
+            "code_exact": true,
+            "amount_exact": true,
+            "date_exact": true,
+            "description_exact": true,
+            "document_index_ok": true,
+            "source_page": 2,
+            "source_page_ok": false,
+            "issues": []
+          }
+        ]
+      },
+      "financials": {
+        "fields": {
+          "statement_billed": {
+            "expected": 9149.5,
+            "got": 9149.5,
+            "exact": true
+          },
+          "bill_adjustments": {
+            "expected": 5894.45,
+            "got": 5894.45,
+            "exact": true
+          },
+          "after_bill_adjustments": {
+            "expected": null,
+            "got": 3255.05,
+            "exact": false
+          },
+          "statement_insurer_paid": {
+            "expected": 1691.7,
+            "got": 1691.7,
+            "exact": true
+          },
+          "prior_patient_payment": {
+            "expected": 0.0,
+            "got": 0.0,
+            "exact": true
+          },
+          "statement_balance": {
+            "expected": 1563.35,
+            "got": 1563.35,
+            "exact": true
+          },
+          "eob_billed": {
+            "expected": 9149.5,
+            "got": 9149.5,
+            "exact": true
+          },
+          "eob_allowed": {
+            "expected": 2500.55,
+            "got": 2500.55,
+            "exact": true
+          },
+          "eob_insurer_paid": {
+            "expected": 1691.7,
+            "got": 1691.7,
+            "exact": true
+          },
+          "eob_patient_responsibility": {
+            "expected": 808.85,
+            "got": 808.85,
+            "exact": true
+          },
+          "deductible": {
+            "expected": 320.0,
+            "got": 320.0,
+            "exact": true
+          },
+          "coinsurance": {
+            "expected": 238.85,
+            "got": 238.85,
+            "exact": true
+          },
+          "copayment": {
+            "expected": 250.0,
+            "got": 250.0,
+            "exact": true
+          },
+          "copay_coinsurance": {
+            "expected": null,
+            "got": null,
+            "exact": true
+          }
+        },
+        "exact": 13,
+        "of": 14,
+        "top_level": {
+          "provider_name": {
+            "expected": "Linnet Valley Medical Center",
+            "got": "Linnet Valley Medical Center",
+            "exact": true
+          },
+          "total_billed": {
+            "expected": 9149.5,
+            "got": 9149.5,
+            "exact": true
+          },
+          "amount_patient_owes": {
+            "expected": 1563.35,
+            "got": 1563.35,
+            "exact": true
+          },
+          "due_date": {
+            "expected": "2026-11-02",
+            "got": "2026-11-02",
+            "exact": true
+          }
+        },
+        "top_level_exact": 4,
+        "top_level_of": 4
+      },
+      "documents_match": {
+        "expected": true,
+        "got": false,
+        "reason": "The hospital bill balance due ($1,563.35) does not match the EOB patient responsibility ($808.85) because the bill includes additional charges or balances not covered on the main insurance claim."
+      },
+      "price": {
+        "lines_ok": 16,
+        "of": 16,
+        "flagged": [
+          [
+            2,
+            "96374",
+            "far_above_typical",
+            12.9
+          ],
+          [
+            3,
+            "96375",
+            "far_above_typical",
+            13.6
+          ],
+          [
+            4,
+            "96361",
+            "far_above_typical",
+            12.1
+          ],
+          [
+            12,
+            "74177",
+            "far_above_typical",
+            13.9
+          ],
+          [
+            13,
+            "99284",
+            "far_above_typical",
+            18.2
+          ]
+        ],
+        "summary": {
+          "source": "snowflake",
+          "items_checked": 5,
+          "items_flagged": 5,
+          "billed_total_checked": 7188.0,
+          "medicare_total_checked": 484.98,
+          "error": null
+        },
+        "summary_ok": true,
+        "rows": [
+          {
+            "line": 1,
+            "code": "J7030",
+            "expected_flag": "no_benchmark",
+            "got_flag": "no_benchmark",
+            "expected_times": null,
+            "got_times": null,
+            "ok": true,
+            "note": "No Medicare reference price for this code (common for lab tests and supplies)."
+          },
+          {
+            "line": 2,
+            "code": "96374",
+            "expected_flag": "far_above_typical",
+            "got_flag": "far_above_typical",
+            "expected_times": 12.9,
+            "got_times": 12.9,
+            "ok": true,
+            "note": "Billed $486.00, about 12.9x Medicare's $37.74. Far above typical; ask for a review or a discount."
+          },
+          {
+            "line": 3,
+            "code": "96375",
+            "expected_flag": "far_above_typical",
+            "got_flag": "far_above_typical",
+            "expected_times": 13.6,
+            "got_times": 13.6,
+            "ok": true,
+            "note": "Billed $214.00, about 13.6x Medicare's $15.70. Far above typical; ask for a review or a discount."
+          },
+          {
+            "line": 4,
+            "code": "96361",
+            "expected_flag": "far_above_typical",
+            "got_flag": "far_above_typical",
+            "expected_times": 12.1,
+            "got_times": 12.1,
+            "ok": true,
+            "note": "Billed $158.00, about 12.1x Medicare's $13.03. Far above typical; ask for a review or a discount."
+          },
+          {
+            "line": 5,
+            "code": null,
+            "expected_flag": "no_code",
+            "got_flag": "no_code",
+            "expected_times": null,
+            "got_times": null,
+            "ok": true,
+            "note": "No billing code on this line. Ask for an itemized bill that lists the code."
+          },
+          {
+            "line": 6,
+            "code": "36415",
+            "expected_flag": "no_benchmark",
+            "got_flag": "no_benchmark",
+            "expected_times": null,
+            "got_times": null,
+            "ok": true,
+            "note": "No Medicare reference price for this code (common for lab tests and supplies)."
+          },
+          {
+            "line": 7,
+            "code": "80053",
+            "expected_flag": "no_benchmark",
+            "got_flag": "no_benchmark",
+            "expected_times": null,
+            "got_times": null,
+            "ok": true,
+            "note": "No Medicare reference price for this code (common for lab tests and supplies)."
+          },
+          {
+            "line": 8,
+            "code": "80053",
+            "expected_flag": "no_benchmark",
+            "got_flag": "no_benchmark",
+            "expected_times": null,
+            "got_times": null,
+            "ok": true,
+            "note": "No Medicare reference price for this code (common for lab tests and supplies)."
+          },
+          {
+            "line": 9,
+            "code": "83690",
+            "expected_flag": "no_benchmark",
+            "got_flag": "no_benchmark",
+            "expected_times": null,
+            "got_times": null,
+            "ok": true,
+            "note": "No Medicare reference price for this code (common for lab tests and supplies)."
+          },
+          {
+            "line": 10,
+            "code": "85025",
+            "expected_flag": "no_benchmark",
+            "got_flag": "no_benchmark",
+            "expected_times": null,
+            "got_times": null,
+            "ok": true,
+            "note": "No Medicare reference price for this code (common for lab tests and supplies)."
+          },
+          {
+            "line": 11,
+            "code": "81003",
+            "expected_flag": "no_benchmark",
+            "got_flag": "no_benchmark",
+            "expected_times": null,
+            "got_times": null,
+            "ok": true,
+            "note": "No Medicare reference price for this code (common for lab tests and supplies)."
+          },
+          {
+            "line": 12,
+            "code": "74177",
+            "expected_flag": "far_above_typical",
+            "got_flag": "far_above_typical",
+            "expected_times": 13.9,
+            "got_times": 13.9,
+            "ok": true,
+            "note": "Billed $4,182.00, about 13.9x Medicare's $300.27. Far above typical; ask for a review or a discount."
+          },
+          {
+            "line": 13,
+            "code": "99284",
+            "expected_flag": "far_above_typical",
+            "got_flag": "far_above_typical",
+            "expected_times": 18.2,
+            "got_times": 18.2,
+            "ok": true,
+            "note": "Billed $2,148.00, about 18.2x Medicare's $118.24. Far above typical; ask for a review or a discount. Medicare's rate here covers only the doctor's fee; hospitals also bill a separate facility fee, so some difference is expected."
+          },
+          {
+            "line": 14,
+            "code": "J2405",
+            "expected_flag": "no_benchmark",
+            "got_flag": "no_benchmark",
+            "expected_times": null,
+            "got_times": null,
+            "ok": true,
+            "note": "No Medicare reference price for this code (common for lab tests and supplies)."
+          },
+          {
+            "line": 15,
+            "code": "J2270",
+            "expected_flag": "no_benchmark",
+            "got_flag": "no_benchmark",
+            "expected_times": null,
+            "got_times": null,
+            "ok": true,
+            "note": "No Medicare reference price for this code (common for lab tests and supplies)."
+          },
+          {
+            "line": 16,
+            "code": "Q9967",
+            "expected_flag": "no_benchmark",
+            "got_flag": "no_benchmark",
+            "expected_times": null,
+            "got_times": null,
+            "ok": true,
+            "note": "No Medicare reference price for this code (common for lab tests and supplies)."
+          }
+        ]
+      },
+      "mentions": {
+        "duplicate": [
+          "questions_to_ask",
+          "possible_issues"
+        ],
+        "bundled_supply": [
+          "questions_to_ask"
+        ],
+        "balance_difference": [
+          "plain_summary",
+          "spoken_summary",
+          "questions_to_ask",
+          "document_mismatch_reason"
+        ],
+        "difference_amount_754_50": []
+      },
+      "safety_sentences": {},
+      "texts": {
+        "plain_summary": "You received an itemized medical bill from Linnet Valley Medical Center for an emergency room visit on September 14, 2026. The total amount billed for your care was nine thousand one hundred forty-nine dollars and fifty cents. Your insurance company paid part of this bill, and the hospital gave you discounts, leaving a balance of one thousand five hundred sixty-three dollars and thirty-five cents for you to pay. Please note that your insurance company's explanation of benefits shows a different patient responsibility amount, so you should compare both documents carefully.",
+        "spoken_summary": "You have a hospital bill from Linnet Valley Medical Center for one thousand five hundred sixty-three dollars and thirty-five cents, due by November second, 2026. Your insurance company processed the claim, but the amount on your bill does not match the amount on your insurance letter. You should call the billing office to ask why there is a difference.",
+        "questions_to_ask": [
+          "Why does my hospital bill show a different balance than my insurance company's explanation of benefits?",
+          "Can you explain the miscellaneous medical supply fee and why there are two identical charges for a comprehensive metabolic panel?",
+          "Do you offer any payment plans or financial assistance programs for this remaining balance?"
+        ],
+        "document_mismatch_reason": "The hospital bill balance due ($1,563.35) does not match the EOB patient responsibility ($808.85) because the bill includes additional charges or balances not covered on the main insurance claim."
+      },
+      "app_review_findings": [
+        {
+          "line": 2,
+          "kind": "price",
+          "title": "HC IV PUSH SINGLE/INITIAL DRUG is billed at about 13 times Medicare's rate",
+          "question": "Can you explain how the charge for code 96374 was priced, and send an itemized statement?"
+        },
+        {
+          "line": 3,
+          "kind": "price",
+          "title": "HC IV PUSH EA ADDL SEQ NEW DRUG is billed at about 14 times Medicare's rate",
+          "question": "Can you explain how the charge for code 96375 was priced, and send an itemized statement?"
+        },
+        {
+          "line": 4,
+          "kind": "price",
+          "title": "HC IV HYDRATION EA ADDL HOUR is billed at about 12 times Medicare's rate",
+          "question": "Can you explain how the charge for code 96361 was priced, and send an itemized statement?"
+        },
+        {
+          "line": 5,
+          "kind": "note",
+          "title": "Vague fee without a specific code",
+          "question": "Can you explain this line on my statement: \"2026-09-14 · HC MED/SURG SUPPLIES MISC · $486.50\"?"
+        },
+        {
+          "line": 8,
+          "kind": "note",
+          "title": "Possible duplicate charge",
+          "question": "Can you explain this line on my statement: \"2026-09-14 · 80053 · HC COMPREHENSIVE METABOLIC PANEL · $268.00\"?"
+        },
+        {
+          "line": 12,
+          "kind": "price",
+          "title": "HC CT ABD & PELVIS W/CONTRAST is billed at about 14 times Medicare's rate",
+          "question": "Can you explain how the charge for code 74177 was priced, and send an itemized statement?"
+        },
+        {
+          "line": 13,
+          "kind": "doctor_part_only",
+          "title": "HC ED FACILITY LEVEL 4: Medicare's reference covers only the doctor's part",
+          "question": "Can you separate the doctor's charge and the hospital's charge for code 99284 on an itemized statement?"
+        }
+      ]
+    }
+  ]
+}

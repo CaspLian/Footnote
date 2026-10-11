@@ -1,0 +1,17 @@
+{
+  "run": "run-b-photos",
+  "audit_id": "f44393ef-7e49-4000-b54f-49927d06a1dc",
+  "http_status": 200,
+  "seconds": 2.59,
+  "audio_bytes": 1272730,
+  "speech": {
+    "ok": true,
+    "audio_url": "/api/v1/voice/audio/9f45c1867ca1a4302c2fefe0d80659f3",
+    "mime_type": "audio/mpeg",
+    "voice": "matilda",
+    "streaming": false,
+    "text": "You received a hospital bill and an insurance statement for emergency care from September fourteenth, twenty twenty-six. The total charge was nine thousand one hundred forty-nine dollars and fifty cents. Your insurance statement says you only owe eight hundred eight dollars and eighty-five cents. However, the hospital billed you one thousand five hundred sixty-three dollars and thirty-five cents. The hospital forgot to remove seven hundred fifty-four dollars and fifty cents in duplicate and non-covered charges. Please call the hospital billing department before paying. I also compared the charges with Medicare's national rates. CT scan of belly and pelvis using contrast dye was billed about 13.9 times Medicare's national rate. Giving an extra medication through an IV line was billed about 13.6 times Medicare's national rate. 2 other charges also have a difference worth asking about. Medicare's rates are a reference, not proof of an error or a fair hospital price. For 1 charge, Medicare's reference covers only the doctor's part. The hospital's part is not included, so this cannot show whether those charges are high. Ask the billing office for an itemized explanation. It's worth asking the billing office about them.",
+    "error_code": null,
+    "error_message": null
+  }
+}

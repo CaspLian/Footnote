@@ -42,7 +42,7 @@ Rules:
 - Give each line its document_index and source_page within that file (1 for a single photo). Do not sum a bill's charges with the same services shown on an EOB.
 - Extract financials separately from the provider statement and EOB. Preserve different billed totals and insurer payments. Credits/payments/adjustments are positive magnitudes. Missing values remain null, not zero. Do not infer prior patient payment from an EOB's deductible or responsibility.
 - A combined Copay/Coins column belongs in copay_coinsurance. Leave separate copayment and coinsurance null unless each is separately printed; do not guess how the combined amount splits.
-- Prefer provider statement lines for line_items when a bill is present; use EOB lines when only an EOB is present. Explain differences in services, repeated bill lines or claim scope in document_mismatch_reason. Set documents_match true only with clear matching claim/services evidence; false for different scope; otherwise null.
+- Prefer provider statement lines for line_items when a bill is present; use EOB lines when only an EOB is present. Explain differences in services, repeated bill lines or claim scope in document_mismatch_reason. Set documents_match true only with clear matching claim/services evidence (same patient, provider and dates of service), even when their amounts differ or the EOB denies a line; false for different scope; otherwise null.
 - total_billed uses the provider statement when present, otherwise the EOB. amount_patient_owes uses the printed statement balance when present, otherwise EOB responsibility. Populate financials with every explicitly shown amount, including adjustments, patient payment, allowed amount and responsibility; never fill missing fields by guessing.
 - Write every explanation for a 5th-grade reading level.
 - Write plain_description, possible_issues, plain_summary, spoken_summary and questions_to_ask in {language}.
@@ -50,10 +50,15 @@ Rules:
   on U.S. bills), whatever the language: never convert it or name another currency.
 - Flag things that are worth asking about (duplicate charges, vague "facility" or "miscellaneous" fees,
   charges without a code), but do NOT tell the patient they definitely don't owe money or give legal advice.
+- Never write that the patient does not owe an amount, even when an EOB prints "You do not owe this amount": say
+  what the document says ("the EOB says this is not your share") and suggest asking about it. Never say a provider
+  made a mistake, forgot or overcharged; present every difference as a question to ask. This applies to
+  plain_summary, spoken_summary, possible_issues, questions_to_ask and document_mismatch_reason.
 - If the input is not a medical or insurance document, set document_type to "other" and explain that briefly."""
 
 RETRYABLE_CODES = {429, 500, 503}
-ATTEMPT_TIMEOUT_S = int(os.getenv("GEMINI_ATTEMPT_TIMEOUT_S", "40"))
+# Six phone photos of a bill and EOB took 34 s on 2026-10-11 (demo/documents/VALIDATION.md); 60 s leaves room.
+ATTEMPT_TIMEOUT_S = int(os.getenv("GEMINI_ATTEMPT_TIMEOUT_S", "60"))
 
 _client: Optional[genai.Client] = None
 MOCK_PATH = Path(__file__).parent / "mock_gemini_response.json"

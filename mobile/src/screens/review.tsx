@@ -65,7 +65,7 @@ export function Review() {
       {statementCalculated !== undefined ? <Txt variant="caption" muted>Calculated from the statement’s adjustments and recorded payments.</Txt> : null}
       {remaining !== undefined ? <Txt variant="caption" muted>Ask billing to explain any difference. This calculation is not a promise of savings.</Txt> : null}
     </Card>
-    {c.extraction?.documentMismatchReason ? <Feedback title="Check that these documents belong together" text={c.extraction.documentMismatchReason.en} /> : null}
+    {c.extraction?.documentMismatchReason ? <Feedback title={c.extraction.documentsMatch === false ? 'Check that these documents belong together' : 'How the bill and the EOB differ'} text={c.extraction.documentMismatchReason.en} /> : null}
     {c.extraction && c.extraction.financialsVersion !== 1 ? <Button title="Review documents again" icon="document" variant="secondary" onPress={() => caseRoute('/confirm-documents', c.id)} /> : null}
     <Group gap={space.md}>
       <Txt variant="label" muted>Manage this review</Txt>

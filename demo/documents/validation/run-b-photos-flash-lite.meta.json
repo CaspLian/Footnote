@@ -1,0 +1,53 @@
+{
+  "run": "run-b-photos-flash-lite",
+  "started_at": "2026-10-11T08:11:14",
+  "seconds_end_to_end": 15.53,
+  "http_status": 200,
+  "target_language": "en-US",
+  "files_sent_in_order": [
+    {
+      "field": "files",
+      "name": "itemized-bill-p1.jpg",
+      "mime": "image/jpeg",
+      "bytes": 2062416
+    },
+    {
+      "field": "files",
+      "name": "itemized-bill-p2.jpg",
+      "mime": "image/jpeg",
+      "bytes": 1919844
+    },
+    {
+      "field": "files",
+      "name": "itemized-bill-p3.jpg",
+      "mime": "image/jpeg",
+      "bytes": 2344361
+    },
+    {
+      "field": "files",
+      "name": "eob-p1.jpg",
+      "mime": "image/jpeg",
+      "bytes": 1907884
+    },
+    {
+      "field": "files",
+      "name": "eob-p2.jpg",
+      "mime": "image/jpeg",
+      "bytes": 1947250
+    },
+    {
+      "field": "files",
+      "name": "eob-p3.jpg",
+      "mime": "image/jpeg",
+      "bytes": 2344147
+    }
+  ],
+  "total_upload_bytes": 12525902,
+  "gemini_calls_seen_in_server_log": [
+    "POST v1beta/models/gemini-3.5-flash-lite:generateContent \"HTTP/1.1 200 OK\""
+  ],
+  "model_that_answered": "gemini-3.5-flash-lite",
+  "server_log_other_lines": [
+    "INFO:     127.0.0.1:58458 - \"POST /api/v1/analyze HTTP/1.1\" 200 OK"
+  ]
+}

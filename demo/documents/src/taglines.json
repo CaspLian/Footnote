@@ -1,0 +1,26 @@
+{
+  "_about": "Notice of availability of language assistance (45 CFR 92.11). Wording is the HHS sample tagline text that covered entities reuse verbatim, checked against copies published by Virginia DMAS, TennCare and two HTML notices (see RESEARCH.md). The HHS Arabic sample has an untranslated placeholder ('name the language'); this file names Arabic instead. {phone} and {tty} are filled in per document. The 'aca' block is the model wording from the CMS/DOL adverse benefit determination notice (29 CFR 2590.715-2719(e)).",
+  "section_1557": [
+    {"lang": "es", "name": "Español (Spanish)", "text": "ATENCIÓN: si habla español, tiene a su disposición servicios gratuitos de asistencia lingüística. Llame al {phone} (TTY: {tty})."},
+    {"lang": "zh-Hant", "name": "繁體中文 (Chinese)", "text": "注意：如果您使用繁體中文，您可以免費獲得語言援助服務。請致電 {phone}（TTY：{tty}）。"},
+    {"lang": "vi", "name": "Tiếng Việt (Vietnamese)", "text": "CHÚ Ý: Nếu bạn nói Tiếng Việt, có các dịch vụ hỗ trợ ngôn ngữ miễn phí dành cho bạn. Gọi số {phone} (TTY: {tty})."},
+    {"lang": "ko", "name": "한국어 (Korean)", "text": "주의: 한국어를 사용하시는 경우, 언어 지원 서비스를 무료로 이용하실 수 있습니다. {phone} (TTY: {tty})번으로 전화해 주십시오."},
+    {"lang": "tl", "name": "Tagalog (Tagalog – Filipino)", "text": "PAUNAWA: Kung nagsasalita ka ng Tagalog, maaari kang gumamit ng mga serbisyo ng tulong sa wika nang walang bayad. Tumawag sa {phone} (TTY: {tty})."},
+    {"lang": "ru", "name": "Русский (Russian)", "text": "ВНИМАНИЕ: Если вы говорите на русском языке, то вам доступны бесплатные услуги перевода. Звоните {phone} (телетайп: {tty})."},
+    {"lang": "ar", "dir": "rtl", "name": "العربية (Arabic)", "text": "ملحوظة: إذا كنت تتحدث اللغة العربية، فإن خدمات المساعدة اللغوية تتوافر لك بالمجان. اتصل برقم {phone} (رقم هاتف الصم والبكم: {tty})."},
+    {"lang": "fr", "name": "Français (French)", "text": "ATTENTION : Si vous parlez français, des services d’aide linguistique vous sont proposés gratuitement. Appelez le {phone} (ATS : {tty})."},
+    {"lang": "ht", "name": "Kreyòl Ayisyen (French Creole)", "text": "ATANSYON: Si w pale Kreyòl Ayisyen, gen sèvis èd pou lang ki disponib gratis pou ou. Rele {phone} (TTY: {tty})."},
+    {"lang": "pt", "name": "Português (Portuguese)", "text": "ATENÇÃO: Se fala português, encontram-se disponíveis serviços linguísticos, grátis. Ligue para {phone} (TTY: {tty})."},
+    {"lang": "it", "name": "Italiano (Italian)", "text": "ATTENZIONE: In caso la lingua parlata sia l’italiano, sono disponibili servizi di assistenza linguistica gratuiti. Chiamare il numero {phone} (TTY: {tty})."},
+    {"lang": "pl", "name": "Polski (Polish)", "text": "UWAGA: Jeżeli mówisz po polsku, możesz skorzystać z bezpłatnej pomocy językowej. Zadzwoń pod numer {phone} (TTY: {tty})."},
+    {"lang": "de", "name": "Deutsch (German)", "text": "ACHTUNG: Wenn Sie Deutsch sprechen, stehen Ihnen kostenlos sprachliche Hilfsdienstleistungen zur Verfügung. Rufnummer: {phone} (TTY: {tty})."},
+    {"lang": "ja", "name": "日本語 (Japanese)", "text": "注意事項：日本語を話される場合、無料の言語支援をご利用いただけます。{phone}（TTY: {tty}）まで、お電話にてご連絡ください。"},
+    {"lang": "hi", "name": "हिंदी (Hindi)", "text": "ध्यान दें: यदि आप हिंदी बोलते हैं तो आपके लिए मुफ्त में भाषा सहायता सेवाएं उपलब्ध हैं। {phone} (TTY: {tty}) पर कॉल करें।"}
+  ],
+  "aca": [
+    {"lang": "es", "name": "SPANISH (Español)", "text": "Para obtener asistencia en Español, llame al {phone}."},
+    {"lang": "tl", "name": "TAGALOG (Tagalog)", "text": "Kung kailangan ninyo ang tulong sa Tagalog tumawag sa {phone}."},
+    {"lang": "zh-Hans", "name": "CHINESE (中文)", "text": "如果需要中文的帮助，请拨打这个号码 {phone}。"},
+    {"lang": "nv", "name": "NAVAJO (Diné)", "text": "Dinek’ehgo shika at’ohwol ninisingo, kwiijigo holne’ {phone}."}
+  ]
+}

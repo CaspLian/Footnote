@@ -1,0 +1,29 @@
+{
+  "run": "run-a-pdfs-flash-lite",
+  "started_at": "2026-10-11T08:11:02",
+  "seconds_end_to_end": 11.38,
+  "http_status": 200,
+  "target_language": "en-US",
+  "files_sent_in_order": [
+    {
+      "field": "files",
+      "name": "itemized-bill.pdf",
+      "mime": "application/pdf",
+      "bytes": 353903
+    },
+    {
+      "field": "files",
+      "name": "eob.pdf",
+      "mime": "application/pdf",
+      "bytes": 1105506
+    }
+  ],
+  "total_upload_bytes": 1459409,
+  "gemini_calls_seen_in_server_log": [
+    "POST v1beta/models/gemini-3.5-flash-lite:generateContent \"HTTP/1.1 200 OK\""
+  ],
+  "model_that_answered": "gemini-3.5-flash-lite",
+  "server_log_other_lines": [
+    "INFO:     127.0.0.1:61102 - \"POST /api/v1/analyze HTTP/1.1\" 200 OK"
+  ]
+}

@@ -16,3 +16,6 @@ backend/api.env
 *.log
 .agents/
 .impeccable/review/
+
+# Demo documents: the 300-dpi page images are rebuilt by demo/documents/build.py (the PDFs and photos are kept)
+demo/documents/out/png/

@@ -1,0 +1,289 @@
+{
+  "_about": "Inputs for the Footnote demo documents. Everything here is fictional. build.py derives every total, the EOB adjudication and ground-truth.json from this file; change amounts here, never in the HTML.",
+  "specimen_footer": "SPECIMEN · Synthetic document for product demonstration · All names and numbers are fictional",
+  "hospital": {
+    "name": "Linnet Valley Medical Center",
+    "department": "Patient Financial Services",
+    "street": "2600 Linnet Valley Parkway",
+    "city": "Brayford",
+    "state": "OH",
+    "zip": "43066",
+    "correspondence_po_box": "PO Box 6614",
+    "correspondence_zip4": "43066-6614",
+    "remit_po_box": "PO Box 2290",
+    "remit_zip4": "43066-2290",
+    "phone_billing": "(614) 555-0143",
+    "billing_hours": "Monday–Friday, 8 a.m.–6 p.m. ET",
+    "phone_financial_assistance": "(614) 555-0147",
+    "financial_assistance_hours": "Monday–Friday, 8 a.m.–4:30 p.m. ET",
+    "phone_civil_rights": "(614) 555-0151",
+    "tty": "711",
+    "website": "linnetvalley.example",
+    "pay_url": "linnetvalley.example/pay",
+    "financial_assistance_url": "linnetvalley.example/financial-assistance",
+    "surprise_billing_url": "linnetvalley.example/surprise-billing",
+    "cashier":"Cashier’s office, Main Lobby, Monday–Friday, 7:30 a.m.–5 p.m.",
+    "form_id": "LVMC-PFS-ITM 06/26"
+  },
+  "insurer": {
+    "name": "Pellridge Health Plan",
+    "legal_name": "Pellridge Health Plan, Inc.",
+    "plan_name": "Pellridge Preferred PPO 1500",
+    "po_box": "PO Box 30419",
+    "city": "Merrowfield",
+    "state": "OH",
+    "zip4": "43617-0419",
+    "appeals_po_box": "PO Box 30425",
+    "appeals_zip4": "43617-0425",
+    "phone_member_services": "(614) 555-0186",
+    "member_services_hours": "Monday–Friday, 8 a.m.–8 p.m. ET",
+    "fax_appeals": "(614) 555-0188",
+    "phone_fraud": "(614) 555-0190",
+    "phone_civil_rights": "(614) 555-0192",
+    "tty": "711",
+    "website": "pellridgehealth.example",
+    "form_id": "PHP-EOB-GRP 2026.1"
+  },
+  "patient": {
+    "name": "Daniel R. Kessler",
+    "mailing_name": "DANIEL R KESSLER",
+    "street": "418 Cottonwood Run Apt 3B",
+    "city": "Brayford",
+    "state": "OH",
+    "zip4": "43066-2817",
+    "relationship_to_subscriber": "Self",
+    "member_id": "PLR482917365",
+    "group_number": "0471163",
+    "group_name": "Quillmere Fabrication Co."
+  },
+  "visit": {
+    "date_of_service": "2026-09-14",
+    "patient_type": "Emergency (outpatient)",
+    "location": "Emergency Department",
+    "story": "Adult with right lower abdominal pain and nausea since the night before; worked up for appendicitis (labs, CT abdomen and pelvis with IV contrast), treated with IV fluids, ondansetron and morphine, appendicitis ruled out, discharged home the same day."
+  },
+  "hospital_account": {
+    "guarantor_account": "3041872296",
+    "hospital_account": "5002611873",
+    "statement_date": "2026-10-07",
+    "due_date": "2026-11-02",
+    "insurance_billed_date": "2026-09-16",
+    "payment_posted_date": "2026-10-05",
+    "patient_payments": "0.00"
+  },
+  "claim": {
+    "claim_number": "2626404188170",
+    "received_date": "2026-09-21",
+    "processed_date": "2026-10-01",
+    "eob_statement_date": "2026-10-02",
+    "payment_method": "Electronic funds transfer",
+    "payment_date": "2026-10-02",
+    "payment_trace": "EFT0048817226",
+    "network_status": "In-network"
+  },
+  "plan": {
+    "plan_year_start": "2026-01-01",
+    "plan_year_end": "2026-12-31",
+    "coverage_tier": "Individual",
+    "deductible": "1500.00",
+    "deductible_met_before_claim": "1180.00",
+    "out_of_pocket_max": "5000.00",
+    "out_of_pocket_met_before_claim": "1436.20",
+    "er_copay": "250.00",
+    "coinsurance_rate": "0.20",
+    "cost_sharing_note": "The $250 emergency room copay applies to the emergency room facility charge. Tests, imaging, drugs and IV services during the visit are subject to the deductible, then 20% coinsurance."
+  },
+  "lines": [
+    {
+      "rev": "0258",
+      "code": "J7030",
+      "bill_description": "HC SODIUM CHLORIDE 0.9% 1000 ML",
+      "eob_description": "IV solution, saline 1,000 mL",
+      "units": 1,
+      "charge": "118.00",
+      "allowed": "21.40"
+    },
+    {
+      "rev": "0260",
+      "code": "96374",
+      "bill_description": "HC IV PUSH SINGLE/INITIAL DRUG",
+      "eob_description": "IV push, first drug",
+      "units": 1,
+      "charge": "486.00",
+      "allowed": "168.75"
+    },
+    {
+      "rev": "0260",
+      "code": "96375",
+      "bill_description": "HC IV PUSH EA ADDL SEQ NEW DRUG",
+      "eob_description": "IV push, each additional drug",
+      "units": 1,
+      "charge": "214.00",
+      "allowed": "46.20"
+    },
+    {
+      "rev": "0260",
+      "code": "96361",
+      "bill_description": "HC IV HYDRATION EA ADDL HOUR",
+      "eob_description": "IV hydration, additional hour",
+      "units": 1,
+      "charge": "158.00",
+      "allowed": "38.90"
+    },
+    {
+      "rev": "0270",
+      "code": null,
+      "bill_description": "HC MED/SURG SUPPLIES MISC",
+      "eob_description": "Medical/surgical supplies",
+      "units": 1,
+      "charge": "486.50",
+      "denial": "CO-97"
+    },
+    {
+      "rev": "0300",
+      "code": "36415",
+      "bill_description": "HC VENIPUNCTURE ROUTINE",
+      "eob_description": "Blood draw (venipuncture)",
+      "units": 1,
+      "charge": "38.00",
+      "allowed": "8.75"
+    },
+    {
+      "rev": "0301",
+      "code": "80053",
+      "bill_description": "HC COMPREHENSIVE METABOLIC PANEL",
+      "eob_description": "Comprehensive metabolic panel",
+      "units": 1,
+      "charge": "268.00",
+      "allowed": "31.80"
+    },
+    {
+      "rev": "0301",
+      "code": "80053",
+      "bill_description": "HC COMPREHENSIVE METABOLIC PANEL",
+      "eob_description": "Comprehensive metabolic panel",
+      "units": 1,
+      "charge": "268.00",
+      "denial": "OA-18"
+    },
+    {
+      "rev": "0301",
+      "code": "83690",
+      "bill_description": "HC LIPASE",
+      "eob_description": "Lipase (lab test)",
+      "units": 1,
+      "charge": "146.00",
+      "allowed": "18.65"
+    },
+    {
+      "rev": "0305",
+      "code": "85025",
+      "bill_description": "HC CBC W/AUTO DIFF",
+      "eob_description": "Complete blood count (CBC)",
+      "units": 1,
+      "charge": "164.00",
+      "allowed": "22.10"
+    },
+    {
+      "rev": "0307",
+      "code": "81003",
+      "bill_description": "HC URINALYSIS AUTO W/O MICRO",
+      "eob_description": "Urinalysis, automated",
+      "units": 1,
+      "charge": "74.00",
+      "allowed": "6.95"
+    },
+    {
+      "rev": "0350",
+      "code": "74177",
+      "bill_description": "HC CT ABD & PELVIS W/CONTRAST",
+      "eob_description": "CT abdomen and pelvis with contrast",
+      "units": 1,
+      "charge": "4182.00",
+      "allowed": "1086.40"
+    },
+    {
+      "rev": "0450",
+      "code": "99284",
+      "modifier": "25",
+      "_modifier_note": "25 = significant, separately identifiable E/M on the same day as a procedure (the IV push, 96374): the usual pairing on an emergency facility claim.",
+      "bill_description": "HC ED FACILITY LEVEL 4",
+      "eob_description": "Emergency room visit, level 4",
+      "units": 1,
+      "charge": "2148.00",
+      "allowed": "986.30",
+      "er_copay_line": true
+    },
+    {
+      "rev": "0636",
+      "code": "J2405",
+      "bill_description": "HC ONDANSETRON HCL INJ 1 MG",
+      "eob_description": "Ondansetron injection, per 1 mg",
+      "units": 4,
+      "charge": "88.00",
+      "allowed": "4.10"
+    },
+    {
+      "rev": "0636",
+      "code": "J2270",
+      "bill_description": "HC MORPHINE SULFATE INJ UP TO 10 MG",
+      "eob_description": "Morphine injection, up to 10 mg",
+      "units": 1,
+      "charge": "71.00",
+      "allowed": "8.25"
+    },
+    {
+      "rev": "0636",
+      "code": "Q9967",
+      "bill_description": "HC LOCM 300-399 MG/ML IODINE PER ML",
+      "eob_description": "Contrast material, per mL",
+      "units": 100,
+      "charge": "240.00",
+      "allowed": "52.00"
+    }
+  ],
+  "codes": {
+    "CO-45": {
+      "title": "Contracted rate",
+      "x12": "Charge exceeds fee schedule/maximum allowable or contracted/legislated fee arrangement.",
+      "plain": "The billed amount is above our contracted rate for this in-network provider.",
+      "responsibility": "Provider write-off. You do not owe it."
+    },
+    "PR-1": {
+      "title": "Deductible",
+      "x12": "Deductible Amount.",
+      "plain": "Applied to your plan-year deductible.",
+      "responsibility": "You may owe this amount."
+    },
+    "PR-2": {
+      "title": "Coinsurance",
+      "x12": "Coinsurance Amount.",
+      "plain": "Your 20% share of the allowed amount after the deductible.",
+      "responsibility": "You may owe this amount."
+    },
+    "PR-3": {
+      "title": "Copay",
+      "x12": "Co-payment Amount.",
+      "plain": "Your $250 emergency room copay for this visit.",
+      "responsibility": "You may owe this amount."
+    },
+    "OA-18": {
+      "title": "Exact duplicate",
+      "x12": "Exact duplicate claim/service.",
+      "plain": "This line repeats another line on this claim (same service, same date). Not paid.",
+      "responsibility": "You do not owe this amount."
+    },
+    "CO-97": {
+      "title": "Included in another service",
+      "x12": "The benefit for this service is included in the payment/allowance for another service/procedure that has already been adjudicated.",
+      "plain": "Supplies are part of the payment for the emergency room visit.",
+      "responsibility": "Provider write-off. You do not owe it."
+    }
+  },
+  "price_reference": {
+    "source_file": "backend/data/cpt_benchmarks.csv",
+    "source_label": "CMS 2026 Physician Fee Schedule (RVU26D Oct release), national rate",
+    "typical_max_ratio": 3.0,
+    "above_max_ratio": 6.0
+  }
+}
