@@ -4,6 +4,8 @@ Footnote helps patients and caregivers understand medical bills and insurance ex
 
 ## Run locally
 
+For a fresh clone, follow [the local phone and Android emulator setup](README-LOCAL-TESTING.md). It runs the backend on your own computer and connects a phone over the same Wi-Fi.
+
 For a physical iPhone, follow [the merged-v1 iOS testing guide](docs/IOS_TESTING.md).
 The supplied brand masters and presentation are included in [brand/](brand/showcase.html).
 
