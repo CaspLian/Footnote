@@ -1,5 +1,6 @@
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
+import { Platform } from 'react-native';
 import { Directory, File, FileMode, Paths } from 'expo-file-system';
 import type { DocumentAttachment, DocumentKind } from '@/domain';
 import { NativeActionError, nativeMessages, type NativeErrorCode } from './errors';
@@ -14,6 +15,14 @@ export type ImportResult =
   | { status: 'error'; code: NativeErrorCode; message: { en: string; es: string } };
 
 type PickedFile = { uri: string; name: string; mimeType?: string; size?: number };
+
+/** Expo resolves picker results before UIKit's animated dismissal has finished. */
+async function finishPickerDismissal() {
+  // Do not present a loader, alert, or push a native screen over the closing picker.
+  // The loader lives in the current screen; this short iOS handoff also covers cancellation.
+  if (Platform.OS === 'ios') await new Promise<void>(resolve => setTimeout(resolve, 450));
+  await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+}
 
 export function appendAttachmentToForm(form: FormData, attachment: DocumentAttachment, field = 'files'): void {
   // The global fetch is Expo's: it sends parts that are strings, Blobs or objects with bytes(), and refuses React
@@ -78,6 +87,7 @@ export async function importDocument(source: ImportSource, kind: DocumentKind = 
     let picked: PickedFile[];
     if (source === 'files') {
       const result = await DocumentPicker.getDocumentAsync({ type: ['application/pdf', 'image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'], copyToCacheDirectory: true, multiple: true });
+      await finishPickerDismissal();
       const outcome = classifyPickerOutcome(result);
       if (outcome.status !== 'selected') return outcome.status === 'error' ? { ...outcome, message: nativeMessages[outcome.code] } : outcome;
       picked = result.assets!;
@@ -85,7 +95,13 @@ export async function importDocument(source: ImportSource, kind: DocumentKind = 
       if (source === 'camera') { const permission = await ImagePicker.requestCameraPermissionsAsync(); if (!permission.granted) return { status: 'permission-denied', canAskAgain: permission.canAskAgain }; }
       const result = await (source === 'camera'
         ? ImagePicker.launchCameraAsync({ mediaTypes: ['images'], allowsEditing: false, quality: 1, cameraType: ImagePicker.CameraType.back })
-        : ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: false, quality: 1, allowsMultipleSelection: true, selectionLimit: 10, orderedSelection: true }));
+        : ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ['images'], allowsEditing: false, quality: 1,
+          allowsMultipleSelection: true, selectionLimit: 10, orderedSelection: true,
+          // Copy the original to the picker cache instead of decoding/re-encoding every page.
+          preferredAssetRepresentationMode: ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Current,
+        }));
+      await finishPickerDismissal();
       const outcome = classifyPickerOutcome(result);
       if (outcome.status !== 'selected') return outcome.status === 'error' ? { ...outcome, message: nativeMessages[outcome.code] } : outcome;
       picked = result.assets!.map(a => ({ uri: a.uri, name: a.fileName ?? 'document.jpg', mimeType: a.mimeType, size: a.fileSize }));

@@ -1,11 +1,10 @@
-import { useEffect, useId, useMemo, useState } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { AppState, Platform, Pressable } from 'react-native';
 import { useIsFocused } from 'expo-router/react-navigation';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import { scheduleOnRN } from 'react-native-worklets';
 import * as Haptics from 'expo-haptics';
 import Svg, { Circle, ClipPath, Defs, G, Path, RadialGradient, Rect, Stop } from 'react-native-svg';
-import Animated, { cancelAnimation, Easing, interpolateColor, useAnimatedProps, useAnimatedStyle, useFrameCallback, useDerivedValue, useSharedValue, withDelay, withSpring, withTiming, type SharedValue } from 'react-native-reanimated';
+import Animated, { cancelAnimation, Easing, interpolateColor, runOnJS, useAnimatedProps, useAnimatedStyle, useFrameCallback, useDerivedValue, useSharedValue, withDelay, withSpring, withTiming, type SharedValue } from 'react-native-reanimated';
 import { orbParticles, orbPaths } from '@/domain/orb-particles';
 import { useFootnoteStore } from '@/store';
 import { useTheme } from '@/theme';
@@ -14,7 +13,7 @@ const Layer = Animated.createAnimatedComponent(Path);
 const Control = Animated.createAnimatedComponent(Pressable);
 const Reveal = Animated.createAnimatedComponent(Rect);
 const particles = orbParticles();
-export function ParticleOrb({ status, onPress, label, size = 132, onCollapse, onExpand, collapsed = false, enter = true, interactive = true, active = true, collapseProgress, level }: { status: NarrationStatus; onPress?: () => void; label: string; size?: number; onCollapse?: () => void; onExpand?: () => void; collapsed?: boolean; enter?: boolean; interactive?: boolean; active?: boolean; collapseProgress?: SharedValue<number>; level?: SharedValue<number> }) {
+export function ParticleOrb({ status, onPress, onDoublePress, onLongPress, label, size = 132, onCollapse, onExpand, collapsed = false, enter = true, interactive = true, active = true, collapseProgress, level }: { status: NarrationStatus | 'listening'; onPress?: () => void; onDoublePress?: () => void; onLongPress?: () => void; label: string; size?: number; onCollapse?: () => void; onExpand?: () => void; collapsed?: boolean; enter?: boolean; interactive?: boolean; active?: boolean; collapseProgress?: SharedValue<number>; level?: SharedValue<number> }) {
   const { colors, reducedMotion } = useTheme();
   const gradientId = `orbSoftening${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
   const clipId = `${gradientId}Clip`;
@@ -24,16 +23,14 @@ export function ParticleOrb({ status, onPress, label, size = 132, onCollapse, on
   const angle = useSharedValue(.5), tilt = useSharedValue(.32), time = useSharedValue(0), activity = useSharedValue(0);
   const drive = useDerivedValue(() => level ? activity.get() * (.35 + .65 * level.get()) : activity.get());
   const paths = useDerivedValue(() => orbPaths(particles, angle.get(), time.get(), drive.get(), tilt.get()));
-  const elapsed = useSharedValue(0);
   const momentum = useSharedValue(0), dragging = useSharedValue(false), committed = useSharedValue(false), scale = useSharedValue(1), entrance = useSharedValue(enter ? 1 : 0);
   const reveal = useSharedValue(collapsed ? 0 : 1);
   const dragStart = useSharedValue(collapsed ? 0 : 1);
   const collapsedHeight = Math.round(size * 64 / 132), travel = size - collapsedHeight;
   useDerivedValue(() => { collapseProgress?.set((1 - reveal.get()) * travel); });
   const frame = useFrameCallback(info => {
-    elapsed.set(v => v + Math.min(info.timeSincePreviousFrame ?? 0, 64) / 1000);
-    if (elapsed.get() < 1 / 30) return;
-    const dt = elapsed.get(); elapsed.set(0);
+    // Follow the display refresh rate. Projection stays on the UI thread and updates only three paths.
+    const dt = Math.min(info.timeSincePreviousFrame ?? 16.67, 32) / 1000;
     time.set(t => t + dt);
     if (!dragging.get()) {
       angle.set(a => (a + dt * (.22 + drive.get() * .7 + momentum.get())) % (Math.PI * 2));
@@ -42,7 +39,7 @@ export function ParticleOrb({ status, onPress, label, size = 132, onCollapse, on
   }, false);
   useEffect(() => { const sub = AppState.addEventListener('change', state => setForeground(state === 'active')); return () => sub.remove(); }, []);
   useEffect(() => { frame.setActive(active && focused && foreground && !reducedMotion && !collapsed); return () => frame.setActive(false); }, [frame, active, focused, foreground, reducedMotion, collapsed]);
-  useEffect(() => { activity.set(withTiming(status === 'speaking' ? 1 : status === 'loading' ? .65 : 0, { duration: reducedMotion ? 0 : 240, easing: Easing.bezier(.23, 1, .32, 1) })); }, [activity, status, reducedMotion]);
+  useEffect(() => { activity.set(withTiming(status === 'speaking' ? 1 : status === 'loading' ? .65 : status === 'listening' ? .35 : 0, { duration: reducedMotion ? 0 : 240, easing: Easing.bezier(.23, 1, .32, 1) })); }, [activity, status, reducedMotion]);
   useEffect(() => {
     reveal.set(withSpring(collapsed ? 0 : 1, { duration: reducedMotion ? 0 : 280, dampingRatio: .92 }));
   }, [collapsed, reveal, reducedMotion]);
@@ -52,6 +49,41 @@ export function ParticleOrb({ status, onPress, label, size = 132, onCollapse, on
     return () => cancelAnimation(entrance);
   }, [enter, entrance, focused, reducedMotion]);
   const feedback = useMemo(() => () => { if (Platform.OS !== 'web' && haptics) void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); }, [haptics]);
+  const singlePress = useCallback(() => { feedback(); if (collapsed) onExpand?.(); if (!reducedMotion) momentum.set(2.4); onPress?.(); }, [feedback, collapsed, onExpand, reducedMotion, momentum, onPress]);
+  const lastTap = useRef<number>(0);
+  const singleTapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (singleTapTimer.current) clearTimeout(singleTapTimer.current);
+    };
+  }, []);
+
+  const handlePress = useCallback(() => {
+    const now = Date.now();
+    const isDouble = onDoublePress && (now - lastTap.current < 380);
+    if (isDouble) {
+      if (singleTapTimer.current) {
+        clearTimeout(singleTapTimer.current);
+        singleTapTimer.current = null;
+      }
+      lastTap.current = 0;
+      feedback();
+      onDoublePress();
+    } else {
+      lastTap.current = now;
+      if (onDoublePress && status !== 'idle') {
+        if (singleTapTimer.current) clearTimeout(singleTapTimer.current);
+        singleTapTimer.current = setTimeout(() => {
+          singleTapTimer.current = null;
+          singlePress();
+        }, 250);
+      } else {
+        singlePress();
+      }
+    }
+  }, [feedback, onDoublePress, singlePress, status]);
+
   const pan = useMemo(() => Gesture.Pan().minDistance(8)
     .onStart(() => { dragging.set(true); committed.set(false); momentum.set(0); cancelAnimation(reveal); dragStart.set(reveal.get()); })
     .onChange(event => {
@@ -64,8 +96,8 @@ export function ParticleOrb({ status, onPress, label, size = 132, onCollapse, on
     .onEnd(event => {
       const down = event.translationY > 44 && event.translationY > Math.abs(event.translationX) * .8 || event.velocityY > 650 && event.translationY > 20;
       const up = event.translationY < -36 && -event.translationY > Math.abs(event.translationX) * .8 || event.velocityY < -650 && event.translationY < -12;
-      if (collapsed && onExpand && up) { committed.set(true); reveal.set(withSpring(1, { duration: reducedMotion ? 0 : 280, dampingRatio: .92, velocity: -event.velocityY / travel })); scheduleOnRN(onExpand); scheduleOnRN(feedback); }
-      else if (!collapsed && onCollapse && down) { committed.set(true); reveal.set(withSpring(0, { duration: reducedMotion ? 0 : 280, dampingRatio: .92, velocity: -event.velocityY / travel })); scheduleOnRN(onCollapse); scheduleOnRN(feedback); }
+      if (collapsed && onExpand && up) { committed.set(true); reveal.set(withSpring(1, { duration: reducedMotion ? 0 : 280, dampingRatio: .92, velocity: -event.velocityY / travel })); runOnJS(onExpand)(); runOnJS(feedback)(); }
+      else if (!collapsed && onCollapse && down) { committed.set(true); reveal.set(withSpring(0, { duration: reducedMotion ? 0 : 280, dampingRatio: .92, velocity: -event.velocityY / travel })); runOnJS(onCollapse)(); runOnJS(feedback)(); }
       if (!reducedMotion && !collapsed) { momentum.set(Math.max(-12, Math.min(12, event.velocityX * .018))); tilt.set(withSpring(.32, { duration: 400, dampingRatio: .8, velocity: event.velocityY * .008 })); }
     })
     .onFinalize(() => {
@@ -75,7 +107,7 @@ export function ParticleOrb({ status, onPress, label, size = 132, onCollapse, on
     }), [angle, tilt, momentum, dragging, committed, scale, reveal, dragStart, feedback, reducedMotion, collapsed, onCollapse, onExpand, travel]);
   const style = useAnimatedStyle(() => ({ opacity: 1 - entrance.get(), transform: [{ translateY: 90 * entrance.get() + (collapsed ? 0 : travel) - travel * reveal.get() }, { scale: scale.get() * (.65 + .35 * (1 - entrance.get())) * (.91 + .09 * reveal.get()) }] }));
   const clipProps = useAnimatedProps(() => ({ height: (collapsedHeight + travel * reveal.get()) / size * 56 }));
-  const control = <Control pointerEvents={interactive ? 'auto' : 'none'} accessible={interactive} accessibilityRole={interactive ? 'button' : undefined} accessibilityLabel={interactive ? label : undefined} accessibilityHint={interactive ? collapsed ? 'Tap or swipe up to expand the voice agent.' : 'Tap to open voice conversation controls. Drag sideways to spin; swipe down to minimize.' : undefined} accessibilityState={{ busy: status === 'loading', expanded: interactive ? !collapsed : undefined }} onPressIn={() => scale.set(withTiming(reducedMotion ? 1 : .96, { duration: reducedMotion ? 0 : 120 }))} onPressOut={() => scale.set(withTiming(1, { duration: reducedMotion ? 0 : 140 }))} onPress={() => { feedback(); if (collapsed) onExpand?.(); else { if (!reducedMotion) momentum.set(2.4); onPress?.(); } }} style={[{ width: size, height: collapsed ? collapsedHeight : size, borderRadius: size / 2 }, style]}>
+  const control = <Control pointerEvents={interactive ? 'auto' : 'none'} accessible={interactive} accessibilityRole={interactive ? 'button' : undefined} accessibilityLabel={interactive ? label : undefined} accessibilityHint={interactive ? 'Tap to start or mute the conversation. Double-tap to end. Hold for voice controls. Drag sideways to spin; swipe down to minimize.' : undefined} accessibilityActions={[...(onLongPress?[{name:'longpress',label:'Voice conversation controls'}]:[]),...(onDoublePress?[{name:'endConversation',label:'End conversation'}]:[])]} onAccessibilityAction={event => { if (event.nativeEvent.actionName === 'longpress') onLongPress?.();else if(event.nativeEvent.actionName==='endConversation')onDoublePress?.(); }} accessibilityState={{ busy: status === 'loading', expanded: interactive ? !collapsed : undefined }} onPressIn={() => scale.set(withTiming(reducedMotion ? 1 : .96, { duration: reducedMotion ? 0 : 120 }))} onPressOut={() => scale.set(withTiming(1, { duration: reducedMotion ? 0 : 140 }))} delayLongPress={500} onLongPress={onLongPress ? () => { feedback(); onLongPress(); } : undefined} onPress={handlePress} style={[{ width: size, height: collapsed ? collapsedHeight : size, borderRadius: size / 2 }, style]}>
     <Svg pointerEvents="none" aria-hidden={true} width={size} height={size} viewBox="0 0 56 56" style={{ position: 'absolute', top: 0, flexShrink: 0 }}>
       <Defs>
         <RadialGradient id={gradientId}><Stop offset="0" stopColor={colors.background}/><Stop offset={.68} stopColor={colors.background} stopOpacity={.98}/><Stop offset={.86} stopColor={colors.background} stopOpacity={.65}/><Stop offset="1" stopColor={colors.background} stopOpacity={0}/></RadialGradient>

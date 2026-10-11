@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createManualCase } from './fixtures';
-import { mapGeminiAnalysis, type GeminiAnalyzeResponse } from './extraction';
+import { hasSubstantialExtraction, mapGeminiAnalysis, type GeminiAnalyzeResponse } from './extraction';
 import { validateCase } from './review';
 import { comparisonFor, priceFinding } from '../services/backend-mapping';
 
@@ -32,3 +32,15 @@ test('missing extracted money stays unknown instead of becoming zero', () => {
 });
 
 test('a missing line amount is explicitly unknown, blocks verification and cannot produce a zero-dollar comparison',()=>{const billCase=createManualCase();const mapped=mapGeminiAnalysis({...response,result:{...response.result,line_items:[{...response.result.line_items[0],billed_amount:null}]}},billCase,'en');const line=mapped.lineItems[0];assert.equal(line.amountMissing,true);assert.ok(validateCase({...billCase,...mapped}).some(issue=>issue.field===`${line.id}.billedCents`&&issue.key==='required'));const benchmark={cpt_code:'99284',medicare_rate:100,medicare_description:'Visit',setting:'facility',source:'csv',error:null};assert.equal(comparisonFor(line,benchmark,'now'),null);assert.equal(priceFinding(line,{source:'CMS',url:'https://cms.gov',amountCents:10000,retrievedAt:'now',context:{en:'Reference',es:'Reference'}}),null);const zero=mapGeminiAnalysis({...response,result:{...response.result,line_items:[{...response.result.line_items[0],billed_amount:0}]}},billCase,'en').lineItems[0];assert.equal(zero.amountMissing,false,'an explicitly stated zero is distinct from a missing value');});
+
+
+test('prose, provider names and placeholder rows do not unlock verification', () => {
+  const result = { ...response.result, total_billed: null, amount_patient_owes: null, line_items: [] };
+  assert.equal(hasSubstantialExtraction(mapGeminiAnalysis({ ...response, result }, createManualCase(), 'en')), false);
+  assert.equal(hasSubstantialExtraction(mapGeminiAnalysis({ ...response, result: { ...result, line_items: [{ original_description: 'Unknown', plain_description:'Unknown', billed_amount: null, cpt_code: null }] } }, createManualCase(), 'en')), false);
+  assert.equal(hasSubstantialExtraction(mapGeminiAnalysis({ ...response, result: { ...result, document_type: 'other', total_billed: 25 } }, createManualCase(), 'en')), false);
+});
+test('documented totals, explicit zeros and usable service codes support partial bills and EOBs', () => {
+  for (const amount of [0, 15]) assert.equal(hasSubstantialExtraction(mapGeminiAnalysis({ ...response, result: { ...response.result, document_type: 'eob', total_billed: amount, line_items: [] } }, createManualCase(), 'en')), true);
+  assert.equal(hasSubstantialExtraction(mapGeminiAnalysis({ ...response, result: { ...response.result, total_billed: null, amount_patient_owes: null, line_items: [{original_description:'Office visit', plain_description:'Office visit', cpt_code:'99213', billed_amount:null}] } }, createManualCase(), 'en')), true);
+});

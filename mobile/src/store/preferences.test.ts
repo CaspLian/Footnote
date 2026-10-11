@@ -37,3 +37,10 @@ test('imported page batches stay together and unknown amounts remain unentered',
   await store.getState().flushPersistence();const restored=createFootnoteStore(io);await restored.getState().retryHydration();assert.equal(restored.getState().cases[0].financials.remainingCents,undefined);assert.equal(restored.getState().cases[0].evidenceContextId,'gemini-context');
   store.getState().addImportedBatch([{...attachments[0],id:'page-4'}],id);assert.equal(store.getState().cases[0].evidenceContextId,undefined);assert.equal(store.getState().cases[0].attachments.length,4);
 });
+
+
+test('actual provider voice keys persist and malformed provider choices do not', async () => {
+  const { normalizePreferences } = await import('../domain/preferences');
+  assert.equal(normalizePreferences({ voice: 'provider:saavi' }).voice, 'provider:saavi');
+  assert.equal(normalizePreferences({ voice: 'provider:../../unsafe' }).voice, 'device');
+});

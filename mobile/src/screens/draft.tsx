@@ -8,7 +8,8 @@ import { useFootnoteStore } from '@/store';
 import { copyDraft, exportDraftPdf, nativeErrorMessage, shareDocument } from '@/native';
 import { Button, ButtonRow, Choice, Feedback, Group, Screen, Txt, useUIStyles, useDesktop, useLanguage } from '@/components/ui';
 import { useTheme, type, space } from '@/theme';
-import { MissingCase, caseRoute, useCase } from './shared';
+import { DocumentsNeedProcessing, MissingCase, caseRoute, useCase } from './shared';
+import { needsDocumentProcessing } from '@/domain/document-readiness';
 
 export function DraftWorkspace() { const { colors } = useTheme(); const styles = useUIStyles();
   const c = useCase();
@@ -26,7 +27,7 @@ export function DraftWorkspace() { const { colors } = useTheme(); const styles =
   const [error, setError] = useState('');
   const loading = !draft && !error;
   const recovered = !!draft && !preparedHere;
-  const caseId = c?.id;
+  const caseId = c&&!needsDocumentProcessing(c)?c.id:undefined;
 
   useEffect(() => {
     let active = true;
@@ -38,6 +39,7 @@ export function DraftWorkspace() { const { colors } = useTheme(); const styles =
     return () => { active = false; };
   }, [caseId, kind, locale, copy]);
   if (!c) return <MissingCase />;
+  if (needsDocumentProcessing(c)) return <DocumentsNeedProcessing billCase={c}/>;
 
   function edit(text: string) {
     if (c) useFootnoteStore.getState().saveDraft(c.id, kind, text, locale);
@@ -64,7 +66,7 @@ export function DraftWorkspace() { const { colors } = useTheme(); const styles =
       caseRoute('/timeline', c!.id);
     });
   }
-  const heading = <Group gap={space.lg}><Txt variant="display">Put your question{'\n'}into words.</Txt><Txt muted>A saved draft. You choose when to send it.</Txt></Group>;
+  const heading = <Group gap={space.lg}><Txt variant="display">Prepare your request</Txt><Txt muted>A saved draft. You choose when to send it.</Txt></Group>;
   const choices = <Group gap={space.md}>
     <Choice title="Billing correction" detail="Ask the provider to clarify or correct your bill." selected={kind === 'billing_correction'} onPress={() => { setKind('billing_correction'); setError(''); setMessage(''); }} />
     <Choice title="Insurer review / appeal" detail="Ask your health plan to review a coverage decision." selected={kind === 'insurer_appeal'} onPress={() => { setKind('insurer_appeal'); setError(''); setMessage(''); }} />
@@ -79,7 +81,7 @@ export function DraftWorkspace() { const { colors } = useTheme(); const styles =
     <Txt variant="caption" muted>Mark submitted only after you send the request yourself.</Txt>
   </Group>;
   return <Screen testID="draft" asideWidth={320} aside={<Group gap={space.xl}>{heading}{choices}{utilities}</Group>} footerHint={loading ? 'Preparing your draft…' : storageError ? 'Saving needs attention' : draft ? 'Draft saved on this device' : undefined} footer={<Button title={draft?.submittedAt ? 'Open submission timeline' : 'Mark submitted'} disabled={loading || busy || !body.trim() || !!storageError} onPress={() => draft?.submittedAt ? caseRoute('/timeline', c.id) : submitted()} />}>
-    {!desktop ? <>{heading}{choices}</> : <Group gap={space.sm}><Txt variant="section">Your draft</Txt><Txt muted>{c.provider}</Txt></Group>}
+    {!desktop ? <>{heading}{choices}</> : <Group gap={space.sm}><Txt variant="section">Your draft</Txt><Txt muted translate={false}>{c.provider}</Txt></Group>}
     {kind === 'insurer_appeal' ? <Feedback text="Identify the insurer decision and your reason for asking for review. Confirm any deadline from your plan documents." /> : null}
     {loading ? <FootnoteLoader compact title="Preparing your draft" detail="Turning your confirmed questions into words." /> : <TextInput testID="draft-body" accessibilityLabel="Editable request draft" value={body} onChangeText={edit} multiline scrollEnabled textAlignVertical="top" style={[type.body, styles.page, { color: colors.ink, height: desktop ? 640 : 420 }]} />}
     <Txt variant="caption" muted>{storageError ? 'Changes are in memory. Saving needs attention.' : recovered ? 'Your saved draft was restored on this device.' : 'Saved on this device'}</Txt>

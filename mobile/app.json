@@ -7,14 +7,51 @@
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "bundleIdentifier": "org.hackknights.footnote",
+      "bundleIdentifier": "footnote.compare",
       "supportsTablet": false,
       "infoPlist": {
-        "CADisableMinimumFrameDurationOnPhone": true
+        "CADisableMinimumFrameDurationOnPhone": true,
+        "CFBundleLocalizations": [
+          "en",
+          "es",
+          "fr",
+          "de",
+          "it",
+          "zh-Hans",
+          "zh-Hant",
+          "ja",
+          "ko",
+          "hi",
+          "ar",
+          "he",
+          "nl",
+          "sv",
+          "da",
+          "fi",
+          "nb",
+          "pl",
+          "cs",
+          "sk",
+          "hu",
+          "ro",
+          "el",
+          "ru",
+          "uk",
+          "tr",
+          "id",
+          "ms",
+          "th",
+          "vi",
+          "pt-PT"
+        ]
+      },
+      "icon": {
+        "light": "../brand/png/appicon/footnote-appicon-light-1024.png",
+        "dark": "../brand/png/appicon/footnote-appicon-dark-1024.png"
       }
     },
     "android": {
-      "package": "org.hackknights.footnote",
+      "package": "footnote.compare",
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.RECORD_AUDIO",
@@ -87,6 +124,7 @@
       "eas": {
         "projectId": "4690d017-8cb2-47b9-9e3d-856aae34bcd4"
       }
-    }
+    },
+    "icon": "./assets/icon.png"
   }
 }

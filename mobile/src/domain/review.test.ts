@@ -25,7 +25,7 @@ test('money input rejects nonfinite, negative, fractional-cent and malformed amo
   assert.equal(parseMoney('0.01', 'es'), 1);
   assert.equal(parseMoney('1234.5'), 123450);
   for (const value of ['', '-1', 'NaN', 'Infinity', '1e3', '1.001', '1,2', '1.234,56', '90071992547409999']) assert.equal(parseMoney(value), null, value);
-  assert.equal(formatMoney(Number.NaN), '—');
+  assert.equal(formatMoney(Number.NaN), 'Not shown');
   assert.equal(isISODate('2026-02-30'), false);
   assert.equal(isISODate('2028-02-29'), true);
 });

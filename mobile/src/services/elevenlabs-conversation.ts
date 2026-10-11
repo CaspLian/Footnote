@@ -13,6 +13,7 @@ export interface SdkConversation {
   getInputVolume(): number;
   getOutputVolume(): number;
   sendUserMessage(text: string): void;
+  sendUserActivity?(): void;
   getId(): string;
 }
 export interface AgentSdk { Conversation: { startSession(options: PartialOptions): Promise<SdkConversation> } }
@@ -22,6 +23,8 @@ export interface ElevenLabsDeps {
   loadSdk(): Promise<AgentSdk>;
   requestMicrophone(): Promise<MicrophoneAccess>;
   claimAudio?(holder: { stop(): void }): () => void;
+  /** Switch from playback-only previews to a duplex native audio session after claiming audio. */
+  activateMicrophone?(): Promise<void>;
   connectTimeoutMs?: number;
   streamAgentText?: boolean;
   devHook?(hook: AgentDebugHook | undefined): void;
@@ -81,6 +84,7 @@ export function createElevenLabsConversation(deps: ElevenLabsDeps) {
       const ended = new Promise<void>(resolve => { resolveEnded = resolve; });
       const events = createAgentEventMapper({
         status: options.onStatus,
+        interruption: options.onInterruption,
         message: options.onMessage,
         end: ending => { closed = true; cleanup(); resolveEnded(); options.onEnd?.(ending); },
       }, { streamAgentText: deps.streamAgentText, log: deps.log });
@@ -97,6 +101,8 @@ export function createElevenLabsConversation(deps: ElevenLabsDeps) {
       try {
         if (closed) throw abortError();
         throwIfAborted(signal);
+        await deps.activateMicrophone?.();
+        throwIfAborted(signal);
         const handlers = agentToolHandlers(context, grant.lines);
         const clientTools = Object.fromEntries(CLIENT_TOOL_NAMES.map(name => [name, (params: unknown) => closed ? 'The conversation has ended.' : handlers[name](params)]));
         started = sdk.Conversation.startSession({
@@ -108,6 +114,13 @@ export function createElevenLabsConversation(deps: ElevenLabsDeps) {
           clientTools,
           onUnhandledClientToolCall: call => deps.log?.('tool_unknown', { name: call.tool_name }),
           ...events.callbacks,
+          onError(message) {
+            events.callbacks.onError(message);
+            if (/input muted state|microphone/i.test(message)) {
+              events.reportEnd({error:'Microphone control failed. End the conversation and try again.'});
+              if (conversation) void closeSdk(conversation).catch(()=>{});
+            }
+          },
         });
         const cancelled = new Promise<never>((_resolve, reject) => {
           onAbort = () => reject(abortError());
@@ -119,6 +132,12 @@ export function createElevenLabsConversation(deps: ElevenLabsDeps) {
         throwIfAborted(signal);
         if (closed) throw abortError();
         if (conversation.type !== 'voice') throw new Error('not_a_voice_session');
+        // Native startup changes the shared audio session. Restore duplex after
+        // publication too, before reporting an active microphone to the UI.
+        await deps.activateMicrophone?.();
+        throwIfAborted(signal);
+        if (closed) throw abortError();
+        conversation.setMicMuted(false);
       } catch (error) {
         closed = true; events.dispose(); cleanup();
         // SDK startup cannot be cancelled: dispose a connection that arrives after End or timeout.
@@ -133,7 +152,13 @@ export function createElevenLabsConversation(deps: ElevenLabsDeps) {
       deps.devHook?.({ send: text => { if (!closed) { events.userTyped(text); activeConversation.sendUserMessage(text); } }, id: () => activeConversation.getId() });
       return {
         async end() { if (closed) return; closed = true; events.closeQuietly(); cleanup(); await closeSdk(activeConversation); },
-        async setMuted(muted) { if (!closed) activeConversation.setMicMuted(muted); },
+        async setMuted(muted) { if (closed) return; if (!muted) await deps.activateMicrophone?.(); if (!closed) activeConversation.setMicMuted(muted); },
+        sendText(text) {
+          if (closed) throw new Error('conversation_closed');
+          activeConversation.sendUserMessage(text);
+          events.userTyped(text);
+        },
+        userActivity() { if (!closed) activeConversation.sendUserActivity?.(); },
         levels() {
           if (closed) return { input: 0, output: 0 };
           try { return { input: activeConversation.getInputVolume(), output: activeConversation.getOutputVolume() }; }

@@ -13,7 +13,7 @@ function harness(streamAgentText = true) {
   const adapter: AgentAdapter = {
     async connect(_c, options: AgentConnectOptions) {
       connects++;
-      mapper = createAgentEventMapper({ status: options.onStatus, message: options.onMessage, end: e => options.onEnd?.(e) }, {
+      mapper = createAgentEventMapper({ status: options.onStatus, message: options.onMessage, end: e => options.onEnd?.(e), interruption: options.onInterruption }, {
         streamAgentText, setTimer: (fn, ms) => { timers.push({ fn, ms }); return timers.length - 1; }, clearTimer: h => { const t = timers[h as number]; if (t) t.fn = () => {}; },
       });
       mapper.callbacks.onStatusChange({ status: 'connecting' });
@@ -184,4 +184,17 @@ test('a far-end hang-up while still connecting: the late session is ended once a
   resolve(); await run;
   assert.equal(ends, 1);
   assert.equal(controller.getSnapshot().status, 'error');
+});
+
+
+test('provider interruptions update the controller once and ignore events after End', async () => {
+  const h = harness();
+  await h.controller.start(context);
+  h.cb().onModeChange({ mode: 'speaking' });
+  h.cb().onInterruption();
+  assert.equal(h.controller.getSnapshot().interruptions, 1);
+  assert.equal(h.controller.getSnapshot().status, 'listening');
+  await h.controller.end();
+  h.cb().onInterruption();
+  assert.equal(h.controller.getSnapshot().interruptions, 1);
 });

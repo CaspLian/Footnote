@@ -1,5 +1,5 @@
 /** Curated intersection of ElevenAgents model coverage and Apple's app localization locales.
- * The choice controls document/agent requests. It does not claim a fully translated UI.
+ * The choice controls bundled UI catalogs and connected document/agent requests.
  * Flags represent a familiar region; the visible native language name is authoritative. */
 export const workingLanguages = [
   { code: 'en', agentCode: 'en', name: 'English', native: 'English', country: 'us', locale: 'en-US' },

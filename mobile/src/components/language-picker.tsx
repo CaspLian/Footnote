@@ -1,6 +1,8 @@
-import { Pressable, View } from 'react-native';
+import { Platform, Pressable, View } from 'react-native';
 import { router } from 'expo-router';
 import { Image } from 'expo-image';
+import * as Haptics from 'expo-haptics';
+import { useFootnoteStore } from '@/store';
 import { languageOption, workingLanguages, type WorkingLanguage } from '@/domain/languages';
 import { radius, space, useTheme } from '@/theme';
 import { Group, Txt } from './ui';
@@ -17,11 +19,15 @@ export function LanguageGrid({ value, onChange }: { value?: WorkingLanguage; onC
       const selected = value === language.code;
       return <View key={language.code} style={{ width: '50%', paddingHorizontal: 5 }}><Pressable
         accessibilityRole="radio" aria-checked={selected} accessibilityLabel={`${language.name}, ${language.native}`} accessibilityState={{ checked: selected }}
-        onPress={() => onChange(language.code)}
+        onPress={() => {
+          if (Platform.OS !== 'web' && useFootnoteStore.getState().preferences.haptics) {
+            void Haptics.selectionAsync().catch(() => {});
+          }
+          onChange(language.code);
+        }}
         style={({ pressed }) => ({ height: 76, paddingVertical: space.md, paddingHorizontal: space.md, borderRadius: radius.control, borderWidth: 1.5, borderColor: selected ? colors.accent : colors.line, backgroundColor: selected || pressed ? colors.accentSoft : colors.surface, flexDirection: 'row', alignItems: 'center', gap: space.sm })}>
         <LanguageFlag country={language.country} size="compact" />
         <Group gap={2} style={{ flex: 1, minWidth: 0 }}><Txt variant="label" accent={selected} numberOfLines={1} ellipsizeMode="tail" maxFontSizeMultiplier={1.3} style={{ fontSize: 16, lineHeight: 21 }}>{language.native}</Txt>{language.name !== language.native ? <Txt variant="caption" muted numberOfLines={1} ellipsizeMode="tail" maxFontSizeMultiplier={1.3}>{language.name.split(' · ')[0]}</Txt> : null}</Group>
-        {selected ? <View pointerEvents="none" style={{ position: 'absolute', top: 5, right: 5 }}><Icon name="check" size={12} color={colors.accent} /></View> : null}
       </Pressable></View>;
     })}
   </View>;

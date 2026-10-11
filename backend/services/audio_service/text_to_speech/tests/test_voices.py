@@ -40,7 +40,12 @@ def test_lookup_ignores_case_and_spaces():
 def test_the_app_gets_names_and_descriptions_but_not_elevenlabs_ids():
     public = load_catalog().public()
     assert public["default"] == "matilda"
-    assert public["voices"][4] == {
+    entry = dict(public["voices"][4])
+    verified = entry.pop("verified_languages")
+    assert any(item["language"] == "en" for item in verified)
+    assert any(item["language"] == "hi" for item in verified)
+    assert all(set(item) <= {"language", "locale", "accent"} for item in verified)
+    assert entry == {
         "key": "bunty", "name": "Bunty", "description": "Energetic, expressive and fun",
         "accent": "Indian", "gender": "male",
     }

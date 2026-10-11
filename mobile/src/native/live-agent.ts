@@ -4,14 +4,14 @@ import { createElevenLabsConversation, type AgentDebugHook } from '../services/e
 import { loadAgentSdk } from '../services/elevenlabs-sdk';
 import { createVoiceAgentSessionAdapter } from '../services/voice-agent-session';
 import { configureAgentAdapter, unavailableAgentAdapter } from '../services/voice-agent';
-import { requestMicrophone } from './microphone';
+import { requestMicrophone, activateConversationMicrophone } from './microphone';
 
 /** Install after backend adapters; no backend means no SDK load, microphone or request. */
 export function installLiveVoiceAgent() {
   if (!backendConfigured()) return;
   const enabled = process.env.EXPO_PUBLIC_VOICE_AGENT !== 'off';
   const conversation = createElevenLabsConversation({
-    loadSdk: loadAgentSdk, requestMicrophone, claimAudio,
+    loadSdk: loadAgentSdk, requestMicrophone, claimAudio, activateMicrophone: activateConversationMicrophone,
     devHook: hook => { if (__DEV__) (globalThis as typeof globalThis & { __footnoteAgent?: AgentDebugHook }).__footnoteAgent = hook; },
   });
   configureAgentAdapter(createVoiceAgentSessionAdapter({

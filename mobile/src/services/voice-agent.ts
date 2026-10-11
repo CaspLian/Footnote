@@ -12,10 +12,10 @@ export interface AgentContext {
   preferences: PersonalContext;
   term?: { id: string; title: string; definition: string; example: string };
 }
-export interface AgentSession { end(): Promise<void>; setMuted(muted: boolean): Promise<void>; levels?(): { input: number; output: number }; }
+export interface AgentSession { end(): Promise<void>; setMuted(muted: boolean): Promise<void>; levels?(): { input: number; output: number }; sendText?(text: string): void; userActivity?(): void; }
 export interface AgentMessage { role: 'user' | 'agent'; text: string; id?: string; final?: boolean; corrected?: boolean; }
 export interface AgentEnding { error?: string }
-export interface AgentConnectOptions { signal: AbortSignal; onStatus: (status: AgentStatus) => void; onMessage: (message: AgentMessage) => void; onEnd?: (ending: AgentEnding) => void }
+export interface AgentConnectOptions { signal: AbortSignal; onStatus: (status: AgentStatus) => void; onMessage: (message: AgentMessage) => void; onEnd?: (ending: AgentEnding) => void; onInterruption?: () => void }
 export interface AgentAdapter {
   /** Request a short-lived session from the backend. Never embed ElevenLabs API keys. */
   connect(context: AgentContext, options: AgentConnectOptions): Promise<AgentSession>;
@@ -26,9 +26,9 @@ let adapter: AgentAdapter = unavailableAgentAdapter;
 export function configureAgentAdapter(next: AgentAdapter) { adapter = next; }
 export const voiceAgentService: AgentAdapter = { connect: (context, options) => adapter.connect(context, options) };
 export function agentLanguage(language: WorkingLanguage) { return languageOption(language).agentCode; }
-export type AgentSnapshot = { status: AgentStatus; muted: boolean; error?: string; messages: AgentMessage[]; caption?: AgentMessage };
+export type AgentSnapshot = { status: AgentStatus; muted: boolean; error?: string; messages: AgentMessage[]; caption?: AgentMessage; interruptions: number };
 export class AgentController {
-  private snapshot: AgentSnapshot = { status: 'idle', muted: false, messages: [] };
+  private snapshot: AgentSnapshot = { status: 'idle', muted: false, messages: [], interruptions: 0 };
   private listeners = new Set<() => void>();
   private abort?: AbortController;
   private session?: AgentSession;
@@ -48,6 +48,7 @@ export class AgentController {
     try {
       const session = await this.service.connect(context, {
         signal: abort.signal,
+        onInterruption: () => { if (this.abort === abort && !abort.signal.aborted) this.update({ interruptions: this.snapshot.interruptions + 1 }); },
         onStatus: status => {
           if (this.abort === abort && !abort.signal.aborted) this.update({ status, ...(status === 'listening' || status === 'thinking' || status === 'idle' ? { caption: undefined } : {}) });
         },
@@ -60,7 +61,7 @@ export class AgentController {
             messages[index] = message;
           } else if (message.corrected) return;
           else messages.push(message);
-          this.update({ messages: messages.slice(-20), ...(message.role === 'agent' && !message.corrected ? { caption: message } : {}) });
+          this.update({ messages: messages.slice(-20), ...(message.role === 'agent' && (!message.corrected || this.snapshot.caption?.id === message.id) ? { caption: message } : {}) });
         },
         onEnd: ending => {
           if (this.abort !== abort || abort.signal.aborted) return;
@@ -79,6 +80,13 @@ export class AgentController {
     const session = this.session;
     if (!session) return;
     try { const muted = !this.snapshot.muted; await session.setMuted(muted); if (this.session === session) this.update({ muted }); } catch { if (this.session === session) this.update({ error: 'Microphone control failed. End the conversation and try again.' }); }
+  }
+  userActivity() { try { this.session?.userActivity?.(); } catch { /* Typing remains available if activity signaling fails. */ } }
+  sendText(text: string): boolean {
+    const message = text.trim();
+    if (!message || !this.session?.sendText) return false;
+    try { this.session.sendText(message); return true; }
+    catch { this.update({ error: 'Your question could not be sent. Try again.' }); return false; }
   }
   async end() {
     this.abort?.abort(); this.abort = undefined;

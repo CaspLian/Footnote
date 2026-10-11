@@ -25,3 +25,22 @@ test('cancelling a pending upload aborts fetch and starts no prepared speech',as
 test('a saved answer without document lines does not generate a reading',async()=>{let spoken=0;globalThis.fetch=(async()=>Response.json({...response,result:{...response.result,line_items:[]}})) as typeof fetch;const result=await createGeminiUnderstanding({appendPart,prepare:async()=>{spoken++;return'';}}).understand(request('empty-lines'),{signal:new AbortController().signal,onPhase:()=>{}});await Promise.resolve();assert.equal(result.contextId,'audit-1');assert.equal(spoken,0);});
 test('page and byte limits fail before uploading with readable reasons',async()=>{let sent=0;globalThis.fetch=(async()=>{sent++;return Response.json(response);}) as typeof fetch;const adapter=createGeminiUnderstanding({appendPart});for(const attachments of [Array.from({length:11},(_,i)=>page(String(i))),[{...page('big'),size:16*1024*1024}]])await assert.rejects(adapter.understand({...request(),attachments},{signal:new AbortController().signal,onPhase:()=>{}}),/10 pages|15 MB/);assert.equal(sent,0);});
 test('pre-cancelled upload sends nothing and readable backend failures reach the controller',async()=>{let sent=0;globalThis.fetch=(async()=>{sent++;return Response.json({detail:'Choose a supported language'},{status:400});}) as typeof fetch;const abort=new AbortController();abort.abort();const adapter=createGeminiUnderstanding({appendPart});await assert.rejects(adapter.understand(request(),{signal:abort.signal,onPhase:()=>{}}),{name:'AbortError'});assert.equal(sent,0);const {UnderstandingController}=await import('./document-understanding');const controller=new UnderstandingController(adapter);await controller.run(request());assert.match(controller.getSnapshot().error??'',/Choose a supported language.*Your copies are saved/);globalThis.fetch=(async()=>{throw new Error('offline');}) as typeof fetch;await controller.run(request());assert.match(controller.getSnapshot().error??'',/Could not reach the Footnote backend/);});
+
+
+test('empty extraction reaches recovery without preparing audio; retry accepts a readable EOB', async () => {
+  let spoken = 0;
+  const empty = { ...response, result: { document_type:'unknown', provider_name:'Unknown', line_items:[], plain_summary:'No medical bill details were found.', spoken_summary:'No details', questions_to_ask:[] } };
+  globalThis.fetch = (async () => Response.json(empty)) as typeof fetch;
+  const { UnderstandingController } = await import('./document-understanding');
+  const controller = new UnderstandingController(createGeminiUnderstanding({ appendPart, prepare:async () => { spoken++; return ''; } }));
+  await controller.run(request('empty-extraction'));
+  assert.equal(controller.getSnapshot().status, 'error');
+  assert.equal(controller.getSnapshot().errorCode, 'no_details');
+  assert.equal(controller.getSnapshot().result, undefined);
+  assert.equal(spoken, 0);
+  globalThis.fetch = (async () => Response.json({...response,result:{...response.result,document_type:'eob'}})) as typeof fetch;
+  await controller.run(request('empty-extraction'));
+  assert.equal(controller.getSnapshot().status, 'complete');
+  assert.equal(controller.getSnapshot().errorCode, undefined);
+  assert.equal(controller.getSnapshot().result?.details?.financials?.billedCents, 12550);
+});

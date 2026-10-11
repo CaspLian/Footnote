@@ -5,11 +5,12 @@ import { useTheme, space } from '@/theme';
 import { GlassSurface } from './glass-surface';
 import { Icon } from './icon';
 import { Txt } from './ui';
+import { useTranslation } from '@/localization/use-translation';
 import { SoftScrollView } from './soft-scroll';
 
 export function GlassCloseButton({ onPress, label = 'Close sheet' }: { onPress: () => void; label?: string }) {
-  const { colors } = useTheme();
-  return <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={{ width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center' }}>
+  const { colors } = useTheme(); const { t } = useTranslation();
+  return <Pressable accessibilityRole="button" accessibilityLabel={t(label)} onPress={onPress} style={{ width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center' }}>
     <GlassSurface style={[StyleSheet.absoluteFill, { borderRadius: 24 }]} /><Icon name="close" size={22} color={colors.ink} />
   </Pressable>;
 }

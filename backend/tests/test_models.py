@@ -43,3 +43,27 @@ def test_a_line_whose_code_was_null_text_is_flagged_no_code(monkeypatch):
     checks, _summary = asyncio.run(snowflake_service.check_prices([line]))
     assert checks[0].cpt_code is None
     assert checks[0].flag == "no_code"
+
+
+def test_separate_bill_and_eob_financial_evidence_round_trips_without_merging():
+    result = GeminiResult.model_validate({
+        'document_type': 'hospital_bill', 'plain_summary': 'Different services.', 'spoken_summary': 'Summary.',
+        'documents': [{'document_index': 1, 'document_type': 'hospital_bill'}, {'document_index': 2, 'document_type': 'eob'}],
+        'documents_match': False, 'document_mismatch_reason': 'The EOB includes an MRI.',
+        'financials': {'statement_billed': 2670, 'bill_adjustments': 1440, 'after_bill_adjustments': 1230,
+                       'statement_insurer_paid': 686, 'prior_patient_payment': 50, 'statement_balance': 494,
+                       'eob_billed': 8450, 'eob_allowed': 6550, 'eob_insurer_paid': 2840, 'eob_patient_responsibility': 3710, 'copay_coinsurance': 710},
+        'line_items': [{'original_description': 'Visit', 'plain_description': 'Visit', 'document_index': 1, 'source_page': 4}],
+    })
+    saved = GeminiResult.model_validate_json(result.model_dump_json())
+    assert saved.financials.statement_balance == 494
+    assert saved.financials.prior_patient_payment == 50
+    assert saved.financials.eob_patient_responsibility == 3710
+    assert saved.financials.statement_insurer_paid != saved.financials.eob_insurer_paid
+    assert saved.financials.copayment is None
+    assert saved.financials.coinsurance is None
+    assert saved.financials.copay_coinsurance == 710
+    assert saved.documents_match is False
+    assert saved.documents[1].document_type == 'eob'
+    assert saved.line_items[0].source_page == 4
+    assert saved.line_items[0].document_index == 1

@@ -1,6 +1,6 @@
 import { throwIfAborted } from './abort-signal';
 import { isISODate } from '../domain/money';
-import { mapGeminiAnalysis } from '../domain/extraction';
+import { hasSubstantialExtraction, mapGeminiAnalysis } from '../domain/extraction';
 import type { VoiceChoice } from '../domain/preferences';
 import { analyzeBillCase, uploadProblem, type AppendDocumentPart } from './gemini-api';
 import { backendLocale, loadAudit } from './backend';
@@ -26,7 +26,10 @@ export function createGeminiUnderstanding(deps: { appendPart: AppendDocumentPart
       if (signal.aborted) throw error;
       throw new UnderstandingFailure(error instanceof Error ? error.message : 'The analysis could not be loaded.');
     }
-    throwIfAborted(signal); onPhase('organizing');
+    throwIfAborted(signal);
+    // This also protects reopened saved answers; a summary without bill facts is not extraction success.
+    if (!hasSubstantialExtraction(mapped)) throw new UnderstandingFailure('We couldn’t find enough bill details in these documents.', 'no_details');
+    onPhase('organizing');
     const recovered = await recoverBillDates(request, mapped, deps.appendPart, signal, deps.markDateRecovery);
     throwIfAborted(signal);
     const auditId = mapped.extraction.auditId;

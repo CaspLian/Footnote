@@ -58,23 +58,23 @@ export function Onboarding() {
     <Group gap={space.sm}><Txt variant="label" muted>Personal setup · {step + 1} of 4</Txt><View style={{ flexDirection: 'row', gap: space.sm }}>{[0, 1, 2, 3].map(v => <View key={v} style={{ flex: 1, height: 3, borderRadius: 2, backgroundColor: v <= step ? colors.accent : colors.line }} />)}</View></Group>
     <Animated.View key={step} entering={reduced ? undefined : FadeIn.duration(motion.transition)} exiting={reduced ? undefined : FadeOut.duration(100)} style={{ gap: space.xl }}>
       {step === 0 ? <>
-        <Group gap={space.lg}><Txt variant="display">Let’s speak{'\n'}your language.</Txt><Txt muted>Select a language for document explanations and conversations.</Txt></Group>
+        <Group gap={space.lg}><Txt variant="display">Choose your language</Txt><Txt muted>Select a language for document explanations and conversations.</Txt></Group>
         <LanguageGrid value={language} onChange={value => { setError(''); setLanguage(value); }} />
         <Txt variant="caption" muted>Your choice is saved locally. App screens are in English; the connected agent will use your working language.</Txt>
       </> : step === 1 ? <>
-        <Group gap={space.lg}><Txt variant="display">A little context.{'\n'}A better start.</Txt><Txt muted>Your details help organize bills and put future comparisons in context.</Txt></Group>
+        <Group gap={space.lg}><Txt variant="display">About you</Txt><Txt muted>Your details help organize bills and put future comparisons in context.</Txt></Group>
         <Field label="First name or nickname" accessibilityHint="Required. Enter your first name or a nickname to continue." placeholder="What should we call you?" autoComplete="given-name" value={profile.firstName} onChangeText={v => patch({ firstName: v })} maxLength={80} />
         <Field label="ZIP code · optional" placeholder="Where you usually receive care" keyboardType="number-pad" maxLength={5} value={profile.zipCode} onChangeText={v => patch({ zipCode: v })} />
         <Txt variant="caption" muted>Stored locally. No email, password or account needed.</Txt>
       </> : step === 2 ? <>
-        <Group gap={space.lg}><Txt variant="display">Your coverage,{'\n'}in your words.</Txt><Txt muted>Add what you know. You can fill in the rest later.</Txt></Group>
+        <Group gap={space.lg}><Txt variant="display">Your insurance</Txt><Txt muted>Add what you know. You can fill in the rest later.</Txt></Group>
         <Group gap={space.xs}>{coverageOptions.map(([value, title]) => <Choice key={value} title={title} selected={profile.coverage === value} onPress={() => patch({ coverage: value })} />)}</Group>
         {profile.coverage !== 'uninsured' ? <Group gap={space.lg}><Field label="Insurer · optional" placeholder="Your health plan" value={profile.insurer} onChangeText={v => patch({ insurer: v })} /><Field label="Plan name · optional" placeholder="For your own reference" value={profile.planName} onChangeText={v => patch({ planName: v })} /></Group> : null}
         <Txt variant="caption" muted>We won’t ask for member IDs or Social Security numbers.</Txt>
       </> : <>
-        <Group gap={space.lg}><Txt variant="display">What would{'\n'}help most?</Txt><Txt muted>Your explanation starts at the level you choose. You can change it on any review.</Txt></Group>
-        <Group gap={space.sm}><Choice title="Keep it simple" detail="Plain language and one useful next step." selected={context.explanationDepth === 'simple'} onPress={() => setContext(c => ({ ...c, explanationDepth: 'simple' }))} /><Choice title="Show me the detail" detail="A closer look at the amounts and source evidence." selected={context.explanationDepth === 'detailed'} onPress={() => setContext(c => ({ ...c, explanationDepth: 'detailed' }))} /></Group>
-        <Group gap={space.sm}><Txt variant="section">I’d like to start with…</Txt>{([['understand', 'Understanding my bill'], ['check_charges', 'Checking the charges'], ['prepare_request', 'Preparing a request']] as const).map(([goal, title]) => <Choice key={goal} title={title} selected={context.goal === goal} onPress={() => setContext(c => ({ ...c, goal }))} />)}</Group>
+        <Group gap={space.lg}><Txt variant="display">Choose your preferences</Txt><Txt muted>Your explanation starts at the level you choose. You can change it on any review.</Txt></Group>
+        <Group gap={space.sm}><Choice title="Keep it simple" detail="Plain language and one useful next step." selected={context.explanationDepth === 'simple'} onPress={() => setContext(c => ({ ...c, explanationDepth: 'simple' }))} /><Choice title="Show me the detail" detail="Amounts, comparisons and source documents." selected={context.explanationDepth === 'detailed'} onPress={() => setContext(c => ({ ...c, explanationDepth: 'detailed' }))} /></Group>
+        <Group gap={space.sm}><Txt variant="section">Start with</Txt>{([['understand', 'Understanding my bill'], ['check_charges', 'Checking the charges'], ['prepare_request', 'Preparing a request']] as const).map(([goal, title]) => <Choice key={goal} title={title} selected={context.goal === goal} onPress={() => setContext(c => ({ ...c, goal }))} />)}</Group>
       </>}
     </Animated.View>
     {error ? <Feedback danger title="Unable to continue" text={error} onDismiss={() => setError('')} /> : null}

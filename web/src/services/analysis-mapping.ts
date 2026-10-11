@@ -136,7 +136,7 @@ function letter(language: Language, provider: string, serviceDate: string, findi
     ? findings.map(f => `- ${es ? f.title_es : f.title}`)
     : items.filter(i => i.status === 'flagged').map(i => `- ${i.description}: ${money(i.hospital_amount)}`);
   if (es) {
-    return [`Para: ${provider} — Departamento de facturación`, serviceDate ? `Fecha del servicio: ${serviceDate}` : '',
+    return [`Para: ${provider} · Departamento de facturación`, serviceDate ? `Fecha del servicio: ${serviceDate}` : '',
       '', 'ASUNTO: Solicitud de factura detallada y explicación de cargos', '', 'Estimado departamento de facturación:', '',
       'Estoy revisando mi factura. Les pido una factura detallada con el código de cada cargo'
         + (asked.length ? ', y una explicación de estos cargos:' : '.'),
@@ -144,7 +144,7 @@ function letter(language: Language, provider: string, serviceDate: string, findi
       'Por favor, díganme si estos cargos son correctos. Mientras los revisan, les pido que la cuenta no se envíe a cobranza.',
       '', 'Gracias.'].filter((line, i, all) => line !== '' || all[i - 1] !== '').join('\n');
   }
-  return [`To: ${provider} — Billing Department`, serviceDate ? `Date of service: ${serviceDate}` : '', '',
+  return [`To: ${provider} · Billing Department`, serviceDate ? `Date of service: ${serviceDate}` : '', '',
     'RE: Request for an itemized statement and an explanation of charges', '', 'Dear Billing Department,', '',
     'I am reviewing my bill. Please send me an itemized statement with the code for each charge'
       + (asked.length ? ', and an explanation of these charges:' : '.'),

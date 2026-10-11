@@ -10,8 +10,8 @@ const evidence = (attachmentId: string, enLabel: string, esLabel: string, en: st
 
 export function createSampleCase(id = SAMPLE_CASE_ID, at = new Date().toISOString()): BillCase {
   const attachments: DocumentAttachment[] = [
-    { id: SAMPLE_DOCUMENT_IDS.bill, uri: 'sample://northline-bill', name: 'Northline — itemized bill.pdf', mimeType: 'application/pdf', kind: 'bill', origin: 'sample', importedAt: at, pageCount: 1 },
-    { id: SAMPLE_DOCUMENT_IDS.eob, uri: 'sample://northline-eob', name: 'Northline — explanation of benefits.pdf', mimeType: 'application/pdf', kind: 'eob', origin: 'sample', importedAt: at, pageCount: 1 },
+    { id: SAMPLE_DOCUMENT_IDS.bill, uri: 'sample://northline-bill', name: 'Northline · itemized bill.pdf', mimeType: 'application/pdf', kind: 'bill', origin: 'sample', importedAt: at, pageCount: 1 },
+    { id: SAMPLE_DOCUMENT_IDS.eob, uri: 'sample://northline-eob', name: 'Northline · explanation of benefits.pdf', mimeType: 'application/pdf', kind: 'eob', origin: 'sample', importedAt: at, pageCount: 1 },
   ];
   return {
     id, provider: 'Northline Medical Center', serviceDate: SAMPLE_SERVICE_DATE,
