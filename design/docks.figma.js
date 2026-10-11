@@ -35,7 +35,7 @@ function orbSvg(active) {
   }
   return `<svg width="56" height="56" viewBox="0 0 56 56" xmlns="http://www.w3.org/2000/svg">${dots}</svg>`;
 }
-let set=page.findOne(n=>n.type==='COMPONENT_SET'&&n.name==='Unfold / Listening control');
+let set=page.findOne(n=>n.type==='COMPONENT_SET'&&n.name==='Footnote / Listening control');
 if(!set) {
   const variants=[];
   for(const active of [false,true]) {
@@ -46,7 +46,7 @@ if(!set) {
     c.description='Sticky explanation control. 84 Fibonacci particles, continuous angle with 240ms activity transition; idle .22rad/s, reading .92rad/s. Pause offscreen/background and under Reduce Motion. Device speech until ElevenLabs is connected.';
     variants.push(c);
   }
-  set=track(figma.combineAsVariants(variants,page));set.name='Unfold / Listening control';set.x=4580;set.y=980;set.resize(188,160);
+  set=track(figma.combineAsVariants(variants,page));set.name='Footnote / Listening control';set.x=4580;set.y=980;set.resize(188,160);
   variants.forEach((c,i)=>{c.x=20;c.y=20+i*72;mutated.push(c.id);});
   for(const [from,to] of [[variants[0],variants[1]],[variants[1],variants[0]]]) await from.setReactionsAsync([{trigger:{type:'ON_CLICK'},actions:[{type:'NODE',destinationId:to.id,navigation:'CHANGE_TO',transition:{type:'SMART_ANIMATE',duration:.24,easing:{type:'EASE_OUT'}}}]}]);
 }

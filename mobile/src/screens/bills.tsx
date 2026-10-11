@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { router } from 'expo-router';
-import { useUnfoldStore } from '@/store';
+import { useFootnoteStore } from '@/store';
 import { Button, Group, Screen, Txt } from '@/components/ui';
 import { SearchTransition } from '@/components/search-transition';
 import { SearchControl } from '@/components/search-control';
@@ -8,9 +8,10 @@ import { CaseRow, EmptyBills } from './shared';
 import { selectBills } from '@/domain/bill-list';
 import { space } from '@/theme';
 export function Bills() {
-  const cases = useUnfoldStore(s => s.cases);
-  const profiles = useUnfoldStore(s => s.profiles);
-  const prefs = useUnfoldStore(s => s.preferences);
+  const savedCases = useFootnoteStore(s => s.cases);
+  const cases = savedCases.filter(c => c.source === 'manual');
+  const profiles = useFootnoteStore(s => s.profiles);
+  const prefs = useFootnoteStore(s => s.preferences);
   const [search, setSearch] = useState('');
   const [focused, setFocused] = useState(false);
   const [filter, setFilter] = useState<'all'|'open'|'resolved'>('all');

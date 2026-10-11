@@ -1,4 +1,4 @@
-"""The languages ClaimPulse answers and speaks in: 34 languages as 42 locales.
+"""The languages Footnote answers and speaks in: 34 languages as 42 locales.
 
 One list for the whole backend. Gemini writes in the locale's language and regional variant, speech-to-text gets the
 language as a hint, and text-to-speech speaks it (services/audio_service/text_to_speech/config.py lists what each

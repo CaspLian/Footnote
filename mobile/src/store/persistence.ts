@@ -4,7 +4,7 @@ import type { AppealDraft, BillCase, CaseEvent, FamilyProfile, PersonalContext, 
 import { normalizePreferences, type AppPreferences } from '../domain/preferences';
 import { refreshDoctorOnlyFindings } from '../services/backend-mapping';
 
-export const STORAGE_KEY = 'unfold-local-v1';
+export const STORAGE_KEY = 'footnote-local-v1';
 export interface PersistedSnapshot {
   preferences: AppPreferences;
   savedTermIds: string[];

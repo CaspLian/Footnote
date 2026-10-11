@@ -5,7 +5,7 @@
 
 ## Objective and acceptance criteria
 
-Keep the Unfold frontend and camera-to-Gemini analysis on the newer integrated backend base. A user can capture
+Keep the Footnote frontend and camera-to-Gemini analysis on the newer integrated backend base. A user can capture
 hospital-bill pages on a phone, send the ordered JPEG pages to Gemini, and verify the returned information.
 
 ## Files and interfaces affected
@@ -21,7 +21,7 @@ hospital-bill pages on a phone, send the ordered JPEG pages to Gemini, and verif
 
 - Rebased the `Camera-capture` camera integration commit onto `Gemini-Tiger-Snow-ElevenLabs-V2` (base commit
   `24f315b`). Rebase completed without conflicts; current commit `9840e5f`.
-- Kept the Aarush Unfold UI, added native camera capture, local JPEG page persistence, ordered multipart uploads,
+- Kept the Aarush Footnote UI, added native camera capture, local JPEG page persistence, ordered multipart uploads,
   Gemini extraction mapping, and editable result verification.
 - Added README phone testing instructions and EAS ignore rules for monorepo Python caches and secrets.
 - Updated the API contract and mobile assistant notes for the integrated app and multi-page image upload.

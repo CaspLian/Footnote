@@ -83,8 +83,8 @@ test('billing correction and insurer appeal templates do not invent a denial', a
   const correction = buildDraft(c, 'billing_correction', 'en');
   assert.match(correction, /CPT 80053/); assert.match(correction, /\$244\.00/); assert.doesNotMatch(correction, /guaranteed|refund owed/i);
   const appeal = buildDraft(c, 'insurer_appeal', 'en');
-  assert.match(appeal, /\[Describe the denied benefit/); assert.match(appeal, /sample contains no denial/);
-  assert.match(buildDraft(c, 'insurer_appeal', 'es'), /ejemplo ficticio no contiene una denegación/);
+  assert.match(appeal, /\[Describe the denied benefit/); assert.match(appeal, /Do not infer a denial from this bill/);
+  assert.match(buildDraft(c, 'insurer_appeal', 'es'), /No infieras una denegación a partir de esta factura/);
 });
 
 test('eight bilingual glossary terms have usable primary-source links and accent-insensitive search', () => {

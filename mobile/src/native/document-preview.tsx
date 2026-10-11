@@ -5,7 +5,7 @@ import { File } from 'expo-file-system';
 import Pdf from 'react-native-pdf';
 import type { DocumentAttachment, Language } from '@/domain';
 import { Button, Field, Txt } from '@/components/ui';
-import { UnfoldLoader } from '@/components/loader';
+import { FootnoteLoader } from '@/components/loader';
 import { type Palette, useTheme, radius, sizes, space } from '@/theme';
 import { nativeErrorMessage, nativeMessages, type NativeErrorCode } from './errors';
 import { shareDocument } from './exports';
@@ -66,7 +66,6 @@ function DocumentPreviewContent({ attachment, language, style, onError, onLoad }
   return <View style={[styles.container, style]}>
     <View style={styles.heading}>
       <Txt variant="label" style={{ flex: 1 }} selectable>{attachment.name}</Txt>
-      {attachment.origin === 'sample' ? <Txt variant="caption" accent>{copy('Sample', 'Ejemplo')}</Txt> : null}
     </View>
     {state === 'locked' ? <View style={styles.recovery}>
       <Txt variant="section">{copy('This PDF needs a password', 'Este PDF necesita una contraseña')}</Txt>
@@ -102,7 +101,7 @@ function DocumentPreviewContent({ attachment, language, style, onError, onLoad }
         onError={() => fail('invalid-image')}
       />}
       {state === 'loading' ? <View style={styles.loading} pointerEvents="none">
-        <UnfoldLoader compact title={copy('Opening your document', 'Abriendo tu documento')} detail={copy('Keeping the original in view.', 'Manteniendo el original a la vista.')} />
+        <FootnoteLoader compact title={copy('Opening your document', 'Abriendo tu documento')} detail={copy('Keeping the original in view.', 'Manteniendo el original a la vista.')} />
       </View> : null}
     </View>}
     <View style={styles.footer}>

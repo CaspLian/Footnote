@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { mockCases } from './data/mockCases';
 import { ActiveTab, Language, MedicalCase, Finding } from './types';
 import { Header } from './components/Header';
 import { Dashboard } from './components/Dashboard';
@@ -14,8 +13,8 @@ import { FindingModal } from './components/FindingModal';
 import { ShieldCheck, Heart } from '@phosphor-icons/react';
 
 export const App: React.FC = () => {
-  const [cases, setCases] = useState<MedicalCase[]>(mockCases);
-  const [activeCaseId, setActiveCaseId] = useState<string>(mockCases[0].id);
+  const [cases, setCases] = useState<MedicalCase[]>([]);
+  const [activeCaseId, setActiveCaseId] = useState<string>('');
   const [currentTab, setCurrentTab] = useState<ActiveTab>('dashboard');
   const [language, setLanguage] = useState<Language>('en');
   const [isIntakeOpen, setIsIntakeOpen] = useState(false);
@@ -75,7 +74,7 @@ export const App: React.FC = () => {
           />
         )}
 
-        {currentTab === 'verification' && (
+        {currentTab === 'verification' && activeCase && (
           <VerificationView
             caseData={activeCase}
             language={language}
@@ -84,7 +83,7 @@ export const App: React.FC = () => {
           />
         )}
 
-        {currentTab === 'review' && (
+        {currentTab === 'review' && activeCase && (
           <ReviewView
             caseData={activeCase}
             language={language}
@@ -93,7 +92,7 @@ export const App: React.FC = () => {
           />
         )}
 
-        {currentTab === 'dispute' && (
+        {currentTab === 'dispute' && activeCase && (
           <DisputeWorkspace
             caseData={activeCase}
             language={language}
@@ -102,7 +101,7 @@ export const App: React.FC = () => {
           />
         )}
 
-        {currentTab === 'call-script' && (
+        {currentTab === 'call-script' && activeCase && (
           <CallScriptView
             caseData={activeCase}
             language={language}
@@ -121,7 +120,6 @@ export const App: React.FC = () => {
         onClose={() => setIsIntakeOpen(false)}
         language={language}
         onCaseParsed={handleCaseParsed}
-        sampleCases={mockCases}
       />
 
       <FindingModal
@@ -138,8 +136,8 @@ export const App: React.FC = () => {
             <ShieldCheck size={18} className="text-brand-600" />
             <span>
               {language === 'en'
-                ? 'Unfold Healthcare Transparency · Protected under federal patient advocacy guidelines.'
-                : 'Unfold Transparencia Médica · Protegido bajo directrices de defensa del paciente.'}
+                ? 'Footnote · Understand your medical bill. Prepare your next step.'
+                : 'Footnote · Entiende tu factura médica. Prepara tu siguiente paso.'}
             </span>
           </div>
 

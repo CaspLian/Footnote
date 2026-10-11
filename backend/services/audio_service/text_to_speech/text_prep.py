@@ -217,7 +217,7 @@ def prepare_for_speech(text: str, pronunciations: dict[str, str] | None = None, 
     """Return the text to send to the speech provider. Returns "" if nothing speakable is left.
 
     `pronunciations` maps exact words to how they should be spelled for the voice,
-    e.g. {"ClaimPulse": "Claim Pulse"}. Defaults to pronunciations.json.
+    e.g. {"Footnote": "Foot note"}. Defaults to pronunciations.json.
     `language` (a locale such as "es-MX", or "es") decides the words spoken for marks. The English-only rewrites
     (symbols such as "~" -> "about", abbreviations, dates with English month names, the code-block note) run only
     for English, so no English word ever lands in another language's reply.

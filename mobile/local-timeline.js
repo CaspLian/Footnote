@@ -5,12 +5,12 @@ import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 
 const databasePromise = (async () => {
-  let key = await SecureStore.getItemAsync('claimpulse.local-database-key');
+  let key = await SecureStore.getItemAsync('footnote.local-database-key');
   if (!key) {
     key = Array.from(await Crypto.getRandomBytesAsync(32), value => value.toString(16).padStart(2, '0')).join('');
-    await SecureStore.setItemAsync('claimpulse.local-database-key', key);
+    await SecureStore.setItemAsync('footnote.local-database-key', key);
   }
-  const db = await SQLite.openDatabaseAsync('claimpulse-local.db');
+  const db = await SQLite.openDatabaseAsync('footnote-local.db');
   await db.execAsync(`PRAGMA key = '${key}';`);
   return db;
 })();
@@ -163,7 +163,7 @@ export async function refreshLocalNotifications() {
   const cases = await db.getAllAsync("SELECT * FROM local_cases WHERE status != 'resolved'");
   const existing = await Notifications.getAllScheduledNotificationsAsync();
   for (const notification of existing) {
-    if (notification.content.data?.scope === 'claimpulse-deadline') {
+    if (notification.content.data?.scope === 'footnote-deadline') {
       await Notifications.cancelScheduledNotificationAsync(notification.identifier);
     }
   }
@@ -181,7 +181,7 @@ export async function refreshLocalNotifications() {
           content: {
             title: label,
             body: offset === 0 ? `The saved estimate is today (${deadline}). Check the actual notice.` : `${offset} day${offset === 1 ? '' : 's'} remain by this saved estimate. Open the app to review it.`,
-            data: { scope: 'claimpulse-deadline', caseId: item.id, field },
+            data: { scope: 'footnote-deadline', caseId: item.id, field },
           },
           trigger: {
             type: Notifications.SchedulableTriggerInputTypes.DATE,

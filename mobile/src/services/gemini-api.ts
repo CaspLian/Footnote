@@ -1,3 +1,4 @@
+import { throwIfAborted } from './abort-signal';
 import type { BillCase, DocumentAttachment } from '../domain/types';
 import { mapGeminiAnalysis, type GeminiAnalyzeResponse } from '../domain/extraction';
 import { backendConfigured, backendUrl } from './backend';
@@ -15,14 +16,14 @@ export function uploadProblem(documents: DocumentAttachment[]): string | undefin
  * (backendLocale() in ./backend). The caller's signal cancels the upload; a 180 s timeout also applies.
  */
 export async function analyzeBillCase(billCase: Pick<BillCase, 'attachments'>, targetLanguage: string, appendPart: AppendDocumentPart, signal?: AbortSignal) {
-  signal?.throwIfAborted();
+  throwIfAborted(signal);
   const documents = billCase.attachments.filter(item => item.origin === 'import');
-  if (!backendConfigured()) throw new Error('No ClaimPulse backend is set (EXPO_PUBLIC_API_URL). Enter the details from the original instead.');
+  if (!backendConfigured()) throw new Error('No Footnote backend is set (EXPO_PUBLIC_API_URL). Enter the details from the original instead.');
   if (!documents.length) throw new Error('Add a bill photo or PDF before analyzing.');
   const problem = uploadProblem(documents); if (problem) throw new Error(problem);
   const form = new FormData();
-  for (const attachment of documents) { signal?.throwIfAborted(); await appendPart(form, attachment); }
-  signal?.throwIfAborted();
+  for (const attachment of documents) { throwIfAborted(signal); await appendPart(form, attachment); }
+  throwIfAborted(signal);
   form.append('target_language', targetLanguage);
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 180_000);
@@ -33,7 +34,7 @@ export async function analyzeBillCase(billCase: Pick<BillCase, 'attachments'>, t
   catch (error) {
     if (signal?.aborted) throw error;
     if (error instanceof Error && error.name === 'AbortError') throw new Error('Analysis took too long. Check your connection and try again.');
-    throw new Error(`Could not reach the ClaimPulse backend at ${backendUrl('')}. Check EXPO_PUBLIC_API_URL and your network.`);
+    throw new Error(`Could not reach the Footnote backend at ${backendUrl('')}. Check EXPO_PUBLIC_API_URL and your network.`);
   } finally { clearTimeout(timeout); signal?.removeEventListener('abort', cancel); }
   if (!response.ok) {
     let detail = `Bill analysis failed (${response.status}).`;

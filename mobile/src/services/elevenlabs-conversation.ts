@@ -1,3 +1,4 @@
+import { throwIfAborted } from './abort-signal';
 import type { PartialOptions, SessionConfig } from '@elevenlabs/client';
 import { AgentUnavailable, type AgentConnectOptions, type AgentContext, type AgentSession } from './voice-agent';
 import type { AgentSessionGrant } from './voice-agent-session';
@@ -29,11 +30,11 @@ export interface ElevenLabsDeps {
 
 export const NOT_IN_BUILD_TEXT = 'This version of the app doesn’t include live voice yet. Install the latest development build.';
 export const MICROPHONE_TEXT: Record<Exclude<MicrophoneAccess, 'granted'>, string> = {
-  denied: 'Unfold needs the microphone to talk it through. Allow microphone access for Unfold in your device settings, then try again.',
-  insecure: 'The microphone only works on a secure page. Open Unfold at http://localhost or over HTTPS.',
+  denied: 'Footnote needs the microphone to talk it through. Allow microphone access for Footnote in your device settings, then try again.',
+  insecure: 'The microphone only works on a secure page. Open Footnote at http://localhost or over HTTPS.',
   no_device: 'No microphone was found. Connect one, then try again.',
 };
-export const DEFAULT_PRIVACY_NOTICE = "Sample bills only: the bill details and everything said in this call go to ElevenLabs, which uses Google's Gemini, and ElevenLabs keeps them for 7 days.";
+export const DEFAULT_PRIVACY_NOTICE = "The bill details and everything said in this call go to ElevenLabs, which uses Google's Gemini, and ElevenLabs keeps them for 7 days.";
 let notice = DEFAULT_PRIVACY_NOTICE;
 const noticeListeners = new Set<() => void>();
 export const privacyNoticeStore = {
@@ -51,19 +52,19 @@ const isMicrophoneError = (error: unknown) => {
 export function createElevenLabsConversation(deps: ElevenLabsDeps) {
   return {
     async prepare(_context: AgentContext, signal: AbortSignal): Promise<{ sdk: AgentSdk }> {
-      signal.throwIfAborted();
+      throwIfAborted(signal);
       let sdk: AgentSdk;
-      try { sdk = await deps.loadSdk(); } catch { signal.throwIfAborted(); throw new AgentUnavailable(NOT_IN_BUILD_TEXT); }
-      signal.throwIfAborted();
+      try { sdk = await deps.loadSdk(); } catch { throwIfAborted(signal); throw new AgentUnavailable(NOT_IN_BUILD_TEXT); }
+      throwIfAborted(signal);
       const mic = await deps.requestMicrophone();
-      signal.throwIfAborted();
+      throwIfAborted(signal);
       if (mic !== 'granted') throw new AgentUnavailable(MICROPHONE_TEXT[mic]);
       return { sdk };
     },
 
     async open(grant: AgentSessionGrant, context: AgentContext, options: AgentConnectOptions, { sdk }: { sdk: AgentSdk }): Promise<AgentSession> {
       const { signal } = options;
-      signal.throwIfAborted();
+      throwIfAborted(signal);
       if (grant.connectionType !== 'webrtc' || !grant.conversationToken) throw new Error('A WebRTC conversation token is required.');
       privacyNoticeStore.set(grant.privacyNotice);
       let conversation: SdkConversation | undefined;
@@ -95,7 +96,7 @@ export function createElevenLabsConversation(deps: ElevenLabsDeps) {
       let onAbort: (() => void) | undefined;
       try {
         if (closed) throw abortError();
-        signal.throwIfAborted();
+        throwIfAborted(signal);
         const handlers = agentToolHandlers(context, grant.lines);
         const clientTools = Object.fromEntries(CLIENT_TOOL_NAMES.map(name => [name, (params: unknown) => closed ? 'The conversation has ended.' : handlers[name](params)]));
         started = sdk.Conversation.startSession({
@@ -115,7 +116,7 @@ export function createElevenLabsConversation(deps: ElevenLabsDeps) {
           if (signal.aborted) onAbort();
         });
         conversation = await Promise.race([started, cancelled, ended.then(() => { throw abortError(); })]);
-        signal.throwIfAborted();
+        throwIfAborted(signal);
         if (closed) throw abortError();
         if (conversation.type !== 'voice') throw new Error('not_a_voice_session');
       } catch (error) {

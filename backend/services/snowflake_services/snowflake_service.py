@@ -42,7 +42,7 @@ def _connect():
         user=os.environ["SNOWFLAKE_USER"],
         password=os.environ["SNOWFLAKE_PASSWORD"],
         warehouse=os.getenv("SNOWFLAKE_WAREHOUSE", "COMPUTE_WH"),
-        database=os.getenv("SNOWFLAKE_DATABASE", "CLAIMPULSE"),
+        database=os.environ["SNOWFLAKE_DATABASE"],
         schema=os.getenv("SNOWFLAKE_SCHEMA", "PUBLIC"),
         client_session_keep_alive=True,
         login_timeout=10,

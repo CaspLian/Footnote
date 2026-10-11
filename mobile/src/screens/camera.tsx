@@ -5,7 +5,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import type { DocumentKind } from '@/domain';
 import { deleteAttachment, persistImportedAttachment } from '@/native';
 import { Button, Feedback, Group, Screen, Txt, useLanguage } from '@/components/ui';
-import { useUnfoldStore } from '@/store';
+import { useFootnoteStore } from '@/store';
 import { space, useTheme } from '@/theme';
 
 export function CameraCapture() {
@@ -53,7 +53,7 @@ export function CameraCapture() {
       }
       if (attachments.reduce((total, attachment) => total + (attachment.size ?? 0), 0) > 15 * 1024 * 1024) throw new Error('upload-too-large');
       // The same commit and next step as the document import flow (components/document-import.tsx).
-      const caseId = useUnfoldStore.getState().addImportedBatch(attachments, params.caseId);
+      const caseId = useFootnoteStore.getState().addImportedBatch(attachments, params.caseId);
       router.replace({ pathname: '/confirm-documents', params: { caseId } });
     } catch (failure) {
       await Promise.all(attachments.map(attachment => deleteAttachment(attachment).catch(() => {})));

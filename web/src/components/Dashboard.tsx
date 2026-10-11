@@ -15,7 +15,7 @@ import {
 
 interface DashboardProps {
   cases: MedicalCase[];
-  activeCase: MedicalCase;
+  activeCase?: MedicalCase;
   language: Language;
   onSelectCase: (id: string) => void;
   onNavigateTab: (tab: ActiveTab) => void;
@@ -32,6 +32,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
 }) => {
   const totalSavings = cases.reduce((acc, c) => acc + c.discrepancy_amount, 0);
   const totalFindings = cases.reduce((acc, c) => acc + c.findings.length, 0);
+
+  if (!activeCase) return <div className="space-y-6 py-8">
+    <h1 className="text-3xl font-bold">{language === 'en' ? 'Make sense of your medical bill.' : 'Comprende tu factura médica.'}</h1>
+    <p className="text-ink-secondary">{language === 'en' ? 'Bring your bill and explanation of benefits together. Understand the charges and prepare your questions.' : 'Reúne tu factura y explicación de beneficios. Entiende los cargos y prepara tus preguntas.'}</p>
+    <button onClick={onOpenIntake} className="rounded-xl bg-brand-600 text-white px-5 py-3 font-semibold">{language === 'en' ? 'Add documents' : 'Agregar documentos'}</button>
+  </div>;
 
   return (
     <div className="space-y-8 animate-fade-in">
@@ -71,8 +77,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </h2>
           <p className="text-sm sm:text-base text-ink-secondary mt-2 leading-relaxed">
             {language === 'en'
-              ? 'Most hospital statements demand full balance before accounting for your insurer’s in-network discount or prior copays. Unfold analyzes CPT billing codes, checks Medicare pricing benchmarks, and spots unauthorized charges.'
-              : 'La mayoría de los hospitales reclaman el saldo total sin aplicar los descuentos de la aseguradora. Unfold analiza códigos CPT y detecta cobros no autorizados.'}
+              ? 'Most hospital statements demand full balance before accounting for your insurer’s in-network discount or prior copays. Footnote analyzes CPT billing codes, checks Medicare pricing benchmarks, and spots unauthorized charges.'
+              : 'La mayoría de los hospitales reclaman el saldo total sin aplicar los descuentos de la aseguradora. Footnote analiza códigos CPT y detecta cobros no autorizados.'}
           </p>
 
           {/* Varied Button Sizes and Weights */}
@@ -85,41 +91,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
               <span>{language === 'en' ? 'Upload Bill & EOB' : 'Subir Factura y EOB'}</span>
             </button>
 
-            <button
-              onClick={() => {
-                onSelectCase('case-northline-001');
-                onNavigateTab('review');
-              }}
-              className="flex items-center gap-2 bg-white hover:bg-slate-50 text-brand-800 border border-slate-300 font-semibold text-sm px-4 py-3 rounded-xl shadow-subtle transition-all"
-            >
-              <Sparkle size={18} className="text-brand-600" />
-              <span>{language === 'en' ? 'Explore Sample Case ($250 Savings)' : 'Explorar Caso de Muestra ($250)'}</span>
-            </button>
           </div>
         </div>
 
-        {/* Subtle Decorative Background Specimen Stamp */}
-        <div className="hidden lg:block absolute right-8 top-1/2 -translate-y-1/2 p-6 rounded-2xl bg-white/80 backdrop-blur-sm border border-slate-200/90 shadow-subtle text-xs text-ink-secondary max-w-xs pointer-events-none">
-          <div className="font-mono text-[10px] text-ink-muted uppercase border-b border-slate-100 pb-2 mb-2 flex justify-between">
-            <span>AUDIT SPECIMEN</span>
-            <span className="text-emerald-600 font-semibold">VERIFIED</span>
-          </div>
-          <p className="font-semibold text-ink-primary">Northline Medical Center</p>
-          <div className="mt-2 space-y-1 font-mono text-[11px]">
-            <div className="flex justify-between">
-              <span>Billed Charge:</span>
-              <span className="tabular-nums font-semibold">$2,670.00</span>
-            </div>
-            <div className="flex justify-between text-rose-600 font-semibold">
-              <span>Duplicate CPT 80053:</span>
-              <span className="tabular-nums">-$250.00</span>
-            </div>
-            <div className="flex justify-between text-brand-700 font-bold pt-1 border-t border-slate-100">
-              <span>True Owed:</span>
-              <span className="tabular-nums">$244.00</span>
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* Metrics Row */}

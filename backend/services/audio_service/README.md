@@ -1,4 +1,4 @@
-# audio_service: voice for ClaimPulse AI
+# audio_service: voice for Footnote
 
 Lives at `backend/services/audio_service/`: recorded questions, spoken readings, and private live conversations.
 The recorded and reading endpoints connect to the team's Gemini extraction step:
@@ -31,7 +31,7 @@ audio_service/
 │   ├── errors.py               internal error type
 │   ├── voices.json             the 20 voices users can choose (key → ElevenLabs voice); edit to add more
 │   ├── voices.py               reads and checks voices.json
-│   ├── pronunciations.json     word → how to say it (e.g. ClaimPulse → Claim Pulse)
+│   ├── pronunciations.json     word → how to say it (e.g. Footnote → Foot note)
 │   ├── demo.py                 mock Gemini answer → MP3, no backend needed
 │   ├── check_setup.py          checks key, plan, credits and voices without spending credits
 │   ├── mock_data/              mock Gemini answers used by the demo and tests

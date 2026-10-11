@@ -1,0 +1,11 @@
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <!-- Concept B - The Footnote Mark: a printers' asterisk with five capsule arms and an open center; the mark that points to the explanation -->
+  <defs>
+    <rect id="arm" x="43" y="10" width="14" height="27" rx="7" fill="#176B5B"/>
+  </defs>
+  <use href="#arm"/>
+  <use href="#arm" transform="rotate(72 50 50)"/>
+  <use href="#arm" transform="rotate(144 50 50)"/>
+  <use href="#arm" transform="rotate(216 50 50)"/>
+  <use href="#arm" transform="rotate(288 50 50)"/>
+</svg>

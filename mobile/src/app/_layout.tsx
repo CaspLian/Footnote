@@ -11,11 +11,11 @@ import { Geist_600SemiBold } from '@expo-google-fonts/geist/600SemiBold';
 import { Geist_700Bold } from '@expo-google-fonts/geist/700Bold';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
-import { useUnfoldStore } from '@/store';
+import { useFootnoteStore } from '@/store';
 import { installBackendAdapters } from '@/native/backend-adapters';
 import { PrivacyProvider } from '@/components/privacy';
 import { WebShell } from '@/components/web-shell';
-import { UnfoldLoader } from '@/components/loader';
+import { FootnoteLoader } from '@/components/loader';
 import { GlassCloseButton } from '@/components/sheet';
 import { toolbarIcons } from '@/components/toolbar-icons';
 import { Button, Feedback, Screen, Txt, useLanguage, useDesktop } from '@/components/ui';
@@ -29,17 +29,17 @@ function RootContent() {
   const { colors, scheme, reducedMotion } = useTheme();
   const [loaded, fontError] = useFonts({ Geist_400Regular, Geist_500Medium, Geist_600SemiBold, Geist_700Bold });
   const desktop=useDesktop();
-  const hydrated = useUnfoldStore(s => s.hydrated);
-  const hydrationError = useUnfoldStore(s => s.hydrationError);
+  const hydrated = useFootnoteStore(s => s.hydrated);
+  const hydrationError = useFootnoteStore(s => s.hydrationError);
   const { locale, copy } = useLanguage();
   useNarrationInterruptions(locale);
 
   useEffect(() => { if ((loaded || fontError) && hydrated) void SplashScreen.hideAsync(); }, [loaded, fontError, hydrated]);
-  if (!loaded && !fontError || !hydrated) return <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background }}><UnfoldLoader title="Opening your workspace" detail="Your documents and profiles stay here."/></View>;
-  if (hydrationError) return <Screen><Txt variant="title">{copy('Your saved data could not be loaded.','No se pudieron cargar tus datos guardados.')}</Txt><Feedback text={copy('Retry before starting a new local workspace.','Intenta de nuevo antes de crear un espacio local nuevo.')} action={{ title: copy('Try again','Intentar de nuevo'), onPress: () => { void useUnfoldStore.getState().retryHydration(); } }} /><Button title={copy('Start an empty workspace','Crear un espacio vacío')} variant="secondary" onPress={() => { void useUnfoldStore.getState().recoverEmpty(); }} /></Screen>;
+  if (!loaded && !fontError || !hydrated) return <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background }}><FootnoteLoader title="Opening your workspace" detail="Your documents and profiles stay here."/></View>;
+  if (hydrationError) return <Screen><Txt variant="title">{copy('Your saved data could not be loaded.','No se pudieron cargar tus datos guardados.')}</Txt><Feedback text={copy('Retry before starting a new local workspace.','Intenta de nuevo antes de crear un espacio local nuevo.')} action={{ title: copy('Try again','Intentar de nuevo'), onPress: () => { void useFootnoteStore.getState().retryHydration(); } }} /><Button title={copy('Start an empty workspace','Crear un espacio vacío')} variant="secondary" onPress={() => { void useFootnoteStore.getState().recoverEmpty(); }} /></Screen>;
   return <><StatusBar style={scheme === 'dark' ? 'light' : 'dark'} /><ThemeProvider value={{ ...(scheme === 'dark' ? DarkTheme : DefaultTheme), colors: { ...(scheme === 'dark' ? DarkTheme : DefaultTheme).colors, background: colors.background, card: colors.surface, text: colors.ink, primary: colors.accent, border: colors.line } }}><PrivacyProvider><WebShell><Stack screenOptions={{ headerShown: !desktop, contentStyle: { backgroundColor: colors.background }, headerStyle: { backgroundColor: colors.background }, headerTintColor: colors.ink, headerTitleStyle: { fontFamily: fonts.semibold, fontSize: type.section.fontSize }, headerShadowVisible: false, scrollEdgeEffects: { top: 'hidden' }, headerTitleAlign: 'left', gestureEnabled: true, animation: reducedMotion ? 'fade' : 'default', headerRight: () => null, headerBackButtonDisplayMode: 'minimal' }}>
     <Stack.Screen name="index" options={{ headerShown: false }} />
-    <Stack.Screen name="welcome" options={{ title: 'Unfold', headerLeft: () => null }} />
+    <Stack.Screen name="welcome" options={{ title: 'Footnote', headerLeft: () => null }} />
     <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
     <Stack.Screen name="languages" options={{title:'Working language',presentation:Platform.OS==='ios'?'formSheet':'modal',sheetAllowedDetents:[0.85,1],sheetGrabberVisible:true,headerLeft:()=>null}}/>
     <Stack.Screen name="onboarding" options={{ title: 'Personal setup', headerRight: () => null }} />

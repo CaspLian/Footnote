@@ -1,0 +1,7 @@
+<svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs><rect id="fa" x="43" y="10" width="14" height="27" rx="7" fill="#E8F0E9"/></defs>
+  <rect width="1024" height="1024" rx="230" fill="#192D2A"/>
+  <g transform="translate(194.5 194.5) scale(6.35)">
+    <use href="#fa"/><use href="#fa" transform="rotate(72 50 50)"/><use href="#fa" transform="rotate(144 50 50)"/><use href="#fa" transform="rotate(216 50 50)"/><use href="#fa" transform="rotate(288 50 50)"/>
+  </g>
+</svg>

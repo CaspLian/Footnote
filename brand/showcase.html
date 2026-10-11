@@ -1,0 +1,353 @@
+<title>Footnote Brand Identity</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one editorial column; specimen boards fixed-color like printed proofs. Palette = the app's own tokens. */
+:root{
+  --bg:#F5F2EB; --surface:#FFFEFA; --fg:#192D2A; --muted:#5E6B65; --accent:#176B5B;
+  --soft:#E8F0E9; --rule:#DDDCD4; --mark-accent:#176B5B; --card-shadow:0 8px 24px rgba(25,45,42,.08);
+  --warn:#8A5B22;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#192D2A; --surface:rgba(255,254,250,.045); --fg:#F5F2EB; --muted:#DDDCD4;
+    --soft:rgba(232,240,233,.12); --rule:rgba(221,220,212,.2); --mark-accent:#E8F0E9;
+    --card-shadow:0 8px 24px rgba(0,0,0,.25); color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#192D2A; --surface:rgba(255,254,250,.045); --fg:#F5F2EB; --muted:#DDDCD4;
+  --soft:rgba(232,240,233,.12); --rule:rgba(221,220,212,.2); --mark-accent:#E8F0E9;
+  --card-shadow:0 8px 24px rgba(0,0,0,.25); color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{
+  background:var(--bg); color:var(--fg); margin:0;
+  font-family:'Geist',ui-sans-serif,system-ui,'Segoe UI',sans-serif;
+  font-size:16px; line-height:1.55; -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1060px; margin:0 auto; padding-block:56px 80px; padding-inline:20px}
+.mono{font-family:'Geist Mono',ui-monospace,Consolas,monospace}
+.eyebrow{font-family:'Geist Mono',ui-monospace,Consolas,monospace; font-size:12px; letter-spacing:.18em; text-transform:uppercase; color:var(--muted)}
+h1{font-size:clamp(34px,6vw,52px); line-height:1.08; letter-spacing:-.02em; font-weight:600; margin:14px 0 10px; text-wrap:balance}
+h2{font-size:26px; letter-spacing:-.01em; font-weight:600; margin:0 0 6px; text-wrap:balance}
+h3{font-size:18px; font-weight:600; margin:0 0 4px}
+p{margin:8px 0}
+.lede{font-size:18px; color:var(--muted); max-width:62ch}
+section{margin-top:72px}
+.sechead{display:flex; align-items:baseline; gap:14px; border-bottom:1px solid var(--rule); padding-bottom:14px; margin-bottom:26px}
+.sechead .eyebrow{white-space:nowrap}
+small, .small{font-size:13.5px; color:var(--muted)}
+table{border-collapse:collapse; width:100%; font-size:14.5px}
+th{text-align:left; font-weight:600; font-size:12.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); padding:8px 10px; border-bottom:1px solid var(--rule)}
+td{padding:9px 10px; border-bottom:1px solid var(--rule); vertical-align:top}
+td.num{font-variant-numeric:tabular-nums; text-align:center}
+.tablebox{overflow-x:auto}
+.grid2{display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:22px}
+.grid3{display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:22px}
+.card{background:var(--surface); border:1px solid var(--rule); border-radius:20px; padding:22px; box-shadow:var(--card-shadow)}
+.specimen{display:flex; align-items:center; justify-content:center; border-radius:16px; min-height:200px}
+.specimen svg{width:150px; height:150px}
+.board-light{background:linear-gradient(135deg,#E0EDE4,#F5EEDC)}
+.board-paper{background:#FFFEFA; border:1px solid #DDDCD4}
+.board-dark{background:#192D2A}
+.swatches{display:flex; flex-wrap:wrap; gap:10px}
+.sw{display:flex; align-items:center; gap:8px; background:var(--surface); border:1px solid var(--rule); border-radius:999px; padding:5px 12px 5px 6px; font-size:13px}
+.sw i{width:22px; height:22px; border-radius:50%; display:inline-block; border:1px solid rgba(25,45,42,.12)}
+.chip{display:inline-block; font-family:'Geist Mono',ui-monospace,monospace; font-size:12px; background:var(--soft); color:var(--fg); border-radius:999px; padding:2px 10px; margin:2px 4px 2px 0}
+.verdict{border-left:3px solid var(--accent); padding:2px 0 2px 14px; color:var(--muted)}
+.ladder{display:flex; align-items:flex-end; gap:14px}
+.ladder figure{margin:0; text-align:center}
+.ladder figcaption{font-family:'Geist Mono',ui-monospace,monospace; font-size:11px; color:var(--muted); margin-top:5px}
+.tile{border-radius:22%; display:block}
+ul{margin:8px 0; padding-left:20px}
+li{margin:3px 0}
+.kv{display:grid; grid-template-columns:118px 1fr; gap:4px 12px; font-size:14.5px}
+.kv dt{color:var(--muted)}
+.kv dd{margin:0}
+.lockup{display:flex; align-items:center; gap:14px}
+.lockup svg{width:44px; height:44px; flex:none}
+.lockup b{font-size:30px; font-weight:600; letter-spacing:-.02em}
+.minilock{display:flex; align-items:center; gap:8px; color:var(--muted)}
+.minilock svg{width:20px; height:20px}
+.minilock span{font-weight:600; font-size:16px; color:var(--fg)}
+.pill{font-family:'Geist Mono',ui-monospace,monospace; font-size:11px; letter-spacing:.1em; text-transform:uppercase; border:1px solid var(--rule); border-radius:999px; padding:3px 10px; color:var(--muted)}
+.pill.win{background:var(--accent); border-color:var(--accent); color:#FFFEFA}
+.hr-note{margin-top:10px; font-size:13.5px; color:var(--muted)}
+.mk-a{fill:var(--mark-accent)} .mk-i{fill:var(--fg)}
+.sk-a{stroke:var(--mark-accent)} .sk-i{stroke:var(--fg)} .sk-r{stroke:var(--rule)}
+.hero{display:grid; grid-template-columns:1fr; gap:30px; align-items:center}
+@media (min-width:760px){.hero{grid-template-columns:1.15fr .85fr}}
+.hero-board{display:flex; flex-direction:column; gap:16px}
+.score-note{font-size:13px; color:var(--muted); margin-top:8px}
+.namecol td:first-child{font-weight:600; white-space:nowrap}
+.cardhead{display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:12px}
+footer{margin-top:80px; border-top:1px solid var(--rule); padding-top:18px; color:var(--muted); font-size:13px}
+a{color:var(--accent)}
+:root[data-theme="dark"] a, :root:not([data-theme="light"]) a{}
+.twoicons{display:flex; gap:16px; flex-wrap:wrap}
+.twoicons figure{margin:0; text-align:center}
+.twoicons figcaption{font-size:11.5px; color:var(--muted); margin-top:6px; font-family:'Geist Mono',ui-monospace,monospace}
+:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+@media (prefers-reduced-motion:no-preference){
+  .card{transition:transform .24s cubic-bezier(.77,0,.175,1)}
+  .card:hover{transform:translateY(-2px)}
+}
+</style>
+
+<div class="wrap">
+
+<header>
+  <div class="eyebrow">Footnote brand identity · 2026-10-10</div>
+  <h1>Footnote</h1>
+  <p class="lede">The small mark that points to the real explanation. A name and symbol for the app that reads a medical bill with you, links every finding to its source, and prepares the request you send yourself.</p>
+</header>
+
+<!-- ============ RECOMMENDED IDENTITY (hero) ============ -->
+<section>
+  <div class="hero">
+    <div class="card">
+      <div class="eyebrow" style="margin-bottom:14px">The Footnote identity</div>
+      <div class="lockup" style="margin-bottom:18px">
+        <svg viewBox="0 0 100 100" aria-label="Footnote asterisk mark">
+          <g class="mk-a"><rect x="43" y="10" width="14" height="27" rx="7"/><rect x="43" y="10" width="14" height="27" rx="7" transform="rotate(72 50 50)"/><rect x="43" y="10" width="14" height="27" rx="7" transform="rotate(144 50 50)"/><rect x="43" y="10" width="14" height="27" rx="7" transform="rotate(216 50 50)"/><rect x="43" y="10" width="14" height="27" rx="7" transform="rotate(288 50 50)"/></g>
+        </svg>
+        <b>Footnote</b>
+      </div>
+      <p>Medical bills hide their truth in fine print. The asterisk is the oldest promise in print that an explanation exists. This identity reclaims it for the patient: the mark sits beside the charge worth asking about, and the app is the footnote that finally gets read.</p>
+      <p class="small">Five capsule arms and an open center make the printers’ asterisk recognizable at every size.</p>
+    </div>
+    <div class="hero-board">
+      <div class="twoicons">
+        <figure>
+          <svg class="tile" width="128" height="128" viewBox="0 0 1024 1024" aria-label="App icon, light">
+            <defs><linearGradient id="hp" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#E0EDE4"/><stop offset="1" stop-color="#F5EEDC"/></linearGradient></defs>
+            <rect width="1024" height="1024" rx="230" fill="url(#hp)"/>
+            <g transform="translate(194.5 194.5) scale(6.35)" fill="#176B5B"><rect x="43" y="10" width="14" height="27" rx="7"/><rect x="43" y="10" width="14" height="27" rx="7" transform="rotate(72 50 50)"/><rect x="43" y="10" width="14" height="27" rx="7" transform="rotate(144 50 50)"/><rect x="43" y="10" width="14" height="27" rx="7" transform="rotate(216 50 50)"/><rect x="43" y="10" width="14" height="27" rx="7" transform="rotate(288 50 50)"/></g>
+          </svg>
+          <figcaption>icon · light</figcaption>
+        </figure>
+        <figure>
+          <svg class="tile" width="128" height="128" viewBox="0 0 1024 1024" aria-label="App icon, dark">
+            <rect width="1024" height="1024" rx="230" fill="#192D2A"/>
+            <g transform="translate(194.5 194.5) scale(6.35)" fill="#E8F0E9"><rect x="43" y="10" width="14" height="27" rx="7"/><rect x="43" y="10" width="14" height="27" rx="7" transform="rotate(72 50 50)"/><rect x="43" y="10" width="14" height="27" rx="7" transform="rotate(144 50 50)"/><rect x="43" y="10" width="14" height="27" rx="7" transform="rotate(216 50 50)"/><rect x="43" y="10" width="14" height="27" rx="7" transform="rotate(288 50 50)"/></g>
+          </svg>
+          <figcaption>icon · dark</figcaption>
+        </figure>
+        <figure>
+          <div class="ladder" style="align-items:flex-end; height:128px">
+            <figure><svg class="tile" width="64" height="64" viewBox="0 0 1024 1024"><rect width="1024" height="1024" rx="230" fill="#192D2A"/><g transform="translate(194.5 194.5) scale(6.35)" fill="#E8F0E9"><rect x="43" y="10" width="14" height="27" rx="7"/><rect x="43" y="10" width="14" height="27" rx="7" transform="rotate(72 50 50)"/><rect x="43" y="10" width="14" height="27" rx="7" transform="rotate(144 50 50)"/><rect x="43" y="10" width="14" height="27" rx="7" transform="rotate(216 50 50)"/><rect x="43" y="10" width="14" height="27" rx="7" transform="rotate(288 50 50)"/></g></svg><figcaption>64</figcaption></figure>
+            <figure><svg class="tile" width="32" height="32" viewBox="0 0 1024 1024"><rect width="1024" height="1024" rx="230" fill="#192D2A"/><g transform="translate(194.5 194.5) scale(6.35)" fill="#E8F0E9"><rect x="43" y="10" width="14" height="27" rx="7"/><rect x="43" y="10" width="14" height="27" rx="7" transform="rotate(72 50 50)"/><rect x="43" y="10" width="14" height="27" rx="7" transform="rotate(144 50 50)"/><rect x="43" y="10" width="14" height="27" rx="7" transform="rotate(216 50 50)"/><rect x="43" y="10" width="14" height="27" rx="7" transform="rotate(288 50 50)"/></g></svg><figcaption>32</figcaption></figure>
+            <figure><svg class="tile" width="16" height="16" viewBox="0 0 1024 1024"><rect width="1024" height="1024" rx="230" fill="#192D2A"/><g transform="translate(194.5 194.5) scale(6.35)" fill="#E8F0E9"><rect x="43" y="10" width="14" height="27" rx="7"/><rect x="43" y="10" width="14" height="27" rx="7" transform="rotate(72 50 50)"/><rect x="43" y="10" width="14" height="27" rx="7" transform="rotate(144 50 50)"/><rect x="43" y="10" width="14" height="27" rx="7" transform="rotate(216 50 50)"/><rect x="43" y="10" width="14" height="27" rx="7" transform="rotate(288 50 50)"/></g></svg><figcaption>16</figcaption></figure>
+          </div>
+        </figure>
+      </div>
+      <p class="small">Scales to 16&nbsp;px without losing the asterisk read. Dark icon uses the palette's accent-soft sage, not a new color.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ A. BRAND ANALYSIS ============ -->
+<section>
+  <div class="sechead"><span class="eyebrow">A</span><h2>Brand analysis</h2></div>
+  <div class="grid2">
+    <div>
+      <p>The app photographs a medical bill or EOB, has the patient verify every extracted value, compares confirmed codes against Medicare benchmarks, explains everything in plain or detailed language with spoken narration, and prepares correction and review requests the patient sends themselves. Family profiles, deadlines, and records stay on the device. No account.</p>
+      <p>Its voice is fixed in the product: <em>"Understand the bill. Own the next step."</em> and <em>"A little clarity is on its way."</em> Its ethics are fixed in the domain rules: findings are questions, never proof of an error, and never a savings promise.</p>
+      <p>The audience includes people with limited English, low literacy, and low vision. Spanish copy ships in the code. Everything about the identity must stay calm, legible, and honest.</p>
+    </div>
+    <div>
+      <p style="margin-top:0">Verified palette from <span class="mono small">mobile/src/theme/index.ts</span>:</p>
+      <div class="swatches">
+        <span class="sw"><i style="background:#F5F2EB"></i>background <span class="mono">#F5F2EB</span></span>
+        <span class="sw"><i style="background:#FFFEFA"></i>surface <span class="mono">#FFFEFA</span></span>
+        <span class="sw"><i style="background:#192D2A"></i>ink <span class="mono">#192D2A</span></span>
+        <span class="sw"><i style="background:#5E6B65"></i>muted <span class="mono">#5E6B65</span></span>
+        <span class="sw"><i style="background:#176B5B"></i>accent <span class="mono">#176B5B</span></span>
+        <span class="sw"><i style="background:#E8F0E9"></i>accent soft <span class="mono">#E8F0E9</span></span>
+        <span class="sw"><i style="background:#DDDCD4"></i>line <span class="mono">#DDDCD4</span></span>
+        <span class="sw"><i style="background:linear-gradient(135deg,#E0EDE4,#F5EEDC)"></i>paper gradient</span>
+      </div>
+      <p class="small" style="margin-top:12px">Typography is Geist (400–700) with tight display tracking. Radii 12/16/20, paper shadows, Phosphor icons, reduced-motion support. The loading state is a folding sheet of paper with one green line; the code calls folded paper "the brand's state indicator". There is no app icon configured yet, so this identity fills a gap rather than replacing an asset.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ C. LOGO EXPLORATION ============ -->
+<section>
+  <div class="sechead"><span class="eyebrow">C</span><h2>Logo exploration</h2></div>
+  <p class="lede" style="margin-bottom:26px">Four concepts plus two alternates, all built from the app's own palette and its paper-and-print world. Each is shown on the brand's paper gradient, warm white, and ink.</p>
+
+  <div class="grid2">
+
+    <!-- Concept A -->
+    <div class="card">
+      <div class="cardhead"><h3>A · Crease Map</h3><span class="pill">Geometric</span></div>
+      <div class="specimen board-light" style="margin-bottom:14px">
+        <svg viewBox="0 0 100 100">
+          <g stroke="#192D2A" stroke-width="3.5" fill="none"><rect x="24" y="14" width="52" height="72" rx="10"/><line x1="50" y1="14" x2="50" y2="86" stroke-width="3"/><line x1="50" y1="50" x2="76" y2="50" stroke-width="3"/><line x1="63" y1="50" x2="63" y2="86" stroke-width="3"/></g>
+          <path d="M63 50 H76 V76 A10 10 0 0 1 66 86 H63 Z" fill="#176B5B"/>
+        </svg>
+      </div>
+      <dl class="kv">
+        <dt>Idea</dt><dd>The fold pattern of a sheet halved three times. The whole bill folds down to the one green pane that matters.</dd>
+        <dt>Construction</dt><dd>5:6 rounded sheet, creases at successive midlines, smallest cell filled. Strokes 3–3.5, radius matched to the app's cards.</dd>
+        <dt>Color</dt><dd>Ink linework, one accent pane. Dark variant inverts linework to warm white.</dd>
+        <dt>At 16 px</dt><dd>Silhouette holds; interior creases begin to merge.</dd>
+        <dt>Honest read</dt><dd>Richest fold story and very on-brand, but busier than B and D when small, invisible on ink without its variant, and can misread as a layout or grid tool.</dd>
+      </dl>
+    </div>
+
+    <!-- Concept B -->
+    <div class="card">
+      <div class="cardhead"><h3>B · Footnote Mark</h3><span class="pill win">Finalist</span></div>
+      <div class="specimen board-light" style="margin-bottom:14px">
+        <svg viewBox="0 0 100 100"><g fill="#176B5B"><rect x="43" y="10" width="14" height="27" rx="7"/><rect x="43" y="10" width="14" height="27" rx="7" transform="rotate(72 50 50)"/><rect x="43" y="10" width="14" height="27" rx="7" transform="rotate(144 50 50)"/><rect x="43" y="10" width="14" height="27" rx="7" transform="rotate(216 50 50)"/><rect x="43" y="10" width="14" height="27" rx="7" transform="rotate(288 50 50)"/></g></svg>
+      </div>
+      <dl class="kv">
+        <dt>Idea</dt><dd>A printers' asterisk: the oldest mark meaning "there is an explanation for this." The app puts it next to the charge worth asking about.</dd>
+        <dt>Construction</dt><dd>Five capsule arms, 72° rotation, open 13-unit center. Capsule radius echoes the app's pill buttons; the open center is the rounded negative space the skill prescribes.</dd>
+        <dt>Color</dt><dd>Accent green on paper; accent-soft sage on ink. Single shape, so one color carries it anywhere.</dd>
+        <dt>At 16 px</dt><dd>The strongest survivor of the set; still clearly an asterisk.</dd>
+        <dt>Honest read</dt><dd>Lives near the overused star and sparkle family. It must stay typographic: capsule arms, hollow center, never four points, never a gradient. Drawn this way it reads print, not AI badge.</dd>
+      </dl>
+    </div>
+
+    <!-- Concept C -->
+    <div class="card">
+      <div class="cardhead"><h3>C · The Opening</h3><span class="pill">Abstract</span></div>
+      <div class="specimen board-light" style="margin-bottom:14px">
+        <svg viewBox="0 0 100 100"><polygon points="14,60 40,34 40,51 14,77" fill="#176B5B"/><polygon points="40,34 57,51 57,68 40,51" fill="#192D2A"/><polygon points="57,51 86,22 86,39 57,68" fill="#176B5B"/></svg>
+      </div>
+      <dl class="kv">
+        <dt>Idea</dt><dd>A Z-folded letter opening; the dark panel is the back face of the middle fold.</dd>
+        <dt>Construction</dt><dd>Three 17-unit parallelograms on 45° slopes sharing vertical fold edges.</dd>
+        <dt>Color</dt><dd>Accent front faces, ink back face.</dd>
+        <dt>At 16 px</dt><dd>Legible as a zigzag band.</dd>
+        <dt>Honest read</dt><dd>Crisp, but the first read is a rising stock chart, a wrong signal for a bill app where "up" means costs. On ink the middle panel vanishes. Eliminated at critique.</dd>
+      </dl>
+    </div>
+
+    <!-- Concept D -->
+    <div class="card">
+      <div class="cardhead"><h3>D · The Caret</h3><span class="pill win">Finalist</span></div>
+      <div class="specimen board-light" style="margin-bottom:14px">
+        <svg viewBox="0 0 100 100"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="14" y1="35" x2="44" y2="35" stroke="#192D2A" stroke-width="7"/><line x1="60" y1="35" x2="86" y2="35" stroke="#192D2A" stroke-width="7"/><polyline points="36,63 52,38 68,63" stroke="#176B5B" stroke-width="7"/></g></svg>
+      </div>
+      <dl class="kv">
+        <dt>Idea</dt><dd>The proofreader's insertion mark rising into a gap in the bill's line: something was left out here, ask about it. It is also an arrow taking the next step up through the paperwork.</dd>
+        <dt>Construction</dt><dd>Two unequal line segments (30 and 26 units) with a 16-unit gap; caret apex optically centered in the gap. One stroke weight, 7, throughout.</dd>
+        <dt>Color</dt><dd>Ink line, accent caret. Dark variant: warm-white line, sage caret.</dd>
+        <dt>At 16 px</dt><dd>Reads cleanly as a mark under a line; the green loses punch at the smallest size.</dd>
+        <dt>Honest read</dt><dd>The most original concept here and completely unclaimed, but it needs one sentence of telling before the metaphor lands, and it is the quieter store thumbnail.</dd>
+      </dl>
+    </div>
+  </div>
+
+  <div class="grid2" style="margin-top:22px">
+    <div class="card" style="opacity:.82">
+      <div class="cardhead"><h3>E · Sheet &amp; Note</h3><span class="pill">Eliminated</span></div>
+      <div style="display:flex; gap:16px; align-items:center">
+        <svg style="flex:none" width="92" height="92" viewBox="0 0 100 100"><g stroke="#192D2A" stroke-width="3" stroke-linejoin="round"><path d="M37 13 H57 L72 28 V66 Q72 75 63 75 H37 Q28 75 28 66 V22 Q28 13 37 13 Z" fill="#FFFEFA"/><path d="M57 13 L72 28 H62 Q57 28 57 23 Z" fill="#E8F0E9"/></g><g fill="none" stroke-linecap="round"><line x1="38" y1="36" x2="52" y2="36" stroke="#176B5B" stroke-width="5"/><line x1="38" y1="48" x2="62" y2="48" stroke="#DDDCD4" stroke-width="4"/><line x1="38" y1="58" x2="56" y2="58" stroke="#DDDCD4" stroke-width="4"/></g></svg>
+        <p class="small">The app's loader distilled: honest continuity, strong on dark, and exactly why it fails. A dog-eared document with text lines is the stock notes glyph of a thousand icon libraries. Kept as an in-product illustration, not as the brand.</p>
+      </div>
+    </div>
+    <div class="card" style="opacity:.82">
+      <div class="cardhead"><h3>F · Pleat</h3><span class="pill">Eliminated</span></div>
+      <div style="display:flex; gap:16px; align-items:center">
+        <svg style="flex:none" width="92" height="92" viewBox="0 0 100 100"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="26,86 50,70 74,86" stroke="#192D2A" stroke-width="6" opacity=".35"/><polyline points="26,66 50,50 74,66" stroke="#192D2A" stroke-width="7" opacity=".65"/><polyline points="26,46 50,28 74,46" stroke="#176B5B" stroke-width="8"/></g></svg>
+        <p class="small">Accordion folds opening upward. Pleasant, scalable, and anonymous: stacked chevrons belong to rank badges and fast-forward buttons. No amount of color makes them ownable.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ D. CRITIQUE + FINAL COMPARISON ============ -->
+<section>
+  <div class="sechead"><span class="eyebrow">D</span><h2>Critique and final comparison</h2></div>
+  <div class="tablebox"><table>
+    <tr><th>Criterion</th><th>A Crease</th><th>B Asterisk</th><th>C Opening</th><th>D Caret</th></tr>
+    <tr><td>Originality</td><td class="num">4</td><td class="num">3.5</td><td class="num">3</td><td class="num"><strong>5</strong></td></tr>
+    <tr><td>Conceptual relevance</td><td class="num">4.5</td><td class="num"><strong>5</strong></td><td class="num">3.5</td><td class="num"><strong>5</strong></td></tr>
+    <tr><td>Simplicity</td><td class="num">3.5</td><td class="num"><strong>5</strong></td><td class="num">4.5</td><td class="num">4.5</td></tr>
+    <tr><td>Memorability</td><td class="num">3.5</td><td class="num"><strong>5</strong></td><td class="num">3.5</td><td class="num">4</td></tr>
+    <tr><td>Recognition at 16 px</td><td class="num">3</td><td class="num"><strong>5</strong></td><td class="num">4</td><td class="num">4</td></tr>
+    <tr><td>Consistency with the UI</td><td class="num">4.5</td><td class="num">4.5</td><td class="num">3</td><td class="num"><strong>5</strong></td></tr>
+    <tr><td>Distinctiveness in category</td><td class="num">4</td><td class="num">4</td><td class="num">2.5</td><td class="num"><strong>5</strong></td></tr>
+    <tr><td>Scalability across surfaces</td><td class="num">3.5</td><td class="num"><strong>5</strong></td><td class="num">3.5</td><td class="num">4.5</td></tr>
+    <tr><td>Longevity</td><td class="num">4</td><td class="num">4.5</td><td class="num">3</td><td class="num">4.5</td></tr>
+    <tr><td><strong>Total /45</strong></td><td class="num">34.5</td><td class="num"><strong>41.5</strong></td><td class="num">30.5</td><td class="num">41.5</td></tr>
+  </table></div>
+  <p class="score-note">B's originality score carries the sparkle-family risk; D's recognition score carries the explanation debt. They tie on points and differ in temperament, which is what the side-by-side below is for.</p>
+
+  <div class="grid2" style="margin-top:28px">
+    <!-- B board -->
+    <div class="card">
+      <div class="cardhead"><h3>Footnote Mark</h3><span class="pill win">Recommended</span></div>
+      <div class="grid3" style="gap:12px; margin-bottom:14px">
+        <div class="specimen board-paper" style="min-height:130px"><svg style="width:84px;height:84px" viewBox="0 0 100 100"><g fill="#176B5B"><rect x="43" y="10" width="14" height="27" rx="7"/><rect x="43" y="10" width="14" height="27" rx="7" transform="rotate(72 50 50)"/><rect x="43" y="10" width="14" height="27" rx="7" transform="rotate(144 50 50)"/><rect x="43" y="10" width="14" height="27" rx="7" transform="rotate(216 50 50)"/><rect x="43" y="10" width="14" height="27" rx="7" transform="rotate(288 50 50)"/></g></svg></div>
+        <div class="specimen board-dark" style="min-height:130px"><svg style="width:84px;height:84px" viewBox="0 0 100 100"><g fill="#E8F0E9"><rect x="43" y="10" width="14" height="27" rx="7"/><rect x="43" y="10" width="14" height="27" rx="7" transform="rotate(72 50 50)"/><rect x="43" y="10" width="14" height="27" rx="7" transform="rotate(144 50 50)"/><rect x="43" y="10" width="14" height="27" rx="7" transform="rotate(216 50 50)"/><rect x="43" y="10" width="14" height="27" rx="7" transform="rotate(288 50 50)"/></g></svg></div>
+        <div class="specimen board-light" style="min-height:130px">
+          <svg class="tile" width="84" height="84" viewBox="0 0 1024 1024"><rect width="1024" height="1024" rx="230" fill="#192D2A"/><g transform="translate(194.5 194.5) scale(6.35)" fill="#E8F0E9"><rect x="43" y="10" width="14" height="27" rx="7"/><rect x="43" y="10" width="14" height="27" rx="7" transform="rotate(72 50 50)"/><rect x="43" y="10" width="14" height="27" rx="7" transform="rotate(144 50 50)"/><rect x="43" y="10" width="14" height="27" rx="7" transform="rotate(216 50 50)"/><rect x="43" y="10" width="14" height="27" rx="7" transform="rotate(288 50 50)"/></g></svg>
+        </div>
+      </div>
+      <div class="lockup" style="margin:4px 0 10px"><svg viewBox="0 0 100 100"><g class="mk-a"><rect x="43" y="10" width="14" height="27" rx="7"/><rect x="43" y="10" width="14" height="27" rx="7" transform="rotate(72 50 50)"/><rect x="43" y="10" width="14" height="27" rx="7" transform="rotate(144 50 50)"/><rect x="43" y="10" width="14" height="27" rx="7" transform="rotate(216 50 50)"/><rect x="43" y="10" width="14" height="27" rx="7" transform="rotate(288 50 50)"/></g></svg><b>Footnote</b></div>
+      <p class="small">Name, symbol, and product promise are one sentence: read the mark by the charge. Wins every size test, needs no caption, and the asterisk can appear inside the UI beside each finding, so the brand and the feature teach each other.</p>
+    </div>
+    <!-- D board -->
+    <div class="card">
+      <div class="cardhead"><h3>The Caret</h3><span class="pill">Runner-up</span></div>
+      <div class="grid3" style="gap:12px; margin-bottom:14px">
+        <div class="specimen board-paper" style="min-height:130px"><svg style="width:84px;height:84px" viewBox="0 0 100 100"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="14" y1="35" x2="44" y2="35" stroke="#192D2A" stroke-width="7"/><line x1="60" y1="35" x2="86" y2="35" stroke="#192D2A" stroke-width="7"/><polyline points="36,63 52,38 68,63" stroke="#176B5B" stroke-width="7"/></g></svg></div>
+        <div class="specimen board-dark" style="min-height:130px"><svg style="width:84px;height:84px" viewBox="0 0 100 100"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="14" y1="35" x2="44" y2="35" stroke="#FFFEFA" stroke-width="7"/><line x1="60" y1="35" x2="86" y2="35" stroke="#FFFEFA" stroke-width="7"/><polyline points="36,63 52,38 68,63" stroke="#E8F0E9" stroke-width="7"/></g></svg></div>
+        <div class="specimen board-light" style="min-height:130px">
+          <svg class="tile" width="84" height="84" viewBox="0 0 1024 1024"><rect width="1024" height="1024" rx="230" fill="#192D2A"/><g transform="translate(174 204) scale(6.76)" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="14" y1="35" x2="44" y2="35" stroke="#FFFEFA" stroke-width="7"/><line x1="60" y1="35" x2="86" y2="35" stroke="#FFFEFA" stroke-width="7"/><polyline points="36,63 52,38 68,63" stroke="#E8F0E9" stroke-width="7"/></g></svg>
+        </div>
+      </div>
+      <div class="lockup" style="margin:4px 0 10px"><svg viewBox="0 0 100 100"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="14" y1="35" x2="44" y2="35" class="sk-i" stroke-width="7"/><line x1="60" y1="35" x2="86" y2="35" class="sk-i" stroke-width="7"/><polyline points="36,63 52,38 68,63" class="sk-a" stroke-width="7"/></g></svg><b>Footnote</b></div>
+      <p class="small">The sharper idea and the riskier badge. Refined here with unequal line segments for intentional asymmetry and a single stroke weight. If not chosen as the brand, it deserves to live inside the product as the "ask about this line" affordance.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ E. RECOMMENDATION ============ -->
+<section>
+  <div class="sechead"><span class="eyebrow">E</span><h2>The Footnote identity</h2></div>
+  <p class="lede"><strong style="color:var(--fg)">Footnote, marked by the printers' asterisk.</strong> One symbol carries the name, the feature, and the promise: the fine print on a medical bill finally gets an explanation, and the patient gets the next step. The caret stays in the system as the runner-up and as an in-product mark; the folded paper stays in the loader, where it already lives.</p>
+  <ul class="small">
+    <li>The name and asterisk connect the identity to the explanation beside each charge.</li>
+    <li>The asterisk must always be drawn as built here: five capsule arms, open center, flat brand color. No four-point sparkles, no gradients, no rotation.</li>
+    <li>Footnote names the app, the analysis service and the voice helper. The supplied asterisk marks the app icon and headers.</li>
+  </ul>
+</section>
+
+<!-- ============ F. PRODUCTION ASSETS ============ -->
+<section>
+  <div class="sechead"><span class="eyebrow">F</span><h2>Production assets</h2></div>
+  <div class="grid2">
+    <div>
+      <p style="margin-top:0">Editable vectors and exports, delivered in <span class="mono small">Nimesh\footnote-brand\</span>:</p>
+      <ul class="small">
+        <li><span class="mono">svg/</span> — six exploration masters (viewBox 0 0 100 100)</li>
+        <li><span class="mono">svg/final/</span> — finalist marks in light, dark, and currentColor mono; app icon sources, 1024, light and dark</li>
+        <li><span class="mono">png/exploration/</span> — all six concepts at 1024 px, transparent</li>
+        <li><span class="mono">png/marks/</span> — finalist marks at 1024 px, transparent</li>
+        <li><span class="mono">png/appicon/</span> — both finalists, light and dark tiles, at 16, 32, 48, 64, 128, 180, 256, 512, 1024 px</li>
+        <li><span class="mono">naming/</span> — full naming package with scoring and checks</li>
+      </ul>
+      <p class="small">Wordmark lockups set in Geist SemiBold with −2% tracking, the app's existing display style. SVG text lockups require the Geist font or conversion to outlines before print use.</p>
+    </div>
+    <div>
+      <p style="margin-top:0">Identity palette, unchanged from the product:</p>
+      <div>
+        <span class="chip">#176B5B accent</span><span class="chip">#192D2A ink</span><span class="chip">#E8F0E9 accent soft</span><span class="chip">#F5F2EB background</span><span class="chip">#FFFEFA surface</span><span class="chip">#DDDCD4 line</span><span class="chip">#E0EDE4→#F5EEDC icon gradient</span>
+      </div>
+      <p class="hr-note">Light icon: accent asterisk on the paper gradient. Dark icon: accent-soft asterisk on ink. Nothing outside the shipped theme file was introduced.</p>
+    </div>
+  </div>
+</section>
+
+<footer>
+  Prepared for the Footnote team · grounded in <span class="mono">mobile/src/theme/index.ts</span>, the FootnoteLoader component, and the shipped onboarding copy · conflict checks are search-level only, not legal clearance.
+</footer>
+
+</div>

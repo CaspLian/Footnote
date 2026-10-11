@@ -1,9 +1,10 @@
+import { throwIfAborted } from './abort-signal';
 import { languageOption, type WorkingLanguage } from '../domain/languages';
 import type { ClaimChange, ClaimDeadlines } from '../domain/types';
 import type { GeminiAnalyzeResponse } from '../domain/extraction';
 
 /**
- * The ClaimPulse backend, from EXPO_PUBLIC_API_URL (for example http://192.168.1.23:8000; see mobile/.env.example).
+ * The Footnote backend, from EXPO_PUBLIC_API_URL (for example http://192.168.1.23:8000; see mobile/.env.example).
  * When it is unset, the app stays fully local, as before. The routes are in docs/API_CONTRACTS.md.
  * Documents are sent by services/gemini-api.ts (every page in one request); this file holds the rest.
  */
@@ -13,7 +14,7 @@ export function backendConfigured(): boolean {
   return API_URL !== '';
 }
 
-// Unfold names the two Chinese scripts; the backend's locales (GET /api/v1/languages) name their regions.
+// Footnote names the two Chinese scripts; the backend's locales (GET /api/v1/languages) name their regions.
 const LOCALE_OVERRIDES: Partial<Record<WorkingLanguage, string>> = { 'zh-Hans': 'zh-CN', 'zh-Hant': 'zh-TW' };
 
 /** The backend locale (target_language) for a working language: 'fr' -> 'fr-FR', 'zh-Hant' -> 'zh-TW'. */
@@ -63,7 +64,7 @@ function detailText(body: unknown): string | undefined {
 
 export async function call<T>(path: string, init: RequestInit, timeoutMs: number = LOOKUP_TIMEOUT_MS, signal?: AbortSignal): Promise<T> {
   if (!backendConfigured()) throw new BackendError(0, 'backend_not_configured');
-  signal?.throwIfAborted();
+  throwIfAborted(signal);
   const controller = new AbortController();
   const cancel = () => controller.abort();
   signal?.addEventListener('abort', cancel, { once: true });

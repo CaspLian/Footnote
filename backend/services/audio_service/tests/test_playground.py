@@ -44,7 +44,7 @@ def speak(client, text, voice=None):
 def test_the_page_loads(client):
     response = client.get("/")
     assert response.status_code == 200
-    assert "ClaimPulse voice playground" in response.text and "/api/speak" in response.text
+    assert "Footnote voice playground" in response.text and "/api/speak" in response.text
 
 
 def test_all_voices_are_listed(client):

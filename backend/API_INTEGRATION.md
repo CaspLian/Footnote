@@ -44,7 +44,7 @@ every line Gemini read, and the total stays the bill's.
 
 - `POST /api/v1/claims` records a bill the user confirmed: `items` (`[{code, description, amount}]`), plus optional
   `provider_name`, `service_date`, `bill_received_date`, `payment_due_date`, `total_billed` and
-  `analysis_audit_id`. Deadlines are estimated from the dates given. The Unfold app calls this when a case is
+  `analysis_audit_id`. Deadlines are estimated from the dates given. The Footnote app calls this when a case is
   first confirmed.
 - `GET /api/v1/claims/{audit_id}` returns the claim, its countdowns, estimates, status, and ordered timeline events.
 - `PATCH` (or `POST`) `/api/v1/claims/{audit_id}/status` accepts `{"status":"dispute_in_progress"}`; an optional

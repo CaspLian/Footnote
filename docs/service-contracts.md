@@ -8,42 +8,25 @@ The root layout installs `native/backend-adapters.ts`. Confirmed imports use Gem
 
 The voice catalog maps Calm/Clear/Warm to real backend keys; previews, saved readings and audio use `/voice/voices`, `/voice/voices/{key}/sample`, `/voice/speak` and `/voice/audio/{id}`. The live adapter uses `/voice/agent/session` with form fields only, loading evidence on the server. A separate recorded-question fallback uses `/voice/analyze`. Settings and Languages read health and supported locales. Profiles, ZIP, insurer and preferences are not uploaded with bill/session requests. Provider keys stay on the server.
 
-Drafts and Guide content remain local. The proposed map below describes future replacements for these original local boundaries; the implemented HTTP contract is [API_CONTRACTS.md](API_CONTRACTS.md).
+Drafts and Guide content remain local; the implemented HTTP contract is [API_CONTRACTS.md](API_CONTRACTS.md).
 
-## Current adapters and future endpoint map
+## App boundaries
 
-The endpoint names below are a proposed handoff contract, not deployed routes.
-
-| App boundary | Current behavior | Proposed FastAPI boundary |
-| --- | --- | --- |
-| `DocumentService.processBill(BillCase)` | Validates confirmed entries; returns `ReviewResult`. Marked paired samples receive supported findings; imports receive manual summaries and no findings. | `POST /v1/reviews`: confirmed case input → grounded `ReviewResult` |
-| `BenchmarkService.lookup(LineItem)` | Returns `null`; no invented comparison. | `POST /v1/benchmarks/lookup`: line/context → sourced `Comparison` or `null` |
-| `DraftService.prepare(BillCase, DraftKind, Language)` | Deterministic, editable English/Spanish templates. | `POST /v1/drafts`: verified case, kind and locale → editable body |
-| `NarrationService.speak(text, language)` / `stop()` | Device voices through `expo-speech`, owned by one narration controller. | `POST /v1/narrations`: text/locale → audio reference; client controls playback and cancellation |
-| `GuideExplanationService.prepare(request)` | Curated glossary definition, example, question, narration text and source; `provenance: 'curated_local'`. No AI call. | Proposed `POST /v1/guide/explanations`: term/locale/depth and consented optional context → a sourced explanation contract |
-| `UnderstandingAdapter.understand(request, { signal, onPhase })` | Returns synthetic or manual mode; no upload or fabricated extraction. Explicitly confirmed documents precede this call. | Proposed `POST /v1/documents/understand` or asynchronous job with cancellation → validated details/context ID |
-| `AgentAdapter.connect(context, callbacks)` | Explicit unavailable error; no microphone or transmission. | Proposed server `POST /v1/voice/sessions` → short-lived ElevenLabs session |
-| `VoicePreviewAdapter.play(voice, workingLanguage)` | Explicit unavailable error; no device TTS substitution. | Backend catalog maps placeholder preferences to genuine provider voice samples |
-| Native import and preview | Copies/previews batches locally; classification changes metadata only. | Upload requires an explicit connected understanding adapter, remote IDs and deletion semantics |
-
-Local `file://` URIs must not be treated as remotely readable documents. A future upload flow needs explicit user-facing upload behavior, a remote document identifier, content validation and deletion semantics before enabling extraction. Preserve manual verification even when extraction is added.
-
-`ReviewResult.mode` supports `synthetic`, `manual` and `connected`. Connected findings use the confirmed line's evidence and Medicare reference context; imported documents are never relabeled as synthetic samples.
-
-## Sponsor status in the local build
-
-| Service | Status and intended adapter role |
+| Boundary | Implemented behavior |
 | --- | --- |
-| Gemini | Not connected. A future server adapter could support grounded document explanation/drafting; current findings and templates are local. |
-| Snowflake | Not connected. Potential sourced comparison-data backend behind `BenchmarkService`; no dataset or benchmark result exists here. |
-| TigerData | Not connected. Potential server event/history storage; the implemented history is local Zustand/AsyncStorage. |
-| ElevenLabs | Not connected. Live `AgentAdapter` and genuine `VoicePreviewAdapter` seams are implemented. Calm/Clear/Warm are local slots, not provider voice IDs. |
+| Document understanding | Explicitly confirmed imports go to Gemini, with saved-audit reopening and bounded missing-date recovery. Offline imports support manual verification. |
+| Bill review | Confirmed codes use national Medicare references and source-linked questions. Unknown amounts and absent references remain unknown. |
+| Draft preparation | Local editable billing-request and insurer-appeal templates; submission is an explicit user action. |
+| Saved reading | ElevenLabs clips prepared for a saved analysis and selected voice; audio supports byte ranges. |
+| Live conversation | Private session credentials from the API, saved-bill context, Gemini answers, captions, mute and end controls. Corrected entries cannot use stale analysis. |
+| Voice preview | Catalog slots resolve to provider voices. Previews download the clip and await native loading/playback confirmation; cancellation and playback errors close the player. |
+| Household and documents | Local versioned metadata, app-owned copies, previews and export. User data is not uploaded by merely opening a picker or selecting a profile. |
 
-Keep future provider credentials on the server. No sponsor completion or savings claim should be inferred from an interface existing.
+The shared HTTP contract is `API_CONTRACTS.md`. Provider keys remain on the server. Native cancellation checks inspect `signal.aborted`; React Native's installed AbortSignal lacks the newer convenience method.
 
 ## Guide content and voice separation
 
-`GuideExplanationRequest` carries `termId`, `language`, `depth`, `voice`, and optional `coverage`. The current term screen requests English content and does not pass coverage. The local implementation looks up the curated glossary; it does not personalize from coverage or synthesize a different explanation for a placeholder voice. Unknown terms reject with `term_not_found`.
+`GuideExplanationRequest` carries `termId`, `language`, `depth`, `voice`, and optional `coverage`. The current term screen requests English content and does not pass coverage. The local implementation looks up the curated glossary; it does not personalize from coverage or synthesize a different explanation for a voice preference. Unknown terms reject with `term_not_found`.
 
 `GuideExplanation` returns `termId`, `definition`, `example`, `question`, `narration`, `source: { title, url }`, and the literal `curated_local` provenance. The screen always offers the example and question. Simple narration reads the title and definition; Detailed narration also reads the example and question. Loading/retry is local asynchronous UI state, not evidence of a backend call. The screen guards against applying a prepared explanation after unmount or a depth/voice change.
 
@@ -81,7 +64,7 @@ Native imports return `success`, `cancelled`, `permission-denied` or an error wi
 
 Exports fail without discarding the editable draft. Sharing reports sheet completion, not delivery. Narration exposes loading/speaking/unavailable/error states, chooses a language-matching device voice, and uses generation guards to prevent a cancelled asynchronous start. Navigation, language, voice and reading-speed changes and backgrounding stop narration.
 
-The store writes version-1 snapshots under `unfold-local-v1`. Unreadable saved data produces a recovery state rather than silent deletion; failed writes remain visible and retryable. Review results are discarded if the case changed, disappeared or a reset occurred while processing. The older review/draft interfaces have no transport cancellation; understanding and live-agent controllers now provide `AbortSignal`. A future network adapter must honor these signals and add timeout/remote-job cancellation behavior while retaining those stale-result guards. Do not convert a timeout into a successful empty result.
+The store writes version-1 snapshots under `footnote-local-v1`. Unreadable saved data produces a recovery state rather than silent deletion; failed writes remain visible and retryable. Review results are discarded if the case changed, disappeared or a reset occurred while processing. The older review/draft interfaces have no transport cancellation; understanding and live-agent controllers now provide `AbortSignal`. Connected adapters honor these signals and transport timeouts while retaining those stale-result guards. Do not convert a timeout into a successful empty result.
 
 `preferences` and `savedTermIds` are now fields in that same version-1 snapshot, stored in AsyncStorage natively and localStorage on web. Older snapshots without them recover defaults while preserving cases and drafts. Preference normalization accepts System/Light/Dark, the four supported voice slots, rates 0.75/0.92/1.1, haptics/reduced-motion booleans, recent/balance/follow_up bill sorting, and resolved visibility. Unsupported values recover independently to their supported defaults. Defaults are System theme, Calm voice, rate 0.92, haptics on, app Reduce motion off, recent sort and resolved bills shown.
 
@@ -91,12 +74,10 @@ For the proposed HTTP adapter, map transport/validation failures to stable error
 
 ## Idempotency and recorded actions
 
-- Sample loading reuses `northline-sample` and rechecks after asset I/O, avoiding duplicate sample cases/import events.
 - Concurrent reviews of the same case share one in-flight operation. A later completed review can create another verification event; this is not permanent request deduplication.
 - Draft preparation reuses `(caseId, kind, locale)`. Saving unchanged text is a no-op; editing a submitted draft clears its submission state and increments its revision.
 - Submission is an explicit user confirmation. Repeated confirmation of the same revision is a no-op; its event ID is `${draft.id}:submitted:${draft.revision}`. Copy/export/share never call `markSubmitted`.
 - Saving the same follow-up or confirmed notice date is a no-op. Removing them records separate removal events. Reminders are local case/timeline records, with no scheduled notification or legal-deadline determination.
-- Sample reset replaces only sample progress and preserves imported cases, household profiles, language, icon preferences, app preferences and saved terms.
 
 A future server should accept an idempotency key for mutations, return the same operation result for repeated keys, and retain separate draft revision/submission records. Those HTTP guarantees are proposed, not implemented by the local interfaces.
 
@@ -109,3 +90,7 @@ Import preparation exposes choosing/preparing/idle and stable cancellation/error
 Relationship permits other with relationshipLabel: 1–40 Unicode letters, numbers and spaces. Values trim and collapse spaces; symbols, empty labels and embedded non-space whitespace fail validation. These profiles and labels remain in the local snapshot.
 
 Timeline is a main tab derived from current case status plus recorded events. Marking resolved is explicit and then returns Home; viewing a resolved card only opens Timeline. Follow-up edits remain case-local and never imply notification delivery.
+
+## Identity and compatibility
+
+Footnote writes new metadata to `footnote-local-v1`, with a validated fallback from the earlier key. Existing document URIs remain valid, and the web attachment reader can open the earlier IndexedDB database. Explicit empty-data recovery clears both keys. The installed application ID remains stable at the user’s request, preserving the device sandbox and existing bills. Earlier fixture cases remain stored for recovery but have no public entry point and are excluded from visible bill lists.

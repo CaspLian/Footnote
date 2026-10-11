@@ -5,14 +5,14 @@ import * as Speech from 'expo-speech';
 import type { Language, NarrationService } from '@/domain';
 import { nativeErrorMessage } from './errors';
 import { NarrationController } from './narration-controller';
-import { useUnfoldStore } from '@/store';
+import { useFootnoteStore } from '@/store';
 import { claimAudio } from '../services/audio-focus';
 
 const controller = new NarrationController({
   getVoices: Speech.getAvailableVoicesAsync,
   stop: Speech.stop,
   maxLength: Speech.maxSpeechInputLength,
-  start: (text, options) => Speech.speak(text, { ...options, rate: useUnfoldStore.getState().preferences.speechRate, useApplicationAudioSession: false }),
+  start: (text, options) => Speech.speak(text, { ...options, rate: useFootnoteStore.getState().preferences.speechRate, useApplicationAudioSession: false }),
 });
 
 let releaseAudio: (() => void) | undefined;
@@ -32,8 +32,8 @@ export const narrationService: NarrationService = {
 /** Mount once in the root layout so tab navigation, backgrounding and language changes stop speech. */
 export function useNarrationInterruptions(language: Language) {
   const pathname = usePathname();
-  const voice = useUnfoldStore(s => s.preferences.voice);
-  const rate = useUnfoldStore(s => s.preferences.speechRate);
+  const voice = useFootnoteStore(s => s.preferences.voice);
+  const rate = useFootnoteStore(s => s.preferences.speechRate);
   useEffect(() => {
     void narrationService.stop().catch(() => {});
     return () => { void narrationService.stop().catch(() => {}); };

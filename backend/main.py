@@ -18,7 +18,7 @@ from services.snowflake_services.snowflake_service import check_prices, lookup  
 MAX_UPLOAD_MB = 15
 GEMINI_TIMEOUT_S = 150  # covers 2 attempts x 2 models
 
-app = FastAPI(title="ClaimPulse AI API")
+app = FastAPI(title="Footnote API")
 
 app.add_middleware(
     CORSMiddleware,
@@ -31,7 +31,7 @@ app.add_middleware(
 
 @app.get("/")
 def read_root():
-    return {"message": "ClaimPulse AI API is running", "mock": is_mock(), "model": model_name()}
+    return {"message": "Footnote API is running", "mock": is_mock(), "model": model_name()}
 
 
 @app.get("/api/v1/languages")

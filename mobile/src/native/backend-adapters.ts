@@ -5,10 +5,10 @@ import { configureVoicePreviewAdapter } from '../services/voice-preview';
 import { appendAttachmentToForm } from './documents';
 import { voiceSamplePreview } from './voice-sample-player';
 import { installLiveVoiceAgent } from './live-agent';
-import { useUnfoldStore } from '../store';
+import { useFootnoteStore } from '../store';
 export function installBackendAdapters() {
   if (!backendConfigured()) return;
-  configureUnderstandingAdapter(createGeminiUnderstanding({ appendPart: appendAttachmentToForm, currentVoice: () => useUnfoldStore.getState().preferences.voice, markDateRecovery: caseId => useUnfoldStore.getState().markDateRecoveryAttempt(caseId) }));
+  configureUnderstandingAdapter(createGeminiUnderstanding({ appendPart: appendAttachmentToForm, currentVoice: () => useFootnoteStore.getState().preferences.voice, markDateRecovery: caseId => useFootnoteStore.getState().markDateRecoveryAttempt(caseId) }));
   configureVoicePreviewAdapter(voiceSamplePreview);
   installLiveVoiceAgent();
 }

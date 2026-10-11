@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { createUnfoldStore, type LocalStorage } from './state';
+import { createFootnoteStore, type LocalStorage } from './state';
 import type { BillCase, ClaimChange, ClaimTracker, DocumentAttachment } from '../domain/types';
 
 function memoryStorage(): LocalStorage {
@@ -11,7 +11,7 @@ const clock = () => '2026-10-10T17:00:00.000Z';
 let sequence = 0;
 const id = (prefix: string) => `${prefix}-${++sequence}`;
 const settle = () => new Promise(resolve => setTimeout(resolve, 0)); // claim tracking runs after the action returns
-const imported: DocumentAttachment = { id: 'import', uri: 'file:///app/unfold/a.jpg', name: 'Bill.jpg', mimeType: 'image/jpeg', kind: 'bill', origin: 'import', importedAt: clock() };
+const imported: DocumentAttachment = { id: 'import', uri: 'file:///app/footnote/a.jpg', name: 'Bill.jpg', mimeType: 'image/jpeg', kind: 'bill', origin: 'import', importedAt: clock() };
 
 function fakeTracker(fail = false) {
   const recorded: BillCase[] = [];
@@ -25,7 +25,7 @@ function fakeTracker(fail = false) {
 }
 
 async function confirmedCase(claims: ClaimTracker) {
-  const store = createUnfoldStore(memoryStorage(), {
+  const store = createFootnoteStore(memoryStorage(), {
     now: clock, id, autoHydrate: false, claims, processBill: async () => ({ mode: 'manual', findings: [], summary: { en: 'Summary.', es: 'Resumen.' } }),
   });
   await store.getState().retryHydration();
@@ -76,7 +76,7 @@ test('confirming a case records its claim once (which marks the audit complete);
 
 test('the synthetic sample is never recorded', async () => {
   const fake = fakeTracker();
-  const store = createUnfoldStore(memoryStorage(), { now: clock, id, autoHydrate: false, claims: fake.tracker });
+  const store = createFootnoteStore(memoryStorage(), { now: clock, id, autoHydrate: false, claims: fake.tracker });
   await store.getState().retryHydration();
   const caseId = await store.getState().loadSample();
   await store.getState().verifyCase(caseId);

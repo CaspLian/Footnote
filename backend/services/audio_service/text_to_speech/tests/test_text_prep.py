@@ -47,7 +47,7 @@ EXPECTED_MOCK_OUTPUT = {
         "Both plans include email support, for example, replies within one day."
     ),
     "mock-bill-summary": (
-        "Hello, and welcome to ClaimPulse AI, your personal medical billing assistant.\n"
+        "Hello, and welcome to Footnote, your personal medical billing assistant.\n"
         "I've finished analyzing your hospital bill from Metro Health Hospital, dated September 15, 2026.\n"
         "Your total hospital charge is $4,850.75. After reviewing your insurance statement, "
         "I've identified two potential billing discrepancies.\n"
@@ -220,16 +220,16 @@ def test_rules(raw, expected):
 
 
 def test_pronunciations_are_whole_word_and_case_sensitive():
-    sounds = {"ClaimPulse": "Claim Pulse"}
-    assert prepare_for_speech("ClaimPulse works", sounds) == "Claim Pulse works."
-    assert prepare_for_speech("ClaimPulsed and claimpulse", sounds) == "ClaimPulsed and claimpulse."
+    sounds = {"Footnote": "Foot note"}
+    assert prepare_for_speech("Footnote works", sounds) == "Foot note works."
+    assert prepare_for_speech("Footnoted and footnote", sounds) == "Footnoted and footnote."
 
 
 def test_default_pronunciations_file_is_loaded_and_comments_skipped():
     sounds = load_pronunciations()
-    assert sounds.get("ClaimPulse") == "Claim Pulse"
+    assert sounds.get("Footnote") == "Foot note"
     assert not any(key.startswith("_") for key in sounds)
-    assert prepare_for_speech("ClaimPulse") == "Claim Pulse."
+    assert prepare_for_speech("Footnote") == "Foot note."
 
 
 def test_pronunciation_alias_is_inserted_literally():
@@ -250,13 +250,13 @@ def pronunciations_file(monkeypatch, tmp_path):
 
 def test_broken_pronunciations_file_is_ignored_not_fatal(pronunciations_file, caplog):
     pronunciations_file.write_text("{not json", encoding="utf-8")
-    assert prepare_for_speech("ClaimPulse works") == "ClaimPulse works."
+    assert prepare_for_speech("Footnote works") == "Footnote works."
     assert "Ignoring pronunciations.json" in caplog.text
 
 
 def test_pronunciations_file_saved_with_bom_still_loads(pronunciations_file):
-    pronunciations_file.write_text('\N{BYTE ORDER MARK}{"ClaimPulse": "Claim Pulse"}', encoding="utf-8")
-    assert prepare_for_speech("ClaimPulse works") == "Claim Pulse works."
+    pronunciations_file.write_text('\N{BYTE ORDER MARK}{"Footnote": "Foot note"}', encoding="utf-8")
+    assert prepare_for_speech("Footnote works") == "Foot note works."
 
 
 # --- Fixes from the adversarial review (2026-10-09) -------------------------------------

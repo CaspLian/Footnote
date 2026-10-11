@@ -49,7 +49,7 @@ def main():
         user=os.getenv("SNOWFLAKE_USER"),
         password=os.getenv("SNOWFLAKE_PASSWORD"),
         warehouse=os.getenv("SNOWFLAKE_WAREHOUSE", "COMPUTE_WH"),
-        database=os.getenv("SNOWFLAKE_DATABASE", "CLAIMPULSE"),
+        database=os.environ["SNOWFLAKE_DATABASE"],
         schema=os.getenv("SNOWFLAKE_SCHEMA", "PUBLIC"),
     )
     try:

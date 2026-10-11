@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react';
 import { Platform, TextInput } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { confirmAction } from '@/components/confirm';
-import { UnfoldLoader } from '@/components/loader';
+import { FootnoteLoader } from '@/components/loader';
 import { DraftKind } from '@/domain';
-import { useUnfoldStore } from '@/store';
+import { useFootnoteStore } from '@/store';
 import { copyDraft, exportDraftPdf, nativeErrorMessage, shareDocument } from '@/native';
 import { Button, ButtonRow, Choice, Feedback, Group, Screen, Txt, useUIStyles, useDesktop, useLanguage } from '@/components/ui';
 import { useTheme, type, space } from '@/theme';
@@ -16,8 +16,8 @@ export function DraftWorkspace() { const { colors } = useTheme(); const styles =
   const { locale, copy } = useLanguage();
   const params = useLocalSearchParams<{ kind?: DraftKind }>();
   const [kind, setKind] = useState<DraftKind>(params.kind === 'insurer_appeal' ? 'insurer_appeal' : 'billing_correction');
-  const drafts = useUnfoldStore(s => s.drafts);
-  const storageError = useUnfoldStore(s => s.storageError);
+  const drafts = useFootnoteStore(s => s.drafts);
+  const storageError = useFootnoteStore(s => s.storageError);
   const draft = drafts.find(d => d.caseId === c?.id && d.kind === kind && d.locale === locale);
   const body = draft?.body ?? '';
   const [preparedHere, setPreparedHere] = useState(false);
@@ -31,8 +31,8 @@ export function DraftWorkspace() { const { colors } = useTheme(); const styles =
   useEffect(() => {
     let active = true;
     if (!caseId) return;
-    const current = useUnfoldStore.getState().drafts.find(d => d.caseId === caseId && d.kind === kind && d.locale === locale);
-    if (!current) void useUnfoldStore.getState().prepareDraft(caseId, kind)
+    const current = useFootnoteStore.getState().drafts.find(d => d.caseId === caseId && d.kind === kind && d.locale === locale);
+    if (!current) void useFootnoteStore.getState().prepareDraft(caseId, kind)
       .then(() => { if (active) setPreparedHere(true); })
       .catch(() => { if (active) setError(copy('The draft could not be prepared. Try again.', 'No se pudo preparar el borrador. Intenta de nuevo.')); });
     return () => { active = false; };
@@ -40,7 +40,7 @@ export function DraftWorkspace() { const { colors } = useTheme(); const styles =
   if (!c) return <MissingCase />;
 
   function edit(text: string) {
-    if (c) useUnfoldStore.getState().saveDraft(c.id, kind, text, locale);
+    if (c) useFootnoteStore.getState().saveDraft(c.id, kind, text, locale);
     setMessage('');
   }
   async function run(action: 'copy' | 'pdf') {
@@ -59,8 +59,8 @@ export function DraftWorkspace() { const { colors } = useTheme(); const styles =
   }
   function submitted() {
     if (!draft) return;
-    confirmAction('Record this submission?', 'Confirm only after you sent the request yourself. Unfold does not send it.', 'Mark submitted', () => {
-      useUnfoldStore.getState().markSubmitted(draft.id);
+    confirmAction('Record this submission?', 'Confirm only after you sent the request yourself. Footnote does not send it.', 'Mark submitted', () => {
+      useFootnoteStore.getState().markSubmitted(draft.id);
       caseRoute('/timeline', c!.id);
     });
   }
@@ -80,11 +80,11 @@ export function DraftWorkspace() { const { colors } = useTheme(); const styles =
   </Group>;
   return <Screen testID="draft" asideWidth={320} aside={<Group gap={space.xl}>{heading}{choices}{utilities}</Group>} footerHint={loading ? 'Preparing your draft…' : storageError ? 'Saving needs attention' : draft ? 'Draft saved on this device' : undefined} footer={<Button title={draft?.submittedAt ? 'Open submission timeline' : 'Mark submitted'} disabled={loading || busy || !body.trim() || !!storageError} onPress={() => draft?.submittedAt ? caseRoute('/timeline', c.id) : submitted()} />}>
     {!desktop ? <>{heading}{choices}</> : <Group gap={space.sm}><Txt variant="section">Your draft</Txt><Txt muted>{c.provider}</Txt></Group>}
-    {kind === 'insurer_appeal' ? <Feedback text="Identify the insurer decision and your reason for asking for review. The sample has no denial; this is an explanation request. Confirm any deadline from your plan documents." /> : null}
-    {loading ? <UnfoldLoader compact title="Preparing your draft" detail="Turning your confirmed questions into words." /> : <TextInput testID="draft-body" accessibilityLabel="Editable request draft" value={body} onChangeText={edit} multiline scrollEnabled textAlignVertical="top" style={[type.body, styles.page, { color: colors.ink, height: desktop ? 640 : 420 }]} />}
+    {kind === 'insurer_appeal' ? <Feedback text="Identify the insurer decision and your reason for asking for review. Confirm any deadline from your plan documents." /> : null}
+    {loading ? <FootnoteLoader compact title="Preparing your draft" detail="Turning your confirmed questions into words." /> : <TextInput testID="draft-body" accessibilityLabel="Editable request draft" value={body} onChangeText={edit} multiline scrollEnabled textAlignVertical="top" style={[type.body, styles.page, { color: colors.ink, height: desktop ? 640 : 420 }]} />}
     <Txt variant="caption" muted>{storageError ? 'Changes are in memory. Saving needs attention.' : recovered ? 'Your saved draft was restored on this device.' : 'Saved on this device'}</Txt>
     {!desktop ? utilities : null}
     {message ? <Feedback text={message} /> : null}
-    {error ? <Feedback danger onDismiss={() => setError('')} text={error} action={body.trim() ? undefined : { title: 'Try preparing again', onPress: () => { void useUnfoldStore.getState().prepareDraft(c.id, kind).then(() => { setError(''); setPreparedHere(true); }).catch(() => setError('Try preparing the draft again.')); } }} /> : null}
+    {error ? <Feedback danger onDismiss={() => setError('')} text={error} action={body.trim() ? undefined : { title: 'Try preparing again', onPress: () => { void useFootnoteStore.getState().prepareDraft(c.id, kind).then(() => { setError(''); setPreparedHere(true); }).catch(() => setError('Try preparing the draft again.')); } }} /> : null}
   </Screen>;
 }

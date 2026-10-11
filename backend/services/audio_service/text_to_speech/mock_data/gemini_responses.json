@@ -31,8 +31,8 @@
   },
   {
     "request_id": "mock-bill-summary",
-    "description": "Realistic ClaimPulse answer: hospital bill summary (from the team)",
-    "text": "Hello, and welcome to ClaimPulse AI, your personal medical billing assistant.\n\nI've finished analyzing your hospital bill from Metro Health Hospital, dated September 15, 2026.\n\nYour total hospital charge is $4,850.75. After reviewing your insurance statement, I've identified two potential billing discrepancies.\n\nFirst, your MRI procedure, listed under CPT code 70551, was billed at $3,200. However, our available pricing benchmark suggests a typical charge of approximately $1,400.\n\nSecond, your insurance provider appears to have covered only 60% of your emergency room visit. This may require further review of your insurance policy.\n\nPlease remember that these findings do not necessarily mean your hospital made a billing error.\n\nWould you like me to explain these charges in greater detail, help you prepare a dispute letter, or connect you with a billing representative?"
+    "description": "Realistic Footnote answer: hospital bill summary (from the team)",
+    "text": "Hello, and welcome to Footnote, your personal medical billing assistant.\n\nI've finished analyzing your hospital bill from Metro Health Hospital, dated September 15, 2026.\n\nYour total hospital charge is $4,850.75. After reviewing your insurance statement, I've identified two potential billing discrepancies.\n\nFirst, your MRI procedure, listed under CPT code 70551, was billed at $3,200. However, our available pricing benchmark suggests a typical charge of approximately $1,400.\n\nSecond, your insurance provider appears to have covered only 60% of your emergency room visit. This may require further review of your insurance policy.\n\nPlease remember that these findings do not necessarily mean your hospital made a billing error.\n\nWould you like me to explain these charges in greater detail, help you prepare a dispute letter, or connect you with a billing representative?"
   },
   {
     "request_id": "mock-empty",

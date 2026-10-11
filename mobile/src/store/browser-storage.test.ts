@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createBrowserStorage, type BrowserStorageBackend } from './browser-storage';
-import { createUnfoldStore } from './state';
+import { createFootnoteStore } from './state';
 import { createSampleCase } from '../domain/fixtures';
 import { STORAGE_KEY } from './persistence';
 import type { DocumentAttachment } from '../domain/types';
@@ -19,15 +19,15 @@ function backend() {
 test('browser metadata and durable attachment keys survive reload without persisting transient blob URLs', async () => {
   const b = backend();
   const storage = createBrowserStorage(() => b.storage);
-  const first = createUnfoldStore(storage, { autoHydrate: false }); await first.getState().retryHydration();
-  const attachment: DocumentAttachment = { id: 'browser-file', uri: 'unfold-attachment://browser-file', name: 'Statement.pdf', mimeType: 'application/pdf', kind: 'bill', origin: 'import', importedAt: new Date().toISOString() };
+  const first = createFootnoteStore(storage, { autoHydrate: false }); await first.getState().retryHydration();
+  const attachment: DocumentAttachment = { id: 'browser-file', uri: 'footnote-attachment://browser-file', name: 'Statement.pdf', mimeType: 'application/pdf', kind: 'bill', origin: 'import', importedAt: new Date().toISOString() };
   const caseId = first.getState().addImportedCase(attachment);
   first.getState().updateCase(caseId, { provider: 'Browser provider', serviceDate: '2026-09-18' });
   first.getState().saveDraft(caseId, 'billing_correction', 'Edited in the browser', 'en');
   await first.getState().flushPersistence();
   const saved = b.values.get(STORAGE_KEY)!;
-  assert.match(saved, /unfold-attachment:\/\/browser-file/); assert.doesNotMatch(saved, /blob:/);
-  const reloaded = createUnfoldStore(storage, { autoHydrate: false }); await reloaded.getState().retryHydration();
+  assert.match(saved, /footnote-attachment:\/\/browser-file/); assert.doesNotMatch(saved, /blob:/);
+  const reloaded = createFootnoteStore(storage, { autoHydrate: false }); await reloaded.getState().retryHydration();
   assert.equal(reloaded.getState().cases[0].attachments[0].uri, attachment.uri);
   assert.equal(reloaded.getState().drafts[0].body, 'Edited in the browser');
 });
@@ -38,7 +38,7 @@ test('localStorage denial/quota errors preserve browser edits and recover throug
     if (blocked) throw new Error('SecurityError');
     return b.storage;
   });
-  const store = createUnfoldStore(storage, { autoHydrate: false }); await store.getState().retryHydration();
+  const store = createFootnoteStore(storage, { autoHydrate: false }); await store.getState().retryHydration();
   const caseId = store.getState().addManualCase(); await store.getState().flushPersistence();
   const oldSave = b.values.get(STORAGE_KEY);
   blocked = true; store.getState().saveDraft(caseId, 'billing_correction', 'Keep these changes', 'en');
@@ -50,11 +50,11 @@ test('localStorage denial/quota errors preserve browser edits and recover throug
 
 test('hydration rebinds current sample URLs but preserves a removed EOB and imported document URI', async () => {
   const b = backend(); const storage = createBrowserStorage(() => b.storage);
-  const initial = createUnfoldStore(storage, { autoHydrate: false }); await initial.getState().retryHydration();
+  const initial = createFootnoteStore(storage, { autoHydrate: false }); await initial.getState().retryHydration();
   const sampleId = await initial.getState().loadSample(); await initial.getState().removeAttachment(sampleId, 'northline-eob');
-  const imported: DocumentAttachment = { id: 'browser-file', uri: 'unfold-attachment://browser-file', name: 'Statement.pdf', mimeType: 'application/pdf', kind: 'bill', origin: 'import', importedAt: new Date().toISOString() };
+  const imported: DocumentAttachment = { id: 'browser-file', uri: 'footnote-attachment://browser-file', name: 'Statement.pdf', mimeType: 'application/pdf', kind: 'bill', origin: 'import', importedAt: new Date().toISOString() };
   initial.getState().addAttachment(sampleId, imported); await initial.getState().flushPersistence();
-  const reloaded = createUnfoldStore(storage, {
+  const reloaded = createFootnoteStore(storage, {
     autoHydrate: false,
     resolveSampleAttachments: async () => createSampleCase().attachments.map(a => ({ ...a, uri: `/assets/new-build/${a.id}.pdf` })),
   });
@@ -66,6 +66,6 @@ test('hydration rebinds current sample URLs but preserves a removed EOB and impo
 
 test('server-side store construction does not access browser storage', () => {
   const storage = createBrowserStorage(() => { throw new Error('No window during SSR'); });
-  const store = createUnfoldStore(storage, { autoHydrate: false });
+  const store = createFootnoteStore(storage, { autoHydrate: false });
   assert.equal(store.getState().hydrated, false); assert.equal(store.getState().hydrationError, null);
 });

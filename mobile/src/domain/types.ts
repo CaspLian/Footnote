@@ -71,7 +71,7 @@ export interface Financials {
   coinsuranceCents?: Money;
   copaymentCents?: Money;
 }
-/** What the ClaimPulse backend read from the imported pages (POST /api/v1/analyze), kept for verification and review. */
+/** What the Footnote backend read from the imported pages (POST /api/v1/analyze), kept for verification and review. */
 export interface ExtractedAnalysis {
   language?: string;
   /** Canonical document values: changed confirmed inputs must not play the original monetary explanation. */

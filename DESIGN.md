@@ -1,5 +1,5 @@
 ---
-name: "Unfold"
+name: "Footnote"
 description: "A spacious editorial workspace for understanding medical documents."
 colors:
   background: "#F5F2EB"
@@ -245,13 +245,13 @@ components:
     width: "100%"
 ---
 
-# Design System: Unfold
+# Design System: Footnote
 
 ## Overview
 
 **Creative North Star: "The Editorial Document Workspace"**
 
-Unfold keeps the spacious editorial document workspace established in the approved design. Proportional Geist, generous page edges, grouped rows and softly raised paper make the original document and its explanation easy to scan. Warm ivory grounds Light; deep green neutrals carry the same hierarchy in Dark. Teal marks actions, selected states and source context.
+Footnote keeps the spacious editorial document workspace established in the approved design. Proportional Geist, generous page edges, grouped rows and softly raised paper make the original document and its explanation easy to scan. Warm ivory grounds Light; deep green neutrals carry the same hierarchy in Dark. Teal marks actions, selected states and source context.
 
 Native iOS materials now join this world at the main-tab navigation controls, sheet close controls, primary actions. Liquid Glass belongs to controls, while reading surfaces remain paper. The app follows the system appearance by default and provides explicit Light and Dark choices. Android, web and devices without the glass API use the corresponding solid surfaces. System Reduce Transparency replaces custom glass controls with opaque fills.
 
@@ -308,7 +308,7 @@ The loaded native font names and observed sizes are recorded in the frontmatter.
 - **Title:** welcome actions, document introductions and compact loader titles.
 - **Heading:** 24px section headings such as Recent bills and Questions worth asking.
 - **Item:** 18px provider and question labels.
-- **Brand / tab title:** 30px bold Unfold, followed by a 22px regular tab name.
+- **Brand / tab title:** 30px bold Footnote, followed by a 22px regular tab name.
 - **Section:** 20px secondary groups and detail headers.
 - **Body:** definitions, examples, source excerpts and draft content.
 - **Label:** buttons, fields, settings and compact navigation.
@@ -324,7 +324,7 @@ Single standalone actions fill native and compact web rows. Related Buttons shar
 
 Screen's footer stays outside the scrolling content, uses screen side padding and sm top padding, and pads its bottom by the greater of the safe-area inset and sm. Its content is centered at a default maximum width of 720, or the screen's narrower content width. Footer-context Buttons use the compact footer token instead of the regular primary height. A one-line caption hint can precede the actions. Intake uses document count, Verify uses provider and Draft uses save status.
 
-Native and compact browser layouts use Home, Bills, Timeline and Guide tabs. Each mobile header begins with bold Unfold; Bills, Timeline and Guide append a larger regular-weight section name. There is no logo placeholder. Profile and Settings access appears only on the four main tabs. Detail screens use a minimal native back control and omit those shortcuts; app-owned sheets use an X close control. Top scroll-edge effects are hidden.
+Native and compact browser layouts use Home, Bills, Timeline and Guide tabs. Each mobile header begins with bold Footnote; Bills, Timeline and Guide append a larger regular-weight section name. There is no logo placeholder. Profile and Settings access appears only on the four main tabs. Detail screens use a minimal native back control and omit those shortcuts; app-owned sheets use an X close control. Top scroll-edge effects are hidden.
 
 Desktop web begins at a width of 1080, uses a 220-wide left navigation rail and xxl workspace padding, and centers content within a maximum width of 1120. Reading screens narrow that container where needed. Original-document and confirmed-detail views can sit beside each other; compact widths stack content.
 
@@ -376,7 +376,7 @@ Date fields open a calendar control instead of accepting typed text. iOS hosts i
 
 ### Navigation
 
-The initial native tabs retain quiet labeled navigation, accent for the active tab and muted ink for inactive tabs. iOS uses native toolbar buttons with tintable Phosphor artwork for profile and Settings access only on Home, Bills, Timeline and Guide. The 30pt bold Unfold title sits left, followed by a 22pt regular section name where applicable. Detail screens and sheets omit those shortcuts; sheet navigation uses an X. Settings and profile navigation reuses those routes.
+The initial native tabs retain quiet labeled navigation, accent for the active tab and muted ink for inactive tabs. iOS uses native toolbar buttons with tintable Phosphor artwork for profile and Settings access only on Home, Bills, Timeline and Guide. The 30pt bold Footnote title sits left, followed by a 22pt regular section name where applicable. Detail screens and sheets omit those shortcuts; sheet navigation uses an X. Settings and profile navigation reuses those routes.
 
 Desktop navigation uses grouped links on paper, a soft-teal selected background and accent labels. Keyboard focus stays visible.
 
@@ -446,7 +446,7 @@ Two offset paper leaves and a folded corner indicate actual local work. The loop
 - **Don't** use monospace for app content or decorative gauges.
 - **Don't** imply microphone access or a connected live service until a real agent adapter is configured.
 
-Editable design authority: [Unfold mobile and web prototype](https://www.figma.com/design/rZ1cdq02M7Q3CS9S9qQ8kC?node-id=51-934). Runtime tokens are extracted from mobile/src/theme and shared components; the code is the reference for this update.
+Editable design authority: [Footnote mobile and web design](https://www.figma.com/design/rZ1cdq02M7Q3CS9S9qQ8kC?node-id=51-934). Runtime tokens are extracted from mobile/src/theme and shared components; the code is the reference for this update.
 
 ### Language selection and required setup
 

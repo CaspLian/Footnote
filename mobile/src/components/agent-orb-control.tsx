@@ -8,7 +8,7 @@ import { privacyNoticeStore } from '@/services/elevenlabs-conversation';
 import { backendConfigured } from '@/services/backend';
 import { PushToTalk } from '@/native/push-to-talk';
 import type { BillCase } from '@/domain';
-import { useUnfoldStore } from '@/store';
+import { useFootnoteStore } from '@/store';
 import { languageOption } from '@/domain/languages';
 import { voiceChoices } from '@/domain/preferences';
 import { useTheme, space } from '@/theme';
@@ -18,7 +18,7 @@ import { ParticleOrb } from './particle-orb';
 
 export function AgentOrbControl({ billCase, term, collapsed, onCollapsedChange }: { billCase?: BillCase; term?: AgentContext['term']; collapsed: boolean; onCollapsedChange: (collapsed: boolean) => void }) {
   const { colors, reducedMotion } = useTheme();
-  const prefs = useUnfoldStore(s => s.preferences); const personalContext = useUnfoldStore(s => s.personalContext); const profiles = useUnfoldStore(s => s.profiles);
+  const prefs = useFootnoteStore(s => s.preferences); const personalContext = useFootnoteStore(s => s.personalContext); const profiles = useFootnoteStore(s => s.profiles);
   const controller = useMemo(() => new AgentController(voiceAgentService), []);
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot);
   const privacyNotice = useSyncExternalStore(privacyNoticeStore.subscribe, privacyNoticeStore.get, privacyNoticeStore.get);
@@ -57,7 +57,7 @@ export function AgentOrbControl({ billCase, term, collapsed, onCollapsedChange }
     <View pointerEvents="box-none" style={{ alignItems: 'center', maxWidth: 320, width: '100%', gap: 2 }}>
       <ParticleOrb status={state.status === 'speaking' ? 'speaking' : state.status === 'connecting' || state.status === 'thinking' ? 'loading' : state.status === 'error' || state.status === 'unavailable' ? 'unavailable' : 'idle'} label={collapsed ? label ? `Show voice agent. ${label}` : 'Show voice agent' : label ? `Open voice agent. ${label}` : 'Open voice agent'} onPress={() => setOpen(true)} onCollapse={collapse} onExpand={expand} collapsed={collapsed} collapseProgress={collapseProgress} level={voiceLevel}/>
       {label || state.error ? <Animated.View entering={reducedMotion ? undefined : FadeIn.duration(180)}><Animated.View style={[{ alignSelf: 'center', maxWidth: 300, paddingHorizontal: 12, paddingVertical: collapsed ? 4 : 6, borderRadius: 12, backgroundColor: colors.background }, captionMotion]}>
-        {state.status === 'speaking' && state.caption ? <Txt accessibilityLabel={`Unfold: ${state.caption.text}`} accessibilityLiveRegion={state.caption.final ? 'polite' : 'none'} numberOfLines={collapsed ? 1 : 3} style={{ fontSize: collapsed ? 13 : 15, lineHeight: collapsed ? 19 : 22, textAlign: 'center' }}>{state.caption.text}</Txt> : <Txt variant="caption" accent accessibilityLiveRegion="polite" style={{ textAlign: 'center' }}>{label || 'Voice unavailable · Open controls to retry'}</Txt>}
+        {state.status === 'speaking' && state.caption ? <Txt accessibilityLabel={`Footnote: ${state.caption.text}`} accessibilityLiveRegion={state.caption.final ? 'polite' : 'none'} numberOfLines={collapsed ? 1 : 3} style={{ fontSize: collapsed ? 13 : 15, lineHeight: collapsed ? 19 : 22, textAlign: 'center' }}>{state.caption.text}</Txt> : <Txt variant="caption" accent accessibilityLiveRegion="polite" style={{ textAlign: 'center' }}>{label || 'Voice unavailable · Open controls to retry'}</Txt>}
       </Animated.View></Animated.View> : null}
     </View>
     <AppSheet visible={open} title="Talk it through" onClose={() => setOpen(false)} footer={active ? <ButtonRow><Button title={state.muted ? 'Unmute microphone' : 'Mute microphone'} variant="secondary" onPress={() => { feedback(); void controller.toggleMuted(); }} disabled={state.status === 'connecting'} /><Button title="End conversation" onPress={() => { feedback(); void controller.end(); }} /></ButtonRow> : <Button title={state.status === 'error' ? 'Try connecting again' : 'Start conversation'} onPress={start} />}>
@@ -65,7 +65,7 @@ export function AgentOrbControl({ billCase, term, collapsed, onCollapsedChange }
       <Group gap={space.sm}><Txt variant="label">{voice.name} · {language.native}</Txt><Txt variant="caption" muted>{billCase ? billCase.entriesEdited ? 'The saved analysis has different amounts or codes from your corrections. Live voice is paused for this bill.' : billCase.evidenceContextId ? 'The helper uses this bill’s saved analysis. Ask about its charges and questions to clarify.' : 'A saved bill analysis is needed to start a live conversation.' : 'Live conversations are available from a saved bill’s review.'}</Txt></Group>
       {backendConfigured() ? <Txt variant="caption" muted>{privacyNotice}</Txt> : null}
       {label ? <Txt accent accessibilityLiveRegion="polite">{label}</Txt> : null}
-      {state.messages.map((m, i) => <Group key={i} gap={space.xs}><Txt variant="label" accent>{m.role === 'user' ? 'You' : 'Unfold'}</Txt><Txt>{m.text}</Txt></Group>)}
+      {state.messages.map((m, i) => <Group key={i} gap={space.xs}><Txt variant="label" accent>{m.role === 'user' ? 'You' : 'Footnote'}</Txt><Txt>{m.text}</Txt></Group>)}
       {state.error ? <Feedback danger text={state.error} /> : !backendConfigured() ? <Txt variant="caption" muted>Live voice is unavailable while the app is offline. Connect the backend to talk through a saved bill.</Txt> : null}
       {backendConfigured() && (state.status === 'error' || state.status === 'unavailable') ? <PushToTalk key={`${prefs.workingLanguage}-${voice.id}`} language={prefs.workingLanguage} voice={voice.id} /> : null}
       <ButtonRow><Button title="Choose voice" variant="secondary" onPress={() => { setOpen(false); void controller.end(); router.navigate('/voices'); }} /><Button title="Minimize orb" variant="quiet" onPress={collapse} /></ButtonRow>

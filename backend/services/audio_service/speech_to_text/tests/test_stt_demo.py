@@ -29,4 +29,4 @@ def test_a_real_word_error_still_counts_when_numbers_are_ignored():
 
 
 def test_round_trip_compares_with_the_words_the_voice_actually_said():
-    assert _as_spoken("Welcome to ClaimPulse AI") == "Welcome to Claim Pulse AI"
+    assert _as_spoken("Welcome to Footnote") == "Welcome to Foot note"

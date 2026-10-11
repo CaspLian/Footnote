@@ -2,7 +2,7 @@ import { AccessibilityInfo, Pressable } from 'react-native';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { expectedRemaining, formatDate, formatMoney, getCaseSummary } from '@/domain';
-import { useUnfoldStore } from '@/store';
+import { useFootnoteStore } from '@/store';
 import { DocumentPreview } from '@/native';
 import { Badge, Button, ButtonRow, Card, Choice, Divider, Feedback, Group, Row, Screen, Section, Txt } from '@/components/ui';
 import { BackendVoiceButton } from '@/native/backend-voice';
@@ -18,7 +18,7 @@ import { useTheme, radius, space } from '@/theme';
 export function Review() {
   const { colors } = useTheme();
   const c = useCase();
-  const prefs = useUnfoldStore(s => s.preferences);
+  const prefs = useFootnoteStore(s => s.preferences);
   const highlight = useAgentHighlight(c?.id);
   const auditId = c?.extraction?.auditId;
   const caseId = c?.id;
@@ -29,15 +29,15 @@ export function Review() {
     // The persisted confirmed amounts stay intact. This checks that the saved answer can be reopened without another Gemini call.
     void loadAudit(auditId, abort.signal).then(response => {
       if (abort.signal.aborted || !caseId) return;
-      const current = useUnfoldStore.getState().cases.find(item => item.id === caseId);
-      if (current) useUnfoldStore.getState().setAnalysisProvenance(caseId, auditId, mapGeminiAnalysis(response, current, 'en').extraction.inputFingerprint!);
+      const current = useFootnoteStore.getState().cases.find(item => item.id === caseId);
+      if (current) useFootnoteStore.getState().setAnalysisProvenance(caseId, auditId, mapGeminiAnalysis(response, current, 'en').extraction.inputFingerprint!);
       setAuditError('');
     }).catch(() => { if (!abort.signal.aborted) setAuditError('The saved analysis could not be reopened. Your confirmed details are still available on this device.'); });
     return () => abort.abort();
   }, [auditId, caseId]);
-  useEffect(() => { const finding = c?.findings.find(item => item.id === highlight); if (finding) AccessibilityInfo.announceForAccessibility(`Unfold is showing: ${finding.title.en}`); }, [highlight, c?.findings]);
-  const depth = useUnfoldStore(s => s.personalContext.explanationDepth);
-  const profiles = useUnfoldStore(s => s.profiles);
+  useEffect(() => { const finding = c?.findings.find(item => item.id === highlight); if (finding) AccessibilityInfo.announceForAccessibility(`Footnote is showing: ${finding.title.en}`); }, [highlight, c?.findings]);
+  const depth = useFootnoteStore(s => s.personalContext.explanationDepth);
+  const profiles = useFootnoteStore(s => s.profiles);
   const [orbCollapsed, setOrbCollapsed] = useState(false);
   const [expanded, setExpanded] = useState(false);
   if (!c) return <MissingCase />;
@@ -50,7 +50,6 @@ export function Review() {
   const sourcePending = c.source === 'manual' && !!c.extraction && !c.extraction.inputFingerprint;
   return <Screen measureOverlay overlayReserve={orbCollapsed ? 68 : 136} overlayBottom={4} overlaySpace={24} testID="review" aside={original ? <Group gap={space.lg}><Txt variant="section">Original statement</Txt><DocumentPreview attachment={original} language="en" /></Group> : undefined} overlay={<AgentOrbControl billCase={sourcePending ? { ...c, evidenceContextId: undefined } : c} collapsed={orbCollapsed} onCollapsedChange={setOrbCollapsed} />} footer={<Button title="Prepare request" onPress={() => caseRoute('/draft', c.id)} />}>
     <Group gap={space.lg}><Txt variant="display">Here’s the picture.</Txt><Txt muted>{c.provider} · {profile?.firstName ?? 'Unassigned profile'} · {formatDate(c.serviceDate, 'en')}</Txt></Group>
-    {c.source === 'sample' ? <Badge text="Synthetic sample" /> : null}
     <Card>
       <Row label="Statement balance" value={formatMoney(c.financials.remainingCents, 'en')} /><Divider />
       <Row label="EOB responsibility" value={formatMoney(c.financials.eobResponsibilityCents, 'en')} />
@@ -68,13 +67,13 @@ export function Review() {
         </Pressable>
       </Card>
     </Group>
-    <Group gap={space.sm}><Choice title="Keep it simple" selected={depth === 'simple'} onPress={() => useUnfoldStore.getState().setExplanationDepth('simple')} /><Choice title="Show more detail" selected={depth === 'detailed'} onPress={() => useUnfoldStore.getState().setExplanationDepth('detailed')} /></Group>
+    <Group gap={space.sm}><Choice title="Keep it simple" selected={depth === 'simple'} onPress={() => useFootnoteStore.getState().setExplanationDepth('simple')} /><Choice title="Show more detail" selected={depth === 'detailed'} onPress={() => useFootnoteStore.getState().setExplanationDepth('detailed')} /></Group>
     <Section title="What this means"><Txt>{summary}</Txt>{c.extraction?.auditId && !sourcePending && !analysisChanged(c) && backendConfigured() ? <BackendVoiceButton auditId={c.extraction.auditId} voice={prefs.voice} language={c.extraction.language ?? backendLocale(prefs.workingLanguage)} /> : null}</Section>
     {sourcePending && backendConfigured() ? <Txt variant="caption" muted>Checking the saved source before enabling its audio and live bill conversation.</Txt> : null}
     {c.extraction && analysisChanged(c) ? <Feedback text="Your confirmed details differ from the saved document reading. The original audio and live bill conversation are paused so they do not describe old amounts. Use the confirmed review and ask billing about the correction." /> : null}
     {auditError ? <Feedback text={auditError} /> : null}
     {c.extraction ? <Section title="From your document">
-      {c.extraction.mock ? <Badge text="MOCK mode: a fixed sample, not your document" /> : null}
+      {c.extraction.mock ? <Badge text="Document reading unavailable: this result does not describe your document" /> : null}
       {c.extraction.questions.length ? <Group gap={space.sm}><Txt variant="label">Questions to ask billing</Txt>{c.extraction.questions.map((q, i) => <Txt key={i} selectable>• {q.en}</Txt>)}</Group> : <Txt muted>Gemini suggested no questions for this document.</Txt>}
     </Section> : null}
     <Section title={c.findings.length ? 'Questions worth asking' : 'Your next step'}>

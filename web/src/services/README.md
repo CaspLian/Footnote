@@ -1,6 +1,6 @@
 # Backend services for the web app
 
-Everything the screens need from the ClaimPulse backend. Nothing here changes a screen: the screens still use
+Everything the screens need from the Footnote backend. Nothing here changes a screen: the screens still use
 `data/mockCases.ts` until they call these. The routes are in `docs/API_CONTRACTS.md`; the mobile app makes the same
 calls (`mobile/src/services/`).
 

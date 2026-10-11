@@ -4,7 +4,7 @@ This is an Expo/React Native mobile application. Prioritize mobile-first pattern
 
 The guidance below is Expo's generated template.
 
-- The app is the Unfold frontend (from `frontend-aarush`, merged 2026-10-10): Expo Router in `src/app/`, TypeScript,
+- The app is the Footnote frontend (from `frontend-aarush`, merged 2026-10-10): Expo Router in `src/app/`, TypeScript,
   React Native Web, and a development build (`expo start --dev-client`). Follow its structure. `README.md` explains
   how to run it.
 - Reading documents (from `Camera-capture`, merged 2026-10-10): "Take a photo" uses `expo-camera` to keep ordered JPEG

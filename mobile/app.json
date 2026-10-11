@@ -1,9 +1,9 @@
 {
   "expo": {
-    "name": "Unfold",
-    "slug": "unfold",
+    "name": "Footnote",
+    "slug": "footnote",
     "version": "0.1.0",
-    "scheme": "unfold",
+    "scheme": "footnote",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "ios": {
@@ -31,7 +31,7 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow Unfold to use the camera."
+          "cameraPermission": "Allow Footnote to use the camera."
         }
       ],
       [
@@ -47,8 +47,8 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Allow Unfold to select a bill or EOB from your photos.",
-          "cameraPermission": "Allow Unfold to photograph your bill or EOB."
+          "photosPermission": "Allow Footnote to select a bill or EOB from your photos.",
+          "cameraPermission": "Allow Footnote to photograph your bill or EOB."
         }
       ],
       "expo-image",
@@ -56,21 +56,21 @@
       [
         "expo-local-authentication",
         {
-          "faceIDPermission": "Use Face ID to unlock your private Unfold workspace."
+          "faceIDPermission": "Use Face ID to unlock your private Footnote workspace."
         }
       ],
       [
         "expo-audio",
         {
-          "microphonePermission": "Allow Unfold to use the microphone so you can talk through your bill with the voice helper."
+          "microphonePermission": "Allow Footnote to use the microphone so you can talk through your bill with the voice helper."
         }
       ],
       "@livekit/react-native-expo-plugin",
       [
         "@config-plugins/react-native-webrtc",
         {
-          "microphonePermission": "Allow Unfold to use the microphone so you can talk through your bill with the voice helper.",
-          "cameraPermission": "Allow Unfold to photograph your bill or EOB."
+          "microphonePermission": "Allow Footnote to use the microphone so you can talk through your bill with the voice helper.",
+          "cameraPermission": "Allow Footnote to photograph your bill or EOB."
         }
       ]
     ],
@@ -80,7 +80,7 @@
     "web": {
       "bundler": "metro",
       "output": "single",
-      "name": "Unfold"
+      "name": "Footnote"
     },
     "extra": {
       "router": {},

@@ -2,20 +2,20 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useStore } from 'zustand';
 import { deleteAttachment, clearLocalAttachments } from '../native/documents';
 import { resolveSampleAttachments } from '../services/sample-assets';
-import { createUnfoldStore, type UnfoldState } from './state';
+import { createFootnoteStore, type FootnoteState } from './state';
 
-export const unfoldStore = createUnfoldStore(AsyncStorage, {
+export const footnoteStore = createFootnoteStore(AsyncStorage, {
   resolveSampleAttachments,
   deleteAttachments: async attachments => { await Promise.all(attachments.map(deleteAttachment)); },
   clearAllAttachments: clearLocalAttachments,
 });
 
-const identity = (state: UnfoldState) => state;
-export const useUnfoldStore = Object.assign(
-  function useUnfoldStore<T = UnfoldState>(selector: (state: UnfoldState) => T = identity as (state: UnfoldState) => T): T {
-    return useStore(unfoldStore, selector);
+const identity = (state: FootnoteState) => state;
+export const useFootnoteStore = Object.assign(
+  function useFootnoteStore<T = FootnoteState>(selector: (state: FootnoteState) => T = identity as (state: FootnoteState) => T): T {
+    return useStore(footnoteStore, selector);
   },
-  unfoldStore,
+  footnoteStore,
 );
 
 export * from './state';

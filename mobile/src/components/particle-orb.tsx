@@ -7,7 +7,7 @@ import * as Haptics from 'expo-haptics';
 import Svg, { Circle, ClipPath, Defs, G, Path, RadialGradient, Rect, Stop } from 'react-native-svg';
 import Animated, { cancelAnimation, Easing, interpolateColor, useAnimatedProps, useAnimatedStyle, useFrameCallback, useDerivedValue, useSharedValue, withDelay, withSpring, withTiming, type SharedValue } from 'react-native-reanimated';
 import { orbParticles, orbPaths } from '@/domain/orb-particles';
-import { useUnfoldStore } from '@/store';
+import { useFootnoteStore } from '@/store';
 import { useTheme } from '@/theme';
 import type { NarrationStatus } from '@/native/narration-controller';
 const Layer = Animated.createAnimatedComponent(Path);
@@ -18,7 +18,7 @@ export function ParticleOrb({ status, onPress, label, size = 132, onCollapse, on
   const { colors, reducedMotion } = useTheme();
   const gradientId = `orbSoftening${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
   const clipId = `${gradientId}Clip`;
-  const haptics = useUnfoldStore(s => s.preferences.haptics);
+  const haptics = useFootnoteStore(s => s.preferences.haptics);
   const focused = useIsFocused();
   const [foreground, setForeground] = useState(AppState.currentState !== 'background' && AppState.currentState !== 'inactive');
   const angle = useSharedValue(.5), tilt = useSharedValue(.32), time = useSharedValue(0), activity = useSharedValue(0);

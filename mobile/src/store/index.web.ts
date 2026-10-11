@@ -2,14 +2,14 @@ import { useStore } from 'zustand';
 import { deleteAttachment, clearLocalAttachments } from '../native/documents';
 import { resolveSampleAttachments } from '../services/sample-assets';
 import { createBrowserStorage } from './browser-storage';
-import { createUnfoldStore, type UnfoldState } from './state';
+import { createFootnoteStore, type FootnoteState } from './state';
 
 const browserStorage = createBrowserStorage(() => {
   if (typeof window === 'undefined') throw new Error('browser_storage_unavailable');
   return window.localStorage;
 });
 
-export const unfoldStore = createUnfoldStore(browserStorage, {
+export const footnoteStore = createFootnoteStore(browserStorage, {
   resolveSampleAttachments,
   deleteAttachments: async attachments => { await Promise.all(attachments.map(deleteAttachment)); },
   clearAllAttachments: clearLocalAttachments,
@@ -17,12 +17,12 @@ export const unfoldStore = createUnfoldStore(browserStorage, {
   autoHydrate: typeof window !== 'undefined',
 });
 
-const identity = (state: UnfoldState) => state;
-export const useUnfoldStore = Object.assign(
-  function useUnfoldStore<T = UnfoldState>(selector: (state: UnfoldState) => T = identity as (state: UnfoldState) => T): T {
-    return useStore(unfoldStore, selector);
+const identity = (state: FootnoteState) => state;
+export const useFootnoteStore = Object.assign(
+  function useFootnoteStore<T = FootnoteState>(selector: (state: FootnoteState) => T = identity as (state: FootnoteState) => T): T {
+    return useStore(footnoteStore, selector);
   },
-  unfoldStore,
+  footnoteStore,
 );
 
 export * from './state';

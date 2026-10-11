@@ -1,0 +1,5 @@
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <!-- Footnote mark, dark contexts (on ink #192D2A). Arms in accent-soft sage. -->
+  <defs><rect id="fa" x="43" y="10" width="14" height="27" rx="7" fill="#E8F0E9"/></defs>
+  <use href="#fa"/><use href="#fa" transform="rotate(72 50 50)"/><use href="#fa" transform="rotate(144 50 50)"/><use href="#fa" transform="rotate(216 50 50)"/><use href="#fa" transform="rotate(288 50 50)"/>
+</svg>

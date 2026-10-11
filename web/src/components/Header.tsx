@@ -85,12 +85,12 @@ export const Header: React.FC<HeaderProps> = ({
               onClick={() => setCurrentTab('dashboard')}
               className="flex items-center gap-2.5 group text-left focus:outline-none"
             >
-              <div className="w-9 h-9 rounded-xl bg-brand-600 text-white flex items-center justify-center shadow-subtle group-hover:bg-brand-700 transition-colors">
-                <ShieldCheck size={22} weight="duotone" />
+              <div className="w-9 h-9 rounded-xl bg-brand-50 flex items-center justify-center shadow-subtle transition-colors">
+                <img src="/footnote-mark.svg" width={30} height={30} alt="" />
               </div>
               <div>
                 <div className="flex items-center gap-1.5">
-                  <span className="font-bold text-lg text-ink-primary tracking-tight">Unfold</span>
+                  <span className="font-bold text-lg text-ink-primary tracking-tight">Footnote</span>
                   <span className="text-[10px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded bg-brand-50 text-brand-700 border border-brand-200/60">
                     Audit AI
                   </span>

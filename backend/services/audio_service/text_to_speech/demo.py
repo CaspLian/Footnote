@@ -3,7 +3,7 @@
     python -m text_to_speech.demo --dry-run          # free: show the cleaned text for every mock answer
     python -m text_to_speech.demo                    # speak one short mock answer, save it as an MP3
     python -m text_to_speech.demo --mock mock-numbers
-    python -m text_to_speech.demo --text "Hello from ClaimPulse"
+    python -m text_to_speech.demo --text "Hello from Footnote"
     python -m text_to_speech.demo --all --open       # speak every mock answer and open the first file
     python -m text_to_speech.demo --list-voices      # free: the voices users can choose (voices.json)
     python -m text_to_speech.demo --voice bunty      # speak in one of those voices

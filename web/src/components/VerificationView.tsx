@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { MedicalCase, Language, ActiveTab, LineItem } from '../types';
-import { 
-  CheckCircle, 
-  ArrowRight, 
-  WarningCircle, 
-  FilePdf, 
-  MagnifyingGlassPlus, 
+import {
+  CheckCircle,
+  ArrowRight,
+  WarningCircle,
+  FilePdf,
+  MagnifyingGlassPlus,
   PencilSimple,
   Receipt,
   Scales
@@ -66,7 +66,7 @@ export const VerificationView: React.FC<VerificationViewProps> = ({
 
       {/* Two-Column Forensic Inspection Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Column (5 cols): High-Fidelity Synthetic Document Specimen */}
+        {/* Left Column (5 cols): Original Document Details */}
         <div className="lg:col-span-5 space-y-4">
           <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-card sticky top-20">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
@@ -90,9 +90,7 @@ export const VerificationView: React.FC<VerificationViewProps> = ({
                     </p>
                     <p className="text-[10px] text-ink-muted">PO Box 4492 · Department of Patient Accounts</p>
                   </div>
-                  <span className="text-[9px] bg-amber-100 text-amber-800 font-bold px-1.5 py-0.5 rounded border border-amber-300">
-                    SYNTHETIC DEMO
-                  </span>
+
                 </div>
                 <div className="mt-2 grid grid-cols-2 text-[11px] text-ink-secondary gap-y-1">
                   <div>Statement Date: <span className="font-semibold text-ink-primary">{caseData.statement_date}</span></div>

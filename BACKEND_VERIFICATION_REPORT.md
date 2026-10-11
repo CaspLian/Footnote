@@ -1,4 +1,4 @@
-# ClaimPulse AI backend: verification report
+# Footnote backend: verification report
 
 Date: 2026-10-10. Verified: branch `Gemini-Tiger-Snow-Integration-V1` at `f86e22f`, the merge of
 `nimesh/audio-service`, `backend-gemini` and `Tiger-data`. After verification, the parts were wired together
@@ -321,8 +321,8 @@ The app now saves through `analysis_store`, so these no longer block it. They ma
 2. **Snowflake live: done.** The `CPT_BENCHMARKS` table is loaded and matches the CSV.
 3. **Tiger Data live: done** (the complete connection string is in `backend/.env`). For the live test session,
    a local helper script (in the session's scratch folder, not in the repo) ran the developer console with its
-   saves in a schema of its own, `claimpulse_console`, so test data stayed apart from the team's tables.
-   `DROP SCHEMA claimpulse_console CASCADE;` removes it all. Plain `python dev_console.py`, like the app, saves to
+   saves in a schema of its own, `footnote_console`, so test data stayed apart from the team's tables.
+   `DROP SCHEMA footnote_console CASCADE;` removes it all. Plain `python dev_console.py`, like the app, saves to
    the `public` schema, and creates the tables `bill_analyses` and `bill_analysis_lines` there on the first save.
 
    All keys now live in `backend/.env`. It was renamed from `api.env` on 2026-10-10, so `main.py` reads them; git

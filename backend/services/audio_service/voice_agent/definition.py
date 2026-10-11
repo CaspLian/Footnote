@@ -8,10 +8,10 @@ try:
 except ImportError:
     from text_to_speech.voices import load_catalog
 
-AGENT_NAME = "ClaimPulse Bill Helper (dev)"
+AGENT_NAME = "Footnote Bill Helper"
 LLM = "gemini-3.5-flash"
 CLIENT_TOOL_NAMES = ("show_line_item", "show_price_check")
-PRIVACY_NOTICE = ("Sample bills only: the bill details and everything said in this call go to ElevenLabs, "
+PRIVACY_NOTICE = ("The bill details and everything said in this call go to ElevenLabs, "
                   "which uses Google's Gemini, and ElevenLabs keeps them for 7 days.")
 ALLOWED_OVERRIDES = {"agent": {"language": True, "first_message": True}, "tts": {"voice_id": True},
                      "conversation": {"text_only": True}, "asr": {"keywords": True}}
@@ -19,39 +19,39 @@ CLIENT_EVENTS = ["conversation_initiation_metadata", "ping", "audio", "interrupt
                  "agent_response", "agent_response_correction", "agent_chat_response_part",
                  "agent_response_complete", "client_tool_call", "agent_tool_response", "client_error"]
 GREETINGS = {
-    "en": "Hi! I'm the ClaimPulse helper. What would you like to know about your bill?",
-    "es": "¡Hola! Soy el asistente de ClaimPulse. ¿Qué le gustaría saber sobre su factura?",
-    "fr": "Bonjour ! Je suis l'assistant ClaimPulse. Que souhaitez-vous savoir sur votre facture ?",
-    "pt": "Olá! Sou o assistente ClaimPulse. O que gostaria de saber sobre a sua fatura?",
-    "pt-br": "Olá! Sou o assistente ClaimPulse. O que você gostaria de saber sobre sua conta?",
-    "de": "Hallo! Ich bin der ClaimPulse-Assistent. Was möchten Sie über Ihre Rechnung wissen?",
-    "it": "Ciao! Sono l'assistente ClaimPulse. Cosa vorrebbe sapere sulla sua fattura?",
-    "nl": "Hallo! Ik ben de ClaimPulse-assistent. Wat wilt u weten over uw rekening?",
-    "pl": "Dzień dobry! Jestem asystentem ClaimPulse. Co chce Pan lub Pani wiedzieć o rachunku?",
-    "sv": "Hej! Jag är ClaimPulse-assistenten. Vad vill du veta om din faktura?",
-    "da": "Hej! Jeg er ClaimPulse-assistenten. Hvad vil du vide om din regning?",
-    "no": "Hei! Jeg er ClaimPulse-assistenten. Hva vil du vite om regningen din?",
-    "fi": "Hei! Olen ClaimPulse-avustaja. Mitä haluaisit tietää laskustasi?",
-    "tr": "Merhaba! Ben ClaimPulse yardımcısıyım. Faturanız hakkında ne bilmek istersiniz?",
-    "id": "Halo! Saya asisten ClaimPulse. Apa yang ingin Anda ketahui tentang tagihan Anda?",
-    "ms": "Hai! Saya pembantu ClaimPulse. Apakah yang ingin anda tahu tentang bil anda?",
-    "tl": "Kumusta! Ako ang katulong ng ClaimPulse. Ano ang gusto mong malaman tungkol sa iyong bill?",
-    "vi": "Xin chào! Tôi là trợ lý ClaimPulse. Bạn muốn biết gì về hóa đơn của mình?",
-    "ja": "こんにちは。ClaimPulseのアシスタントです。請求書について何を知りたいですか？",
-    "zh": "您好！我是ClaimPulse助手。关于您的账单，您想了解什么？",
-    "ko": "안녕하세요! ClaimPulse 도우미입니다. 청구서에 대해 무엇을 알고 싶으신가요?",
-    "hi": "नमस्ते! मैं ClaimPulse सहायक हूँ। आप अपने बिल के बारे में क्या जानना चाहते हैं?",
-    "ta": "வணக்கம்! நான் ClaimPulse உதவியாளர். உங்கள் கட்டணப் பட்டியல் பற்றி என்ன தெரிந்துகொள்ள விரும்புகிறீர்கள்?",
-    "ar": "مرحبًا! أنا مساعد ClaimPulse. ماذا تريد أن تعرف عن فاتورتك؟",
-    "ru": "Здравствуйте! Я помощник ClaimPulse. Что вы хотите узнать о своём счёте?",
-    "uk": "Вітаю! Я помічник ClaimPulse. Що ви хочете дізнатися про свій рахунок?",
-    "bg": "Здравейте! Аз съм помощникът на ClaimPulse. Какво искате да знаете за сметката си?",
-    "ro": "Bună! Sunt asistentul ClaimPulse. Ce doriți să aflați despre factura dumneavoastră?",
-    "cs": "Dobrý den! Jsem pomocník ClaimPulse. Co chcete vědět o svém účtu?",
-    "el": "Γεια σας! Είμαι ο βοηθός ClaimPulse. Τι θα θέλατε να μάθετε για τον λογαριασμό σας;",
-    "hr": "Dobar dan! Ja sam pomoćnik ClaimPulse. Što želite znati o svom računu?",
-    "sk": "Dobrý deň! Som pomocník ClaimPulse. Čo chcete vedieť o svojom účte?",
-    "hu": "Üdvözlöm! A ClaimPulse segítője vagyok. Mit szeretne tudni a számlájáról?",
+    "en": "Hi! I'm the Footnote helper. What would you like to know about your bill?",
+    "es": "¡Hola! Soy el asistente de Footnote. ¿Qué le gustaría saber sobre su factura?",
+    "fr": "Bonjour ! Je suis l'assistant Footnote. Que souhaitez-vous savoir sur votre facture ?",
+    "pt": "Olá! Sou o assistente Footnote. O que gostaria de saber sobre a sua fatura?",
+    "pt-br": "Olá! Sou o assistente Footnote. O que você gostaria de saber sobre sua conta?",
+    "de": "Hallo! Ich bin der Footnote-Assistent. Was möchten Sie über Ihre Rechnung wissen?",
+    "it": "Ciao! Sono l'assistente Footnote. Cosa vorrebbe sapere sulla sua fattura?",
+    "nl": "Hallo! Ik ben de Footnote-assistent. Wat wilt u weten over uw rekening?",
+    "pl": "Dzień dobry! Jestem asystentem Footnote. Co chce Pan lub Pani wiedzieć o rachunku?",
+    "sv": "Hej! Jag är Footnote-assistenten. Vad vill du veta om din faktura?",
+    "da": "Hej! Jeg er Footnote-assistenten. Hvad vil du vide om din regning?",
+    "no": "Hei! Jeg er Footnote-assistenten. Hva vil du vite om regningen din?",
+    "fi": "Hei! Olen Footnote-avustaja. Mitä haluaisit tietää laskustasi?",
+    "tr": "Merhaba! Ben Footnote yardımcısıyım. Faturanız hakkında ne bilmek istersiniz?",
+    "id": "Halo! Saya asisten Footnote. Apa yang ingin Anda ketahui tentang tagihan Anda?",
+    "ms": "Hai! Saya pembantu Footnote. Apakah yang ingin anda tahu tentang bil anda?",
+    "tl": "Kumusta! Ako ang katulong ng Footnote. Ano ang gusto mong malaman tungkol sa iyong bill?",
+    "vi": "Xin chào! Tôi là trợ lý Footnote. Bạn muốn biết gì về hóa đơn của mình?",
+    "ja": "こんにちは。Footnoteのアシスタントです。請求書について何を知りたいですか？",
+    "zh": "您好！我是Footnote助手。关于您的账单，您想了解什么？",
+    "ko": "안녕하세요! Footnote 도우미입니다. 청구서에 대해 무엇을 알고 싶으신가요?",
+    "hi": "नमस्ते! मैं Footnote सहायक हूँ। आप अपने बिल के बारे में क्या जानना चाहते हैं?",
+    "ta": "வணக்கம்! நான் Footnote உதவியாளர். உங்கள் கட்டணப் பட்டியல் பற்றி என்ன தெரிந்துகொள்ள விரும்புகிறீர்கள்?",
+    "ar": "مرحبًا! أنا مساعد Footnote. ماذا تريد أن تعرف عن فاتورتك؟",
+    "ru": "Здравствуйте! Я помощник Footnote. Что вы хотите узнать о своём счёте?",
+    "uk": "Вітаю! Я помічник Footnote. Що ви хочете дізнатися про свій рахунок?",
+    "bg": "Здравейте! Аз съм помощникът на Footnote. Какво искате да знаете за сметката си?",
+    "ro": "Bună! Sunt asistentul Footnote. Ce doriți să aflați despre factura dumneavoastră?",
+    "cs": "Dobrý den! Jsem pomocník Footnote. Co chcete vědět o svém účtu?",
+    "el": "Γεια σας! Είμαι ο βοηθός Footnote. Τι θα θέλατε να μάθετε για τον λογαριασμό σας;",
+    "hr": "Dobar dan! Ja sam pomoćnik Footnote. Što želite znati o svom računu?",
+    "sk": "Dobrý deň! Som pomocník Footnote. Čo chcete vedieť o svojom účte?",
+    "hu": "Üdvözlöm! A Footnote segítője vagyok. Mit szeretne tudni a számlájáról?",
 }
 
 
@@ -67,7 +67,7 @@ def agent_language(locale: str) -> str:
 
 def greeting_for_locale(locale: str) -> str:
     if locale == "zh-TW":
-        return "您好！我是ClaimPulse助手。關於您的帳單，您想了解什麼？"
+        return "您好！我是Footnote助手。關於您的帳單，您想了解什麼？"
     return GREETINGS[agent_language(locale)]
 
 
@@ -90,7 +90,7 @@ def agent_body(tool_ids: list[str]) -> dict:
         locale = {"pt-br": "pt-BR", "tl": "fil-PH", "no": "nb-NO"}.get(language, language)
         presets[language] = {"overrides": {"agent": {"first_message": greeting},
                                           "tts": {"model_id": "eleven_flash_v2_5", "voice_id": catalog.default_for(locale).voice_id}}}
-    return {"name": AGENT_NAME, "tags": ["claimpulse", "dev", "synthetic-data-only"],
+    return {"name": AGENT_NAME, "tags": ["footnote", "private"],
             "conversation_config": {
                 "agent": {"language": "en", "first_message": GREETINGS["en"],
                           "dynamic_variables": {"dynamic_variable_placeholders": {
@@ -109,7 +109,7 @@ def agent_body(tool_ids: list[str]) -> dict:
                 # The live Agents API requires Flash/Turbo v2 for its English base agent.
                 # Non-English language presets above use multilingual Flash v2.5.
                 "tts": {"model_id": "eleven_flash_v2", "voice_id": catalog.default.voice_id, "text_normalisation_type": "system_prompt"},
-                "asr": {"provider": "scribe_realtime", "quality": "high", "keywords": ["ClaimPulse", "Medicare"]},
+                "asr": {"provider": "scribe_realtime", "quality": "high", "keywords": ["Footnote", "Medicare"]},
                 "turn": {"turn_timeout": 15, "turn_eagerness": "patient", "silence_end_call_timeout": 120},
                 "conversation": {"max_duration_seconds": 600, "file_input": {"enabled": False}, "client_events": CLIENT_EVENTS},
                 "language_presets": presets},

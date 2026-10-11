@@ -1,0 +1,12 @@
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <!-- Variant E - Sheet and Note: the app's loader distilled; dog-eared sheet, one green finding above quiet text lines -->
+  <g stroke="#192D2A" stroke-width="3" stroke-linejoin="round">
+    <path d="M37 13 H57 L72 28 V66 Q72 75 63 75 H37 Q28 75 28 66 V22 Q28 13 37 13 Z" fill="#FFFEFA"/>
+    <path d="M57 13 L72 28 H62 Q57 28 57 23 Z" fill="#E8F0E9"/>
+  </g>
+  <g fill="none" stroke-linecap="round">
+    <line x1="38" y1="36" x2="52" y2="36" stroke="#176B5B" stroke-width="5"/>
+    <line x1="38" y1="48" x2="62" y2="48" stroke="#DDDCD4" stroke-width="4"/>
+    <line x1="38" y1="58" x2="56" y2="58" stroke="#DDDCD4" stroke-width="4"/>
+  </g>
+</svg>

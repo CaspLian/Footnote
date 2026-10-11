@@ -1,0 +1,10 @@
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <!-- Concept A - Crease Map: the bill's fold pattern; successive halving folds it down to the one pane that matters -->
+  <g stroke="#192D2A" stroke-width="3.5" fill="none">
+    <rect x="24" y="14" width="52" height="72" rx="10"/>
+    <line x1="50" y1="14" x2="50" y2="86" stroke-width="3"/>
+    <line x1="50" y1="50" x2="76" y2="50" stroke-width="3"/>
+    <line x1="63" y1="50" x2="63" y2="86" stroke-width="3"/>
+  </g>
+  <path d="M63 50 H76 V76 A10 10 0 0 1 66 86 H63 Z" fill="#176B5B"/>
+</svg>

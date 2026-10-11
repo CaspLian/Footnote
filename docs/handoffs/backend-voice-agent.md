@@ -15,7 +15,7 @@ was fixed using the existing restricted `load_settings_file()` helper and covere
 regression. The final merged audio suite passed 648 tests; combined backend passed 165 with 2 skipped in an
 isolated local PostgreSQL database. The private session route returned a valid no-store WebRTC credential live.
 
-Provisioning succeeded with the configured backend key held in process: a private `ClaimPulse Bill Helper (dev)`
+Provisioning succeeded with the configured backend key held in process: a private `Footnote Bill Helper (dev)`
 agent was created and read back with Gemini 3.5 Flash, voice recording disabled, seven-day retention, and only
 the intended tools/overrides. Its nonsecret ID is retained in local configuration, never committed here.
 The provider requires English Agents to use Flash/Turbo v2, so English uses Flash v2 and other presets Flash

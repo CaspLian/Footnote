@@ -1,0 +1,6 @@
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <!-- Concept C - The Opening: a Z-folded paper strip opening upward; the dark panel is the back face of the middle fold -->
+  <polygon points="14,60 40,34 40,51 14,77" fill="#176B5B"/>
+  <polygon points="40,34 57,51 57,68 40,51" fill="#192D2A"/>
+  <polygon points="57,51 86,22 86,39 57,68" fill="#176B5B"/>
+</svg>

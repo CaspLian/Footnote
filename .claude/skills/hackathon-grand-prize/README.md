@@ -123,7 +123,7 @@ Scores are 0–10 and default to equal weights. Only use `--weights-json` with a
 ### Evaluate project health
 
 ```powershell
-python scripts\project-health-check.py --checks-json '{"build_passes":true,"tests_pass":true,"lint_or_typecheck_passes":true,"core_flows_work":true,"error_flows_work":true,"authorization_enforced":{"status":"not_applicable","rationale":"No identities or protected resources exist in this offline prototype."},"inputs_validated":true,"api_failures_handled":true,"data_integrity_verified":true,"retries_safe":true,"security_reviewed":true,"secrets_scanned":true,"demo_fallback_ready":true}'
+python scripts\project-health-check.py --checks-json '{"build_passes":true,"tests_pass":true,"lint_or_typecheck_passes":true,"core_flows_work":true,"error_flows_work":true,"authorization_enforced":{"status":"not_applicable","rationale":"No identities or protected resources exist in this offline design."},"inputs_validated":true,"api_failures_handled":true,"data_integrity_verified":true,"retries_safe":true,"security_reviewed":true,"secrets_scanned":true,"demo_fallback_ready":true}'
 ```
 
 Supply all 13 top-level checks. Use `true` only for an applicable check backed by observed evidence and `false` for an applicable failed or unverified check. Only build, tests, lint/typecheck, authorization, API-failure, data-integrity, and retry checks may use `{"status":"not_applicable","rationale":"..."}` when that capability is genuinely absent; the rationale must be specific and at least 20 characters. Core/error flows, input validation, security review, secret scanning, and demo fallback are mandatory. Permitted N/A checks are reported without failing the gate.

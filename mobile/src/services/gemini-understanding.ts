@@ -1,3 +1,4 @@
+import { throwIfAborted } from './abort-signal';
 import { isISODate } from '../domain/money';
 import { mapGeminiAnalysis } from '../domain/extraction';
 import type { VoiceChoice } from '../domain/preferences';
@@ -10,7 +11,7 @@ import { UnderstandingFailure, type UnderstandingAdapter } from './document-unde
 
 export function createGeminiUnderstanding(deps: { appendPart: AppendDocumentPart; currentVoice?: () => VoiceChoice; resolveVoice?: typeof voiceKeyFor; prepare?: typeof prepareSpeech; markDateRecovery?: (caseId: string) => void }): UnderstandingAdapter {
   return { async understand(request, { signal, onPhase }) {
-    signal.throwIfAborted();
+    throwIfAborted(signal);
     const imports = request.attachments.filter(item => item.origin === 'import');
     if (!request.attachments.length) throw new UnderstandingFailure('Add a document before continuing.');
     if (!imports.length) return { mode: request.attachments.every(item => item.origin === 'sample') ? 'synthetic' : 'manual' };
@@ -25,9 +26,9 @@ export function createGeminiUnderstanding(deps: { appendPart: AppendDocumentPart
       if (signal.aborted) throw error;
       throw new UnderstandingFailure(error instanceof Error ? error.message : 'The analysis could not be loaded.');
     }
-    signal.throwIfAborted(); onPhase('organizing');
+    throwIfAborted(signal); onPhase('organizing');
     const recovered = await recoverBillDates(request, mapped, deps.appendPart, signal, deps.markDateRecovery);
-    signal.throwIfAborted();
+    throwIfAborted(signal);
     const auditId = mapped.extraction.auditId;
     if (auditId && mapped.lineItems.length) void (deps.resolveVoice ?? voiceKeyFor)(deps.currentVoice?.() ?? 'calm', mapped.extraction.language ?? backendLocale(request.workingLanguage))
       .then(voice => { if (!signal.aborted) return (deps.prepare ?? prepareSpeech)(auditId, voice); }).catch(() => {});

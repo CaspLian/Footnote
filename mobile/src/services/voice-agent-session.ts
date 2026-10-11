@@ -1,3 +1,4 @@
+import { throwIfAborted } from './abort-signal';
 // The live agent's backend boundary: form requests, short-lived credentials, and readable refusal messages.
 // The microphone and ElevenLabs client are injected by native/live-agent.ts so this module is testable in Node.
 import { AgentUnavailable, type AgentAdapter, type AgentConnectOptions, type AgentContext, type AgentSession } from './voice-agent';
@@ -37,13 +38,13 @@ export interface AgentSessionGrant {
   privacyNotice?: string;
 }
 
-export const NO_ANALYSIS_TEXT = 'Live conversations need a bill that ClaimPulse has read. Add the bill’s pages to this case, then try again.';
+export const NO_ANALYSIS_TEXT = 'Live conversations need a bill that Footnote has read. Add the bill’s pages to this case, then try again.';
 export const CORRECTED_ANALYSIS_TEXT = 'Your confirmed details differ from the saved document reading. Live bill conversations are paused so the helper does not describe old amounts. Use your confirmed review and contact billing about the correction.';
-export const GUIDE_TEXT = 'Live conversations work from a bill’s review for now. Open a bill that ClaimPulse has read to talk it through.';
-export const ORIGIN_TEXT = 'This page isn’t allowed to start live conversations. Open Unfold at http://localhost or http://127.0.0.1.';
+export const GUIDE_TEXT = 'Live conversations work from a bill’s review for now. Open a bill that Footnote has read to talk it through.';
+export const ORIGIN_TEXT = 'This page isn’t allowed to start live conversations. Open Footnote at http://localhost or http://127.0.0.1.';
 export const busyText = (seconds?: number) => `Too many conversations were started just now. Try again in ${seconds && seconds > 0 ? Math.ceil(seconds) : 10} seconds.`;
 export const NOT_SET_UP_TEXT = 'Live conversations aren’t set up on this server yet.';
-export const ROUTE_MISSING_TEXT = 'This ClaimPulse server doesn’t offer live conversations yet.';
+export const ROUTE_MISSING_TEXT = 'This Footnote server doesn’t offer live conversations yet.';
 export const ANALYSIS_GONE_TEXT = 'This bill’s saved analysis isn’t on the server anymore. Add the bill’s pages again, then try again.';
 export const PROVIDER_TEXT = 'Live conversations are unavailable right now. Try again later.';
 export const languageText = (name: string) => `Live conversations aren’t available in ${name} yet. Choose another working language to talk it through.`;
@@ -116,7 +117,7 @@ export function sessionFailure(status: number, detail: unknown, languageName: st
 }
 
 export async function requestAgentSession(request: AgentSessionRequest, deps: { url: string; signal: AbortSignal; fetchImpl?: typeof fetch; timeoutMs?: number }): Promise<AgentSessionGrant> {
-  deps.signal.throwIfAborted();
+  throwIfAborted(deps.signal);
   const controller = new AbortController();
   const onAbort = () => controller.abort();
   deps.signal.addEventListener('abort', onAbort);
@@ -152,17 +153,17 @@ export function createVoiceAgentSessionAdapter<P>(deps: SessionAdapterDeps<P>): 
   return {
     async connect(context, options) {
       if (!(deps.backendConfigured ?? backendConfigured)()) return deps.fallback.connect(context, options);
-      options.signal.throwIfAborted();
+      throwIfAborted(options.signal);
       const auditId = sessionAuditId(context);                       // before the microphone prompt and any request
       const prepared = deps.prepare ? await deps.prepare(context, options.signal) : (undefined as P);
-      options.signal.throwIfAborted();
+      throwIfAborted(options.signal);
       const locale = (deps.backendLocale ?? backendLocale)(context.language);
       const voice = await (deps.resolveVoice ?? voiceKeyFor)(context.voice, locale);
-      options.signal.throwIfAborted();
+      throwIfAborted(options.signal);
       let grant: AgentSessionGrant;
       try { grant = await requestAgentSession({ auditId, targetLanguage: locale, voice, connectionType: 'webrtc' }, { url: deps.sessionUrl?.() ?? backendUrl(AGENT_SESSION_ROUTE), signal: options.signal, fetchImpl: deps.fetchImpl }); }
       catch (e) { if (e instanceof AgentSessionError && e.kind === 'http') throw sessionFailure(e.status, e.detail, deps.languageName?.(context.language) ?? languageOption(context.language).name, e.retryAfterSeconds); throw e; }
-      options.signal.throwIfAborted();
+      throwIfAborted(options.signal);
       if (!deps.open) throw new AgentUnavailable('Live voice conversations need an app update before they can start here.');
       return deps.open(grant, context, options, prepared);
     },

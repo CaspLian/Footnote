@@ -1,6 +1,6 @@
-# ClaimPulse AI: project context
+# Footnote: project context
 
-Last checked: 2026-10-10, branch `Backend-Frontend-Connection-V1` (the backend and the connected frontend). Re-check
+Last checked: 2026-10-10, branch `merged-v1` (the backend and the connected frontend). Re-check
 anything here against the code after merges: the code wins over this document.
 
 ## Product
@@ -19,12 +19,12 @@ elderly patients, and anyone overwhelmed by medical paperwork.
 4. The explanation is shown in the chosen language, with the price comparison and questions to ask.
 5. The answer is spoken aloud (ElevenLabs).
 6. The analysis is saved (Tiger Data / PostgreSQL), so it can be reopened and heard again.
-7. Review confirmed details in the Unfold app, prepare a request, track the case, or talk through a saved bill.
+7. Review confirmed details in the Footnote app, prepare a request, track the case, or talk through a saved bill.
 
 ## Architecture (as implemented)
 
 ```
-Unfold app (Expo, connected when configured)  or  backend/dev_console.py (local test page)
+Footnote app (Expo, connected when configured)  or  backend/dev_console.py (local test page)
         │  HTTP (multipart form, JSON)
         ▼
 backend/main.py (FastAPI) ── POST /api/v1/analyze ── GET /api/v1/audits/{id} ── /api/v1/voice/* (voice_routes.py)
@@ -74,10 +74,10 @@ Between checkpoints, record status changes in your handoff.
 | Voice question → transcript → analysis → spoken reply | VERIFIED live (English) | `POST /api/v1/voice/analyze` |
 | Spoken reply includes the price findings | VERIFIED live English in the final integration; earlier live translations in 11 other locales. Changed numbers in translations are now retried/dropped. Doctor-only findings omit ratios and high-price claims | `spoken_reply()`, `_spoken_text()` in `voice_routes.py` |
 | Hear a saved analysis again, without re-analyzing | VERIFIED live | `POST /api/v1/voice/speak` |
-| Voice picker and samples; streamed replies; byte ranges for iPhones | Picker and samples: VERIFIED mocked. Streaming: VERIFIED live (first audio after 0.43 s, 2026-10-09). Byte ranges: live on 2026-10-10 just before `d1753db`, mocked at `d1753db`. iPhone playback: UNVERIFIED | `GET /api/v1/voice/voices`, `/audio/{id}` |
+| Voice picker and previews; streamed replies; byte ranges for iPhones | Android preview: audible playback confirmed by Nimesh after the cancellation compatibility fix. Catalog and API also verified in automated checks. Streaming: VERIFIED live (first audio after 0.43 s, 2026-10-09). Byte ranges: live on 2026-10-10 just before `d1753db`, mocked at `d1753db`. iPhone playback: UNVERIFIED | `GET /api/v1/voice/voices`, `/audio/{id}` |
 | Spoken replies in languages other than English | VERIFIED live (2026-10-10): spoken and heard back in 12 languages and both Chinese scripts, full replies in 12 locales. Hebrew and Thai are spoken by v4 Turbo (Flash v2.5 does not speak them), more slowly. In Arabic, speech-to-text heard the formal "two hundred" as "one hundred" | `text_to_speech/config.py`, `voice_routes.py` |
 | Developer console (every route in a browser) | VERIFIED mocked (headless Chrome, a stand-in for ElevenLabs, 58 checks). Its API also answered live requests (curl, 2026-10-10) | `backend/dev_console.py` |
-| Mobile app connected to the backend | VERIFIED in Expo web: onboarding, import, extraction, confirmation, review, saved reading and persistent reopening; 156 tests, typecheck and lint pass. Android APK built/installed; updated screens loaded with preserved data. Native fresh upload/live voice remain unverified while Nimesh uses the emulator | `mobile/src/services/backend.ts`, `connected-services.ts` |
+| Mobile app connected to the backend | VERIFIED in Expo web: onboarding, import, extraction, confirmation, review, saved reading and persistent reopening; 166 tests, typecheck and lint pass. Android APK built/installed; updated screens loaded with preserved data. Native fresh upload/live voice remain unverified while Nimesh uses the emulator | `mobile/src/services/backend.ts`, `connected-services.ts` |
 | Follow-up questions about a saved bill | VERIFIED live web conversation: synthetic microphone question, saved amounts, captions, CT card highlight, mute and End. Agent uses Gemini 3.5 Flash; standalone recorded questions remain separate | `voice_agent/`, `mobile/src/components/agent-orb-control.tsx` |
 | Authentication, rate limits | PARTIAL: agent session origin checks, issuance limits and provider limits implemented. No application authentication; other routes remain unprotected | `voice_agent/limits.py`; app-key proposal remains open |
 | Tiger Data audit / regional benchmark tables | Claim audit/lifecycle tables VERIFIED live over HTTP with isolated schema; regional benchmark table not used by app lookups | `claim_routes.py`, `tigerdata_service.py` |
@@ -142,7 +142,7 @@ rows, all from the **CMS 2026 Physician Fee Schedule (RVU26D, October release), 
   `EXPO_PUBLIC_API_URL` is set.
 - **On the whiteboard:** "React Native / Expo or Mobile Web PWA" in the task plan, "React + Tailwind CSS" in the
   tech-stack list, and a diagram of a "React Native/Expo App".
-- **Unresolved:** the prototype uses Expo Router and TypeScript, but no decision is recorded. Also open:
+- **Unresolved:** the design uses Expo Router and TypeScript, but no decision is recorded. Also open:
   whether the web build matters.
 
 ## Contradictions between plans and code
@@ -158,7 +158,7 @@ rows, all from the **CMS 2026 Physician Fee Schedule (RVU26D, October release), 
 
 Which contract to keep is an open team decision: `docs/decisions/2026-10-10-open-whiteboard-contract.md`.
 
-## Scope reductions for a reliable demo
+## Earlier scope proposal
 
 There is a proposal, not a decision: `docs/decisions/2026-10-10-proposal-demo-scope.md`.
 

@@ -1,6 +1,6 @@
-# ClaimPulse AI: instructions for coding assistants
+# Footnote: instructions for coding assistants
 
-ClaimPulse AI is a hackathon project: an accessible, multilingual assistant that helps patients and caregivers
+Footnote is a hackathon project: an accessible, multilingual assistant that helps patients and caregivers
 understand medical bills and insurance Explanation of Benefits (EOB) letters, spot charges worth asking about,
 and prepare questions for the billing office. Users include people with limited English, low literacy or low
 vision, so plain language and spoken output matter.
@@ -41,7 +41,7 @@ live in `docs/`. **`docs/` is the team's shared memory: never delete or rename i
 | `backend/dev_console.py` | Local test page for every route (http://127.0.0.1:8770/console) |
 | `backend/tests/`, `backend/services/audio_service/**/tests/` | Backend and audio tests |
 | `backend/samples/` | Sample bills for tests and demos |
-| `mobile/` | Unfold Expo Router/TypeScript app; `Camera-capture` sends imported bill pages to the analysis API |
+| `mobile/` | Footnote Expo Router/TypeScript app; `Camera-capture` sends imported bill pages to the analysis API |
 | `docs/` | Shared project context (this system) |
 | `BACKEND_VERIFICATION_REPORT.md` | Dated verification evidence and open bugs (2026-10-10) |
 

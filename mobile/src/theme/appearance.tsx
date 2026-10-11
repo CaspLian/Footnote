@@ -1,6 +1,6 @@
 import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 import { AccessibilityInfo, Appearance, Platform, useColorScheme } from 'react-native';
-import { useUnfoldStore } from '@/store';
+import { useFootnoteStore } from '@/store';
 import { darkColors, darkGradients, gradients, lightColors, type Palette } from './palette';
 
 const AppearanceContext = createContext<{ colors: Palette; gradients: { paper: readonly [string, string] }; scheme: 'light' | 'dark'; reducedMotion: boolean; reducedTransparency: boolean }>({
@@ -8,8 +8,8 @@ const AppearanceContext = createContext<{ colors: Palette; gradients: { paper: r
   reducedMotion: false, reducedTransparency: false,
 });
 export function AppearanceProvider({ children }: { children: ReactNode }) {
-  const preference = useUnfoldStore(s => s.preferences.theme);
-  const reduceMotion = useUnfoldStore(s => s.preferences.reduceMotion);
+  const preference = useFootnoteStore(s => s.preferences.theme);
+  const reduceMotion = useFootnoteStore(s => s.preferences.reduceMotion);
   const system = useColorScheme();
   const scheme = preference === 'system' ? system === 'dark' ? 'dark' : 'light' : preference;
   const [systemMotion, setSystemMotion] = useState(false);

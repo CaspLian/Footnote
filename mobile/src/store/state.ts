@@ -11,6 +11,7 @@ import { backendConfigured } from '../services/backend';
 import { documentService } from '../services/connected-services';
 import { draftService, sampleEntriesChanged } from '../services/local-services';
 import { parseSnapshot, STORAGE_KEY, type PersistedSnapshot } from './persistence';
+import { LEGACY_STORAGE_KEY } from '../domain/legacy-identity';
 import { defaultPreferences, normalizePreferences, type AppPreferences } from '../domain/preferences';
 
 export interface LocalStorage {
@@ -18,7 +19,7 @@ export interface LocalStorage {
   setItem(key: string, value: string): unknown | Promise<unknown>;
   removeItem(key: string): unknown | Promise<unknown>;
 }
-export interface UnfoldState {
+export interface FootnoteState {
   preferences: AppPreferences;
   savedTermIds: string[];
   setPreferences(preferences: Partial<AppPreferences>): void;
@@ -50,7 +51,7 @@ export interface UnfoldState {
   processingCaseIds: string[];
   setLocale(locale: Language): void;
   completeWelcome(): void;
-  setIconPreferences(preferences: Partial<Pick<UnfoldState, 'iconWeight' | 'iconSize' | 'duotoneOpacity'>>): void;
+  setIconPreferences(preferences: Partial<Pick<FootnoteState, 'iconWeight' | 'iconSize' | 'duotoneOpacity'>>): void;
   setActiveCase(caseId: string): void;
   loadSample(): Promise<string>;
   addManualCase(): string;
@@ -95,7 +96,7 @@ const emptyData = () => ({
   iconSize: 24, duotoneOpacity: 0.2, cases: [] as BillCase[], drafts: [] as AppealDraft[], events: [] as CaseEvent[], activeCaseId: undefined as string | undefined,
 });
 
-export function snapshotOf(state: UnfoldState): PersistedSnapshot {
+export function snapshotOf(state: FootnoteState): PersistedSnapshot {
   return {
     preferences: state.preferences, savedTermIds: state.savedTermIds,
     version: 1, onboardingCompleted: state.onboardingCompleted, profiles: state.profiles, activeProfileId: state.activeProfileId, personalContext: state.personalContext, locale: state.locale, welcomeCompleted: state.welcomeCompleted, iconWeight: state.iconWeight,
@@ -105,7 +106,7 @@ export function snapshotOf(state: UnfoldState): PersistedSnapshot {
 }
 
 /** Pure store with injected I/O so persistence and failure paths run in Node tests. */
-export function createUnfoldStore(storage: LocalStorage, options: StoreOptions = {}) {
+export function createFootnoteStore(storage: LocalStorage, options: StoreOptions = {}) {
   const now = options.now ?? (() => new Date().toISOString());
   const makeId = options.id ?? ((prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`);
   let pendingSave: Promise<void> = Promise.resolve();
@@ -114,7 +115,7 @@ export function createUnfoldStore(storage: LocalStorage, options: StoreOptions =
   const inFlightClaims = new Map<string, Promise<string | undefined>>();
   let generation = 0;
 
-  const store = createStore<UnfoldState>()((set, get) => {
+  const store = createStore<FootnoteState>()((set, get) => {
     const ensureWritable = () => {
       if (!get().hydrated || get().hydrationError) throw new Error('storage_not_loaded');
     };
@@ -125,7 +126,7 @@ export function createUnfoldStore(storage: LocalStorage, options: StoreOptions =
         catch { set({ storageError: 'storage_unavailable' }); }
       });
     };
-    const change = (patch: Partial<UnfoldState>) => { ensureWritable(); set(patch); persist(); };
+    const change = (patch: Partial<FootnoteState>) => { ensureWritable(); set(patch); persist(); };
     const claims = options.claims ?? claimTracker;
     // Keeps the case's claim in Tiger Data in step: recorded on the first confirmation (then "audit complete"), and
     // updated after later steps. It is a side record, so a failure never reaches the user or changes the case.
@@ -183,7 +184,8 @@ export function createUnfoldStore(storage: LocalStorage, options: StoreOptions =
       set({ hydrated: false, hydrationError: null });
       hydration = (async () => {
         try {
-          const serialized = await storage.getItem(STORAGE_KEY);
+          const current = await storage.getItem(STORAGE_KEY);
+          const serialized = current ?? await storage.getItem(LEGACY_STORAGE_KEY);
           const snapshot = serialized === null ? undefined : parseSnapshot(serialized);
           if (snapshot) {
             // Native caches may be cleared and web asset hashes may change after a new build.
@@ -204,6 +206,10 @@ export function createUnfoldStore(storage: LocalStorage, options: StoreOptions =
             }
             const { version: _version, ...data } = snapshot;
             set({ ...data, hydrated: true, hydrationError: null, storageError: null });
+            if (current === null) {
+              try { await storage.setItem(STORAGE_KEY, JSON.stringify(snapshot)); }
+              catch { set({ storageError: 'storage_unavailable' }); }
+            }
           } else set({ hydrated: true, hydrationError: null });
         } catch { set({ hydrated: true, hydrationError: 'saved_data_unreadable' }); }
         finally { hydration = undefined; }
@@ -260,7 +266,7 @@ export function createUnfoldStore(storage: LocalStorage, options: StoreOptions =
         void trackClaim(caseId, c.financials.remainingCents === undefined ? { action: 'Case marked resolved', note: 'No statement balance was confirmed' } : { finalCents: c.financials.remainingCents }); },
       setNoticeDeadline(caseId, date) { const c = caseById(caseId); if (date !== null && !isISODate(date)) throw new Error('invalid_date'); if ((c.noticeDeadline ?? null) === date) return; change({ cases: get().cases.map(c => c.id === caseId ? { ...c, noticeDeadline: date ?? undefined, updatedAt: now() } : c), events: [...get().events, event(caseId, date ? 'deadline_set' : 'deadline_removed', date ? { date } : {})] }); void trackClaim(caseId, date !== null ? { collectionDeadline: date } : { action: 'Notice date removed' }); },
       setIconPreferences(preferences) {
-        const patch: Partial<UnfoldState> = {};
+        const patch: Partial<FootnoteState> = {};
         if (preferences.iconWeight && ['regular', 'bold', 'thin'].includes(preferences.iconWeight)) patch.iconWeight = preferences.iconWeight;
         if (typeof preferences.iconSize === 'number' && Number.isFinite(preferences.iconSize)) patch.iconSize = Math.min(32, Math.max(16, preferences.iconSize));
         if (typeof preferences.duotoneOpacity === 'number' && Number.isFinite(preferences.duotoneOpacity)) patch.duotoneOpacity = Math.min(1, Math.max(0, preferences.duotoneOpacity));
@@ -414,6 +420,7 @@ export function createUnfoldStore(storage: LocalStorage, options: StoreOptions =
         // Only called from an explicit recovery choice, never on a read failure.
         if (options.clearAllAttachments) await options.clearAllAttachments();
         await storage.removeItem(STORAGE_KEY);
+        await storage.removeItem(LEGACY_STORAGE_KEY);
         set({ ...emptyData(), hydrated: true, hydrationError: null, storageError: null, processingCaseIds: [] });
       },
       async retryPersistence() {

@@ -4,7 +4,7 @@ import { languageOption } from '@/domain/languages';
 import { useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 import { router } from 'expo-router';
-import { useUnfoldStore } from '@/store';
+import { useFootnoteStore } from '@/store';
 import { clearLocalAttachments, nativeErrorMessage } from '@/native';
 import { voiceChoices } from '@/domain/preferences';
 import { Feedback, Group, Screen, Txt } from '@/components/ui';
@@ -19,7 +19,7 @@ import { useVoiceCatalog } from '@/components/use-voice-catalog';
 
 export function Settings() {
   const privacy = usePrivacy();
-  const prefs = useUnfoldStore(s => s.preferences);
+  const prefs = useFootnoteStore(s => s.preferences);
   const catalog = useVoiceCatalog();
   const resolved = catalog?.voices.find(v => v.key === resolveVoiceKey(prefs.voice, backendLocale(prefs.workingLanguage), catalog));
   const [connection, setConnection] = useState('Checking connection…');
@@ -27,27 +27,21 @@ export function Settings() {
   useEffect(() => {
     if (!backendConfigured()) return;
     const abort = new AbortController();
-    void backendHealth(abort.signal).then(result => { if (!abort.signal.aborted) setConnection(result.mock ? 'Connected · MOCK sample mode' : 'Connected to ClaimPulse'); }).catch(() => { if (!abort.signal.aborted) setConnection('Could not reach ClaimPulse. Check the connection and try again.'); });
+    void backendHealth(abort.signal).then(result => { if (!abort.signal.aborted) setConnection(result.mock ? 'Connected · Document reading unavailable' : 'Connected to Footnote'); }).catch(() => { if (!abort.signal.aborted) setConnection('Could not reach Footnote. Check the connection and try again.'); });
     return () => abort.abort();
   }, [healthRevision]);
-  const context = useUnfoldStore(s => s.personalContext);
-  const cases = useUnfoldStore(s => s.cases);
-  const profiles = useUnfoldStore(s => s.profiles);
+  const context = useFootnoteStore(s => s.personalContext);
+  const cases = useFootnoteStore(s => s.cases);
+  const profiles = useFootnoteStore(s => s.profiles);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const set = useUnfoldStore.getState().setPreferences;
+  const set = useFootnoteStore.getState().setPreferences;
   const voice = voiceChoices.find(v => v.id === (prefs.voice === 'device' ? 'calm' : prefs.voice))!;
   const language = languageOption(prefs.workingLanguage);
-  function reset() {
-    confirmAction('Reset the sample?', 'Sample drafts, actions and follow-up will reset. Your family profiles and imported cases are kept.', 'Reset sample', () => {
-      setBusy(true); setError('');
-      void useUnfoldStore.getState().resetDemo().catch(() => setError('Reset failed. Try again.')).finally(() => setBusy(false));
-    });
-  }
   function clearImports() {
-    confirmAction('Delete imported cases?', 'This removes imported documents, drafts and their history from this device. Family profiles and the sample are kept.', 'Delete imports', () => {
+    confirmAction('Delete imported cases?', 'This removes imported documents, drafts and their history from this device. Your family profiles are kept.', 'Delete imports', () => {
       setBusy(true); setError('');
-      void (async () => { try { for (const c of cases.filter(c => c.source === 'manual')) await useUnfoldStore.getState().deleteCase(c.id); await clearLocalAttachments(); } catch (e) { setError(nativeErrorMessage(e, 'en')); } finally { setBusy(false); } })();
+      void (async () => { try { for (const c of cases.filter(c => c.source === 'manual')) await useFootnoteStore.getState().deleteCase(c.id); await clearLocalAttachments(); } catch (e) { setError(nativeErrorMessage(e, 'en')); } finally { setBusy(false); } })();
     }, true);
   }
   return <Screen contentWidth={720} testID="settings">
@@ -61,8 +55,8 @@ export function Settings() {
       <SettingsPicker title="App theme" value={prefs.theme} options={[{ label: 'System', value: 'system' }, { label: 'Light', value: 'light' }, { label: 'Dark', value: 'dark' }]} onChange={theme => set({ theme })} />
     </SettingsGroup>
     <SettingsGroup title="Voice & explanations" note="Live conversations use a saved bill’s analysis. Choose a language and voice for your questions.">
-      <SettingsLink title="Agent voice" detail={`${voice.name} · ${backendConfigured() ? resolved?.name ?? 'ElevenLabs' : 'ElevenLabs placeholder'}`} leading={<OrbMark/>} onPress={() => router.navigate('/voices')} />
-      <SettingsDivider /><SettingsPicker title="Explanation detail" value={context.explanationDepth} options={[{ label: 'Simple', value: 'simple' }, { label: 'Detailed', value: 'detailed' }]} onChange={useUnfoldStore.getState().setExplanationDepth} />
+      <SettingsLink title="Agent voice" detail={`${voice.name} · ${backendConfigured() ? resolved?.name ?? 'ElevenLabs' : 'Voice unavailable'}`} leading={<OrbMark/>} onPress={() => router.navigate('/voices')} />
+      <SettingsDivider /><SettingsPicker title="Explanation detail" value={context.explanationDepth} options={[{ label: 'Simple', value: 'simple' }, { label: 'Detailed', value: 'detailed' }]} onChange={useFootnoteStore.getState().setExplanationDepth} />
     </SettingsGroup>
     <SettingsGroup title="Interaction" note="System accessibility preferences are always respected.">
       <SettingsToggle title="Haptic feedback" detail={Platform.OS === 'web' ? 'Used in the mobile app.' : 'Gentle feedback for main actions.'} value={prefs.haptics} onChange={haptics => set({ haptics })} />
@@ -74,17 +68,16 @@ export function Settings() {
     </SettingsGroup>
     <SettingsGroup title="Privacy" note="App lock controls access; it does not encrypt imported files.">
       {Platform.OS === 'web' ? <Group style={{ padding: space.lg }}><Txt variant="label">Biometric app lock</Txt><Txt muted>Available with Face ID or fingerprint authentication in the mobile app.</Txt></Group> : <>
-        <SettingsToggle title={`${privacy.label} app lock`} detail="Authenticate after reopening Unfold. Device passcode can be used as a fallback." value={privacy.enabled} disabled={privacy.busy} onChange={() => { void privacy.toggle(); }} />
+        <SettingsToggle title={`${privacy.label} app lock`} detail="Authenticate after reopening Footnote. Device passcode can be used as a fallback." value={privacy.enabled} disabled={privacy.busy} onChange={() => { void privacy.toggle(); }} />
         {privacy.enabled ? <><SettingsDivider /><SettingsLink title="Lock workspace now" icon="lock" onPress={privacy.lock} /></> : null}
       </>}
     </SettingsGroup>
     {privacy.message ? <Feedback text={privacy.message} /> : null}
-    <SettingsGroup title="Local data & demo" note="Deleting a case removes its documents, drafts and recorded actions from this device.">
-      <SettingsLink title={busy ? 'Updating local data…' : 'Reset the sample'} detail="Keep profiles and imported cases" icon="document" onPress={reset} disabled={busy} />
-      <SettingsDivider /><SettingsLink title="Delete imported cases" detail={`${cases.filter(c => c.source === 'manual').length} imported ${cases.filter(c => c.source === 'manual').length === 1 ? 'case' : 'cases'}`} icon="files" danger onPress={clearImports} disabled={busy || !cases.some(c => c.source === 'manual')} />
+    <SettingsGroup title="Local data" note="Deleting a case removes its documents, drafts and recorded actions from this device.">
+      <SettingsLink title="Delete imported cases" detail={`${cases.filter(c => c.source === 'manual').length} imported ${cases.filter(c => c.source === 'manual').length === 1 ? 'case' : 'cases'}`} icon="files" danger onPress={clearImports} disabled={busy || !cases.some(c => c.source === 'manual')} />
     </SettingsGroup>
     {error ? <Feedback danger onDismiss={() => setError('')} text={error} /> : null}
     {backendConfigured() ? <SettingsGroup title="Backend connection"><SettingsLink title={connection} detail="Tap to check again" icon="document" onPress={() => { setConnection('Checking connection…'); setHealthRevision(v => v + 1); }} /></SettingsGroup> : null}
-    <Group gap={space.sm}><Txt variant="label">Unfold · Prototype 0.1</Txt><Txt variant="caption" muted>{backendConfigured() ? 'Bills you analyze are sent to your ClaimPulse backend (Gemini, Medicare rates, Tiger Data, ElevenLabs).' : 'No account. No family cloud. Sponsor services are not connected.'}</Txt></Group>
+    <Group gap={space.sm}><Txt variant="label">Footnote · 0.1</Txt><Txt variant="caption" muted>{backendConfigured() ? 'Bills you analyze are sent to your Footnote backend (Gemini, Medicare rates, Tiger Data, ElevenLabs).' : 'No account. No family cloud. Sponsor services are not connected.'}</Txt></Group>
   </Screen>;
 }

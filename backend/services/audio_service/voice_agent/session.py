@@ -78,7 +78,7 @@ class SessionService:
         except BaseException:
             self.limiter.release(reservation)
             raise
-        keywords = ["ClaimPulse", "Medicare"]
+        keywords = ["Footnote", "Medicare"]
         provider = clean(analysis["result"].get("provider_name"), 100)
         if provider:
             keywords.append(provider)

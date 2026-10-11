@@ -184,6 +184,6 @@ Do not set the `Content-Type` header yourself; `fetch` adds the right one for `F
   mode is enterprise-only). Use test data for demos.
 - **`scribe_v2_medical`** (`ELEVENLABS_STT_MODEL_ID=scribe_v2_medical`): same price and API, tuned
   for clinical audio. Worth comparing with `python -m speech_to_text.demo --model scribe_v2_medical`.
-- **Not built yet:** keyterm prompting (bias towards words like "ClaimPulse" or "CPT"; +$0.05 per
+- **Not built yet:** keyterm prompting (bias towards words like "Footnote" or "CPT"; +$0.05 per
   hour) and live transcription while the user speaks (`scribe_v2_realtime` over a WebSocket,
   $0.39 per hour).

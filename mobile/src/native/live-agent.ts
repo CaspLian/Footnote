@@ -12,7 +12,7 @@ export function installLiveVoiceAgent() {
   const enabled = process.env.EXPO_PUBLIC_VOICE_AGENT !== 'off';
   const conversation = createElevenLabsConversation({
     loadSdk: loadAgentSdk, requestMicrophone, claimAudio,
-    devHook: hook => { if (__DEV__) (globalThis as typeof globalThis & { __unfoldAgent?: AgentDebugHook }).__unfoldAgent = hook; },
+    devHook: hook => { if (__DEV__) (globalThis as typeof globalThis & { __footnoteAgent?: AgentDebugHook }).__footnoteAgent = hook; },
   });
   configureAgentAdapter(createVoiceAgentSessionAdapter({
     fallback: unavailableAgentAdapter,

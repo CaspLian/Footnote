@@ -171,6 +171,41 @@ def test_read_back_match_ignores_provider_defaults_and_order():
     assert not matches(actual, expected)
 
 
+def test_rebrand_only_renames_the_explicitly_configured_agent(monkeypatch):
+    from voice_agent import provision as module
+
+    class Provider:
+        def __init__(self):
+            self.agent = agent_body(["tool-a", "tool-b"])
+            self.agent["name"] = "Previous identity"
+            self.writes = []
+
+        def get_agent(self, agent_id):
+            assert agent_id == "agent-test"
+            return copy.deepcopy(self.agent)
+
+        def request(self, method, path, *, body):
+            self.writes.append((method, path))
+            self.agent = copy.deepcopy(body)
+            return self.agent
+
+    tools = [{"id": f"tool-{letter}", "tool_config": config} for letter, config in zip(("a", "b"), module.tool_configs())]
+    monkeypatch.setattr(module, "pages", lambda *args, **kwargs: tools)
+    fake = Provider()
+    config = AgentConfig("fake-key", "agent-test")
+    with pytest.raises(AgentError):
+        module.provision(config, fake)
+    with pytest.raises(AgentError):
+        module.provision(config, fake, rename_from="Another identity")
+    assert not fake.writes
+    agent_id, verified = module.provision(config, fake, rename_from="Previous identity")
+    assert agent_id == "agent-test" and verified["name"] == module.AGENT_NAME
+    assert fake.writes == [("PATCH", "/v1/convai/agents/agent-test")]
+    assert verified["platform_settings"]["auth"]["enable_auth"] is True
+    assert verified["platform_settings"]["privacy"]["record_voice"] is False
+    assert verified["platform_settings"]["privacy"]["retention_days"] == 7
+
+
 def test_config_uses_existing_settings_loader_with_explicit_synthetic_env(tmp_path, monkeypatch):
     path = tmp_path / "voice.env"
     path.write_text("ELEVENLABS_API_KEY=fake-key\nELEVENLABS_AGENT_ID=agent-test\nELEVENLABS_AGENT_SESSIONS_PER_HOUR=7\nGEMINI_API_KEY=must-not-load\n", encoding="utf-8")

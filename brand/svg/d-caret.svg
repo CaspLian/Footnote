@@ -1,0 +1,8 @@
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <!-- Concept D - The Caret: a proofreader's insertion mark rising into a gap in the bill's line; something was left out, ask about it -->
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="14" y1="35" x2="44" y2="35" stroke="#192D2A" stroke-width="7"/>
+    <line x1="60" y1="35" x2="86" y2="35" stroke="#192D2A" stroke-width="7"/>
+    <polyline points="36,63 52,38 68,63" stroke="#176B5B" stroke-width="7"/>
+  </g>
+</svg>

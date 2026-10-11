@@ -6,13 +6,13 @@
 
 ## Context
 
-The existing Unfold orb has conversation controls and captions but needed a live provider. Nimesh requested an
+The existing Footnote orb has conversation controls and captions but needed a live provider. Nimesh requested an
 ElevenLabs voice agent using Gemini and the app connection. The recovered revision-2 design supplied the session
 contract; this record describes the implemented result rather than unbuilt design steps.
 
 ## Decision
 
-Use one private development agent named `ClaimPulse Bill Helper (dev)` with Gemini 3.5 Flash. Runtime bill context
+Use one private development agent named `Footnote Bill Helper (dev)` with Gemini 3.5 Flash. Runtime bill context
 comes from a saved analysis identified by `audit_id`; the backend constructs eight bounded dynamic variables.
 The API key stays on the backend. The app obtains a fresh short-lived WebRTC token per Start; the optional
 WebSocket transport returns a signed URL for tools and scripted tests. Neither credential is cached or logged.
@@ -53,7 +53,7 @@ text-only test mode and recognition keywords overrides; it does not allow client
 ## Privacy and scope
 
 The agent is provisioned with voice recording disabled and seven-day retention. The app displays this exact
-notice before Start: "Sample bills only: the bill details and everything said in this call go to ElevenLabs,
+notice before Start: "The bill details and everything said in this call go to ElevenLabs,
 which uses Google's Gemini, and ElevenLabs keeps them for 7 days."
 
 Free-text bill fields can contain identifying information; omitting dedicated patient/account fields is not

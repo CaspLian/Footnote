@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate explicitly synthetic paired documents for Unfold's offline demo.
+"""Generate paired documents for Footnote's internal verification.
 
 Requires reportlab and pypdf. The Codex bundled Python runtime includes both.
 Run from any directory: python3 mobile/scripts/generate-fixtures.py
@@ -21,25 +21,25 @@ TEAL = colors.HexColor("#176B5B")
 LINE = colors.HexColor("#DFE5DF")
 SOFT = colors.HexColor("#EAF3EF")
 FONT_DIRECTORY = Path(__file__).resolve().parents[1] / "node_modules" / "@expo-google-fonts" / "geist"
-pdfmetrics.registerFont(TTFont("Unfold", str(FONT_DIRECTORY / "400Regular" / "Geist_400Regular.ttf")))
-pdfmetrics.registerFont(TTFont("UnfoldBold", str(FONT_DIRECTORY / "700Bold" / "Geist_700Bold.ttf")))
+pdfmetrics.registerFont(TTFont("Footnote", str(FONT_DIRECTORY / "400Regular" / "Geist_400Regular.ttf")))
+pdfmetrics.registerFont(TTFont("FootnoteBold", str(FONT_DIRECTORY / "700Bold" / "Geist_700Bold.ttf")))
 
 
 def make_pdf(kind, language):
     spanish = language == "es"
     path = OUTPUT / f"northline-{kind}-{language}.pdf"
-    doc = SimpleDocTemplate(str(path), pagesize=(612, 792), rightMargin=42, leftMargin=42, topMargin=38, bottomMargin=42, title=f"Unfold synthetic {kind}", author="Unfold prototype")
+    doc = SimpleDocTemplate(str(path), pagesize=(612, 792), rightMargin=42, leftMargin=42, topMargin=38, bottomMargin=42, title=f"Footnote {kind} test document", author="Footnote")
     styles = {
-        "tag": ParagraphStyle("tag", fontName="UnfoldBold", fontSize=9, leading=13, textColor=TEAL, spaceAfter=12),
-        "title": ParagraphStyle("title", fontName="UnfoldBold", fontSize=23, leading=29, textColor=INK, spaceAfter=8),
-        "body": ParagraphStyle("body", fontName="Unfold", fontSize=10, leading=15, textColor=INK),
-        "muted": ParagraphStyle("muted", fontName="Unfold", fontSize=9, leading=13, textColor=MUTED),
-        "section": ParagraphStyle("section", fontName="UnfoldBold", fontSize=12, leading=18, textColor=INK, spaceBefore=16, spaceAfter=8),
-        "amount": ParagraphStyle("amount", fontName="UnfoldBold", fontSize=24, leading=31, textColor=INK, alignment=TA_RIGHT),
-        "cell": ParagraphStyle("cell", fontName="Unfold", fontSize=9, leading=13, textColor=INK),
+        "tag": ParagraphStyle("tag", fontName="FootnoteBold", fontSize=9, leading=13, textColor=TEAL, spaceAfter=12),
+        "title": ParagraphStyle("title", fontName="FootnoteBold", fontSize=23, leading=29, textColor=INK, spaceAfter=8),
+        "body": ParagraphStyle("body", fontName="Footnote", fontSize=10, leading=15, textColor=INK),
+        "muted": ParagraphStyle("muted", fontName="Footnote", fontSize=9, leading=13, textColor=MUTED),
+        "section": ParagraphStyle("section", fontName="FootnoteBold", fontSize=12, leading=18, textColor=INK, spaceBefore=16, spaceAfter=8),
+        "amount": ParagraphStyle("amount", fontName="FootnoteBold", fontSize=24, leading=31, textColor=INK, alignment=TA_RIGHT),
+        "cell": ParagraphStyle("cell", fontName="Footnote", fontSize=9, leading=13, textColor=INK),
     }
     p = lambda text, style="body": Paragraph(text, styles[style])
-    rows = [p("UNFOLD / EJEMPLO FICTICIO" if spanish else "UNFOLD / SYNTHETIC SAMPLE", "tag")]
+    rows = [p("FOOTNOTE / DOCUMENTO DE PRUEBA" if spanish else "FOOTNOTE / TEST DOCUMENT", "tag")]
     rows.append(p("Northline Medical Center", "title"))
     rows.append(p(("Factura médica detallada" if spanish else "Itemized medical statement") if kind == "bill" else ("Explicación de beneficios (EOB)" if spanish else "Explanation of benefits (EOB)")))
     rows.append(Spacer(1, 12))
@@ -59,7 +59,7 @@ def make_pdf(kind, language):
     table = Table(data, colWidths=[70, 258, 80, 120], repeatRows=1)
     table.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (-1, 0), SOFT), ("TEXTCOLOR", (0, 0), (-1, -1), INK),
-        ("FONTNAME", (0, 0), (-1, 0), "UnfoldBold"), ("FONTNAME", (0, 1), (-1, -1), "Unfold"),
+        ("FONTNAME", (0, 0), (-1, 0), "FootnoteBold"), ("FONTNAME", (0, 1), (-1, -1), "Footnote"),
         ("FONTSIZE", (0, 0), (-1, -1), 9), ("ALIGN", (2, 0), (-1, -1), "RIGHT"),
         ("TOPPADDING", (0, 0), (-1, -1), 11), ("BOTTOMPADDING", (0, 0), (-1, -1), 11),
         ("LINEBELOW", (0, 0), (-1, -1), 0.5, LINE), ("VALIGN", (0, 0), (-1, -1), "TOP"),
@@ -87,18 +87,18 @@ def make_pdf(kind, language):
         total_label = "Responsabilidad del paciente" if spanish else "Patient responsibility"
         total = "$294.00"
     table = Table([[p(label, "cell"), value] for label, value in summary], colWidths=[380, 148])
-    table.setStyle(TableStyle([("FONTNAME", (0, 0), (-1, -1), "Unfold"), ("FONTSIZE", (0, 0), (-1, -1), 10), ("TEXTCOLOR", (0, 0), (-1, -1), INK), ("ALIGN", (1, 0), (1, -1), "RIGHT"), ("LEFTPADDING", (0, 0), (0, -1), 0), ("RIGHTPADDING", (1, 0), (1, -1), 0), ("TOPPADDING", (0, 0), (-1, -1), 4), ("BOTTOMPADDING", (0, 0), (-1, -1), 4)])); rows.append(table)
+    table.setStyle(TableStyle([("FONTNAME", (0, 0), (-1, -1), "Footnote"), ("FONTSIZE", (0, 0), (-1, -1), 10), ("TEXTCOLOR", (0, 0), (-1, -1), INK), ("ALIGN", (1, 0), (1, -1), "RIGHT"), ("LEFTPADDING", (0, 0), (0, -1), 0), ("RIGHTPADDING", (1, 0), (1, -1), 0), ("TOPPADDING", (0, 0), (-1, -1), 4), ("BOTTOMPADDING", (0, 0), (-1, -1), 4)])); rows.append(table)
     rows.append(Spacer(1, 10))
     total_table = Table([[p(total_label, "section"), p(total, "amount")]], colWidths=[350, 178])
     total_table.setStyle(TableStyle([("LINEABOVE", (0, 0), (-1, -1), 1, TEAL), ("TOPPADDING", (0, 0), (-1, -1), 13), ("LEFTPADDING", (0, 0), (-1, -1), 0), ("RIGHTPADDING", (0, 0), (-1, -1), 0), ("VALIGN", (0, 0), (-1, -1), "MIDDLE")])); rows.append(total_table)
     rows.append(Spacer(1, 20))
-    footer_text = ("Documento completamente ficticio para el prototipo Unfold. No representa a un paciente, proveedor ni aseguradora real. Las diferencias sirven para practicar preguntas de aclaración; no establecen un cargo incorrecto ni un reembolso." if spanish else "Entirely fictional document for the Unfold prototype. It does not represent a real patient, provider or insurer. Differences support clarification questions; they do not establish an incorrect charge or refund.")
+    footer_text = ("Documento completamente ficticio para el app Footnote. No representa a un paciente, proveedor ni aseguradora real. Las diferencias sirven para practicar preguntas de aclaración; no establecen un cargo incorrecto ni un reembolso." if spanish else "Entirely fictional document for the Footnote app. It does not represent a real patient, provider or insurer. Differences support clarification questions; they do not establish an incorrect charge or refund.")
     rows.append(p(footer_text, "muted"))
     if kind == "eob": rows.append(Spacer(1, 8)); rows.append(p("La EOB no registra pagos realizados al proveedor. Compara esta responsabilidad con los pagos de tu factura." if spanish else "This EOB does not track payments made to the provider. Compare this responsibility with the payments recorded on your bill.", "muted"))
 
     def footer(canvas, _doc):
-        canvas.setFont("Unfold", 8); canvas.setFillColor(MUTED)
-        canvas.drawString(42, 24, "Unfold - Synthetic demo / Ejemplo ficticio")
+        canvas.setFont("Footnote", 8); canvas.setFillColor(MUTED)
+        canvas.drawString(42, 24, "Footnote - Test document / Documento de prueba")
         canvas.drawRightString(570, 24, "1 / 1")
     doc.build(rows, onFirstPage=footer, onLaterPages=footer)
     if len(PdfReader(path).pages) != 1: raise RuntimeError(f"Fixture must remain one page: {path}")
@@ -111,7 +111,7 @@ def main():
     # Recovery fixtures are excluded from the app's bundled sample flow.
     qa = OUTPUT / "qa"; qa.mkdir(exist_ok=True)
     (qa / "corrupt-header.pdf").write_bytes(b"%PDF-1.7\nThis file has a PDF header but no valid page objects.\n")
-    writer = PdfWriter(); writer.append(str(files[0])); writer.encrypt("unfold-qa")
+    writer = PdfWriter(); writer.append(str(files[0])); writer.encrypt("footnote-qa")
     with (qa / "password-protected.pdf").open("wb") as output: writer.write(output)
     for path in files: print(f"Generated {path.name}: 1 page")
 

@@ -1,3 +1,4 @@
+import { throwIfAborted } from './abort-signal';
 import type { BillCase, FamilyProfile, PersonalContext } from '../domain/types';
 import type { WorkingLanguage } from '../domain/languages';
 
@@ -24,7 +25,7 @@ export interface UnderstandingAdapter {
 /** Teammates install the Gemini adapter here. No private files leave the device by default. */
 let adapter: UnderstandingAdapter = {
   async understand(request, { signal }) {
-    signal.throwIfAborted();
+    throwIfAborted(signal);
     if (!request.attachments.length) throw new Error('documents_required');
     return { mode: request.attachments.every(a => a.origin === 'sample') ? 'synthetic' : 'manual' };
   },

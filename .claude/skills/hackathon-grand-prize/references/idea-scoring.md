@@ -13,7 +13,7 @@ Score 1–10:
 | Technical depth | CRUD/thin API | Some nontrivial integration | Meaningful system challenge | Difficult mechanism works and can be explained |
 | Sponsor alignment | Decorative | Useful but replaceable | Central to outcome | Officially eligible, indispensable, visibly proven |
 | Demo potential | Mostly explanation | Understandable result | Fast visual transformation | Repeatable magic moment with strong before/after |
-| UX potential | Setup-heavy/confusing | Usable prototype | Clear guided workflow | Instantly legible and memorable interaction |
+| UX potential | Setup-heavy/confusing | Usable design | Clear guided workflow | Instantly legible and memorable interaction |
 | Feasibility | Core cannot finish | Major execution risk | Credible within time | Core plus fallback and polish buffer are realistic |
 | Judge appeal | Weak rubric fit | Some criteria served | Strong observable rubric fit | Multiple criteria won without diluted story |
 | Grand-prize potential | No memorable advantage | Solid category entry | Finalist-shaped if executed | Exceptional evidence across problem, proof, polish, reliability |
@@ -45,7 +45,7 @@ Cap verdict at `PROMISING` if feasibility or demo potential is below 6. Cap at `
 For each candidate write:
 - **Judge after 20 similar entries:** likely one-sentence reaction.
 - **Remembered in 24 hours because:** one concrete moment.
-- **Cheapest falsification:** test/interview/prototype/research that could kill it quickly.
+- **Cheapest falsification:** test/interview/design/research that could kill it quickly.
 - **Winning constraint:** the one capability that must work.
 
 ## Tie-break order

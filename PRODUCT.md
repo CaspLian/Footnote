@@ -1,4 +1,4 @@
-# Unfold
+# Footnote
 
 <!-- impeccable:product-schema 1 -->
 
@@ -15,15 +15,13 @@ Patients trying to understand a medical statement and its explanation of benefit
 A complete local journey from document import through verification, evidence review, an editable draft and an explicitly recorded submission/follow-up.
 
 ## Capabilities and Constraints
-English-first for this iteration; Spanish is no longer a required flow. No account. App theme defaults to System and supports explicit Light and Dark preferences. Camera, multi-photo and multi-PDF imports are gathered and confirmed before understanding. A bill, an EOB, or both are accepted. Actual asynchronous work owns the loading duration; the default imported-document path offers manual entry without fabricated extraction. Unknown amounts remain blank. Synthetic paired bill/EOB supports the full demonstration. Billing corrections and insurer appeals are separate. Submission is recorded only when the user marks it. Sponsor services are interfaces, not connected integrations. Solana escrow and outbound calls are outside v1.
-
-Working language selection offers 31 choices with bundled offline flags; the UI remains English. ElevenLabs agent sessions and real voice previews require backend adapters. No microphone opens and no case data is transmitted in the default build.
+English app screens with 42 locales for connected document explanations and readings. No account is required. App theme follows System or an explicit Light/Dark preference. Camera pages, photos and PDFs are gathered and confirmed before document understanding. Unknown amounts remain blank. Gemini extraction, Medicare references, saved Tiger Data analysis and ElevenLabs readings are connected when the API is configured; offline imports use manual entry. Live conversations use a saved bill and the supported agent-language subset. Billing corrections and insurer appeals are separate. Submission is recorded only when the user marks it. Outbound calls and escrow remain outside the implemented journey.
 
 ## Brand Commitments
-Unfold; calm clinical styling, proportional Geist and Phosphor icons. Warm ivory and paper in Light, deep green neutrals in Dark, and restrained teal in both. Soft shadows, subtle contextual gradients and meaningful motion are requested; no decorative gauges. Native iOS Liquid Glass is requested for the initial Home, Bills, Timeline and Guide header controls, primary actions and sheet close controls, with legible solid fallbacks where unavailable or Reduce Transparency is enabled. Vernato's hierarchy, spacing, selection feedback and restrained motion are the reference.
+Footnote; calm clinical styling, proportional Geist and Phosphor icons. Warm ivory and paper in Light, deep green neutrals in Dark, and restrained teal in both. Soft shadows, subtle contextual gradients and meaningful motion are requested; no decorative gauges. Native iOS Liquid Glass is requested for the initial Home, Bills, Timeline and Guide header controls, primary actions and sheet close controls, with legible solid fallbacks where unavailable or Reduce Transparency is enabled. Vernato's hierarchy, spacing, selection feedback and restrained motion are the reference.
 
 ## Evidence on Hand
-HackKnights Google Doc and Excalidraw context reviewed during planning. Fictional Northline Medical Center bill and EOB: $494 statement balance; $294 EOB responsibility; $50 recorded patient payment; $244 derived remaining. The $250 difference and repeated laboratory line are questions requiring clarification, never guaranteed savings. No live OCR, medical advice or adjudicated liability claims.
+Verification records are kept in `docs/PROJECT_STATUS.md` and the feature handoffs. Confirmed document values and their source pages support each review. Benchmark differences are questions requiring clarification, never guaranteed savings or adjudicated liability.
 
 ## Product Principles
 - Put original evidence beside the explanation.
@@ -38,11 +36,11 @@ Complete English-first UI, a contextual live-agent interface with mute/end contr
 This record captures the user's explicit approved implementation plan. No additional product facts were inferred.
 
 ## Latest requested additions
-Personal onboarding for first name, region, insurance context, explanation depth and goals. Locally saved self, partner, child and dependent profiles, with each bill associated with a profile. Optional Face ID / Touch ID / Android biometrics protects access on native devices. Airier screens, proportional Geist typography, varied actions and a signature paper unfolding loader. ClaimPulse source at commit 8c1a321 contains a starter app, health endpoint, mock claim and empty service files; transcript pipeline informs the walkthrough without pretending sponsor APIs are connected.
+Personal onboarding for first name, region, insurance context, explanation depth and goals. Locally saved self, partner, child and dependent profiles, with each bill associated with a profile. Optional Face ID / Touch ID / Android biometrics protects access on native devices. Airier screens, proportional Geist typography, varied actions and a signature paper loader.
 
-Mobile tab headers place a 30pt bold Unfold title on the left, followed by a 22pt regular Bills, Timeline or Guide title. There is no logo placeholder. Profile and Settings controls appear only on the main Home, Bills, Timeline and Guide tabs, using native iOS toolbar buttons. All detail screens and app-owned sheets omit those shortcuts. Each app-owned sheet has a Liquid Glass X close control, with a solid fallback where native glass is unavailable. Top scroll-edge blur is disabled. Opening Settings or Family profiles reuses an existing route rather than stacking another copy.
+Mobile tab headers place a 28pt bold Footnote title on the left, followed by a 22pt regular Bills, Timeline or Guide title. The Footnote asterisk accompanies the wordmark. Profile and Settings controls appear only on the main Home, Bills, Timeline and Guide tabs, using native iOS toolbar buttons. All detail screens and app-owned sheets omit those shortcuts. Each app-owned sheet has a Liquid Glass X close control, with a solid fallback where native glass is unavailable. Top scroll-edge blur is disabled. Opening Settings or Family profiles reuses an existing route rather than stacking another copy.
 
-Settings provides household and personal-context access; Appearance contains only App theme (System, Light, Dark). Agent voice, explanation detail, haptics, reduced motion, bill sorting, resolved-bill visibility, native app lock, sample reset and confirmed deletion of imported cases are functional local controls. Preferences survive restart. Calm, Clear and Warm are explicitly labeled ElevenLabs placeholders; real conversations and voice previews require backend adapters. The default build does not substitute device speech.
+Settings provides household and personal-context access; Appearance contains only App theme (System, Light, Dark). Agent voice, explanation detail, haptics, reduced motion, bill sorting, resolved-bill visibility, native app lock and confirmed deletion of imported cases are functional local controls. Preferences survive restart. Calm, Clear and Warm use the connected ElevenLabs voice catalog and live-session adapter. The default build does not substitute device speech.
 
 Bills and Guide use native iOS search controls. Guide supports searchable curated terms, saved terms, definitions, examples, a useful question to copy, source links and contextual agent controls. Definition, example and suggested question form the context for a future two-way conversation. These are general explanations; plan documents determine actual coverage. The default agent adapter is explicitly unavailable.
 

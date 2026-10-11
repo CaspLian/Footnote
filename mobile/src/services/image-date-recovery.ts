@@ -1,3 +1,4 @@
+import { throwIfAborted } from './abort-signal';
 import type { BillCase } from '../domain/types';
 import { isISODate } from '../domain/money';
 import type { mapGeminiAnalysis } from '../domain/extraction';
@@ -12,10 +13,10 @@ export async function recoverBillDates(request: UnderstandingRequest, mapped: Re
   if (request.dateRecoveryAttempted || attempted.has(request.caseId) || isISODate(mapped.serviceDate ?? '') && isISODate(mapped.extraction.dueDate ?? '')) return {};
   const image = request.attachments.find(item => item.origin === 'import' && ['image/jpeg', 'image/png', 'image/webp'].includes(item.mimeType));
   if (!image) return {};
-  signal.throwIfAborted(); attempted.add(request.caseId); markAttempt?.(request.caseId);
+  throwIfAborted(signal); attempted.add(request.caseId); markAttempt?.(request.caseId);
   const details: Partial<BillCase> = { dateRecoveryAttempted: true };
   try {
-    const form = new FormData(); await appendPart(form, image, 'file'); signal.throwIfAborted();
+    const form = new FormData(); await appendPart(form, image, 'file'); throwIfAborted(signal);
     const reply = await call<ImageDates>('/api/v1/analyze-image', { method: 'POST', body: form }, 180_000, signal);
     const dates = reply.extracted_bill;
     if (!isISODate(mapped.serviceDate ?? '') && dates?.service_date && isISODate(dates.service_date)) details.serviceDate = dates.service_date;

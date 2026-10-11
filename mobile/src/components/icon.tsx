@@ -28,7 +28,7 @@ import { UserCircleIcon } from 'phosphor-react-native/src/icons/UserCircle';
 import { LockKeyIcon } from 'phosphor-react-native/src/icons/LockKey';
 import { BookmarkSimpleIcon } from 'phosphor-react-native/src/icons/BookmarkSimple';
 import { PencilSimpleIcon } from 'phosphor-react-native/src/icons/PencilSimple';
-import { useUnfoldStore } from '@/store';
+import { useFootnoteStore } from '@/store';
 import { useTheme } from '@/theme';
 
 const icons = {
@@ -43,9 +43,9 @@ const icons = {
 export type IconName = keyof typeof icons;
 export function Icon({ name, size, color, selected, feature, ...props }: IconProps & { name: IconName; selected?: boolean; feature?: boolean }) {
   const { colors } = useTheme();
-  const iconSize = useUnfoldStore(s => s.iconSize);
-  const weight = useUnfoldStore(s => s.iconWeight);
-  const opacity = useUnfoldStore(s => s.duotoneOpacity);
+  const iconSize = useFootnoteStore(s => s.iconSize);
+  const weight = useFootnoteStore(s => s.iconWeight);
+  const opacity = useFootnoteStore(s => s.duotoneOpacity);
   const Component = icons[name];
   return <View accessible={false} importantForAccessibility="no-hide-descendants"><Component size={size ?? iconSize} color={color ?? colors.ink} weight={selected ? 'fill' : feature ? 'duotone' : weight} duotoneColor={color ?? colors.ink} duotoneOpacity={opacity} {...props} /></View>;
 }

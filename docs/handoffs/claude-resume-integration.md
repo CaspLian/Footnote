@@ -7,7 +7,7 @@
 
 ## Objective and acceptance criteria
 
-Merge Aarush's updated Unfold UI without losing the existing backend connection or Android upload fixes.
+Merge Aarush's updated Footnote UI without losing the existing backend connection or Android upload fixes.
 Connect the app's document, review, claim, language and voice flows to their backend routes. Finish the private
 ElevenLabs agent and connect the review orb to live conversations. Verify the combined app with automated
 checks, synthetic live requests, and browser/Android checks where the environment permits. Keep everything local.
@@ -26,7 +26,7 @@ Existing worktrees and branches:
   translated spoken price findings preserve their numbers. These changes were not integrated at recovery.
 - `voice-agent-v1`, initially `0eee3ab`: an uncommitted revised design and API documentation. The actual agent
   backend had not been implemented when Claude stopped.
-- The orb prototype in `scratchpad/orb_agent/prototype/` includes tested client/event/controller logic, but had
+- The orb design in `scratchpad/orb_agent/design/` includes tested client/event/controller logic, but had
   not been added to the app.
 
 The latest coding request was to connect every backend endpoint and verify the app. The session also records
@@ -49,7 +49,7 @@ explicit parallel work, the live voice-agent/orb request, and keeping these chan
 
 - Recovery checks: git status/branch/history/worktrees inspected; Claude's final requests and saved artifacts read.
 - Recovered `locales-42` backend, at `b6cee00`: `python -m pytest tests -q` with dotenv disabled and both Tiger
-  test URLs pointing at the separate local database `claimpulse_codex_verify`: **165 passed, 2 skipped**. This
+  test URLs pointing at the separate local database the isolated verification database: **165 passed, 2 skipped**. This
   checks the committed locale/number changes before final integration. Pytest's cache directory was not writable;
   the tests themselves passed. The final merged backend repeated **165 passed, 2 skipped** successfully.
 - The existing test Python environment imports all backend test dependencies. The isolated local PostgreSQL
@@ -76,8 +76,8 @@ explicit parallel work, the live voice-agent/orb request, and keeping these chan
   exact saved-audit reopening, Medicare lookups, reading generation/audio byte ranges, voice sample, claim
   creation/read/status/deadline/action/resolution, image-only claim extraction, recorded question plus image,
   audio delivery and a no-store private WebRTC session credential.
-- Live API tests use schema `claimpulse_codex_demo_20261010`, not the team's tables. Offline database tests use
-  the separate local database `claimpulse_codex_verify`. Keys stay in process and ignored settings.
+- Live API tests use schema the isolated integration schema, not the team's tables. Offline database tests use
+  the separate local database the isolated verification database. Keys stay in process and ignored settings.
 - Expo web journey: personal setup, image import, document confirmation, Gemini extraction (14.3 seconds),
   verification, benchmarks, claim persistence, review, actual audio playback and stop, two voice previews,
   voice selection/persistence, and reload passed. Extracted total $4,850 and balance $1,940 stayed consistent;
@@ -105,7 +105,7 @@ explicit parallel work, the live voice-agent/orb request, and keeping these chan
   No native live voice or completed fresh native upload is claimed as verified. The emulator remains under
   Nimesh's control with the rebuilt app and its preserved data.
 
-Local verification artifacts (not committed): `../claimpulse-resume-checks/`, with bounded HTTP driver/report,
+Local verification artifacts (not committed): `../footnote-resume-checks/`, with bounded HTTP driver/report,
 synthetic question WAV, screenshots, redacted browser network/event logs, provider conversation evidence and
 native build log. The ignored backend settings now hold the provisioned development agent ID; no keys were
 copied into these artifacts.

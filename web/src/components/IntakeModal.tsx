@@ -1,245 +1,60 @@
-import React, { useState } from 'react';
-import { Language, MedicalCase } from '../types';
-import { 
-  X, 
-  Camera, 
-  Images, 
-  FilePdf, 
-  UploadSimple, 
-  CheckCircle, 
-  CircleNotch,
-  Sparkle,
-  ShieldCheck,
-  ArrowRight
-} from '@phosphor-icons/react';
+import { useEffect, useRef, useState } from 'react';
+import type { Language, MedicalCase } from '../types';
+import { X, FileArrowUp, CircleNotch } from '@phosphor-icons/react';
+import { analyzeDocuments, backend, BackendError } from '../services';
 
 interface IntakeModalProps {
   isOpen: boolean;
   onClose: () => void;
   language: Language;
   onCaseParsed: (caseData: MedicalCase) => void;
-  sampleCases: MedicalCase[];
 }
 
-export const IntakeModal: React.FC<IntakeModalProps> = ({
-  isOpen,
-  onClose,
-  language,
-  onCaseParsed,
-  sampleCases,
-}) => {
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [docType, setDocType] = useState<'bill' | 'eob'>('bill');
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [processingStep, setProcessingStep] = useState(0);
-
-  if (!isOpen) return null;
-
-  const handleSimulateUpload = (caseToLoad: MedicalCase) => {
-    setIsProcessing(true);
-    setProcessingStep(1);
-
-    setTimeout(() => {
-      setProcessingStep(2);
-      setTimeout(() => {
-        setProcessingStep(3);
-        setTimeout(() => {
-          setIsProcessing(false);
-          setProcessingStep(0);
-          onCaseParsed(caseToLoad);
-          onClose();
-        }, 800);
-      }, 900);
-    }, 900);
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      setSelectedFile(e.dataTransfer.files[0]);
+export function IntakeModal({ isOpen, onClose, language, onCaseParsed }: IntakeModalProps) {
+  const [files, setFiles] = useState<File[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const picker = useRef<HTMLInputElement>(null);
+  const generation = useRef(0);
+  useEffect(() => { if (!isOpen) { generation.current++; setBusy(false); } }, [isOpen]);
+  const copy = (en: string, es: string) => language === 'en' ? en : es;
+  function choose(next: File[]) {
+    setError('');
+    if (next.length > 10 || next.some(file => !/^image\//.test(file.type) && file.type !== 'application/pdf')) {
+      setError(copy('Choose up to 10 photos or PDF documents.', 'Elige hasta 10 fotos o documentos PDF.'));
+      return;
     }
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
-      <div className="bg-white border border-slate-200/90 rounded-3xl shadow-modal w-full max-w-2xl overflow-hidden animate-scale-up">
-        {/* Modal Header */}
-        <div className="p-6 pb-4 border-b border-slate-100 flex items-center justify-between">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold uppercase tracking-wider text-brand-700 bg-brand-50 border border-brand-200 px-2 py-0.5 rounded">
-                Gemini 1.5 Multimodal OCR
-              </span>
-            </div>
-            <h2 className="text-xl font-bold text-ink-primary mt-1">
-              {language === 'en' ? 'Add Documents to Audit' : 'Agregar Documentos para Auditar'}
-            </h2>
-            <p className="text-xs text-ink-muted">
-              {language === 'en'
-                ? 'Upload itemized hospital bills, EOB explanations, or health insurance policies.'
-                : 'Suba facturas de hospital, explicaciones EOB o pólizas de seguro.'}
-            </p>
-          </div>
-
-          <button
-            onClick={onClose}
-            className="p-2 rounded-xl text-slate-400 hover:text-ink-primary hover:bg-slate-100 transition-colors"
-          >
-            <X size={20} />
-          </button>
-        </div>
-
-        {/* Modal Body */}
-        <div className="p-6 space-y-6">
-          {isProcessing ? (
-            /* OCR Progress Steps Animation */
-            <div className="py-12 text-center space-y-4">
-              <div className="relative w-16 h-16 mx-auto flex items-center justify-center">
-                <CircleNotch size={56} className="text-brand-600 animate-spin" />
-                <Sparkle size={24} className="text-brand-600 absolute" />
-              </div>
-
-              <div className="space-y-1">
-                <h3 className="text-base font-bold text-ink-primary">
-                  {language === 'en' ? 'Analyzing Medical Document...' : 'Analizando Documento Médico...'}
-                </h3>
-                <p className="text-xs text-ink-secondary">
-                  {processingStep === 1 &&
-                    (language === 'en'
-                      ? 'Extracting CPT codes, facility fees, and billing dates...'
-                      : 'Extrayendo códigos CPT, cargos de instalación y fechas...')}
-                  {processingStep === 2 &&
-                    (language === 'en'
-                      ? 'Cross-referencing regional Medicare allowable price benchmarks...'
-                      : 'Cotejando baremos de precios de Medicare regional...')}
-                  {processingStep === 3 &&
-                    (language === 'en'
-                      ? 'Matching patient responsibility against EOB adjudications...'
-                      : 'Conciliando responsabilidad del paciente con la EOB...')}
-                </p>
-              </div>
-
-              {/* Step dots */}
-              <div className="flex justify-center gap-2 pt-2">
-                {[1, 2, 3].map((step) => (
-                  <span
-                    key={step}
-                    className={`w-2.5 h-2.5 rounded-full transition-all ${
-                      processingStep >= step ? 'bg-brand-600 scale-110' : 'bg-slate-200'
-                    }`}
-                  ></span>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <>
-              {/* Document Type Selector Pill */}
-              <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 border border-slate-200/80">
-                <span className="text-xs font-semibold text-ink-secondary">
-                  {language === 'en' ? 'Document Classification:' : 'Tipo de Documento:'}
-                </span>
-
-                <div className="flex gap-1 bg-white p-1 rounded-xl border border-slate-200">
-                  <button
-                    onClick={() => setDocType('bill')}
-                    className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
-                      docType === 'bill'
-                        ? 'bg-brand-600 text-white shadow-subtle'
-                        : 'text-ink-secondary hover:text-ink-primary'
-                    }`}
-                  >
-                    {language === 'en' ? 'Hospital Bill / Statement' : 'Factura de Hospital'}
-                  </button>
-                  <button
-                    onClick={() => setDocType('eob')}
-                    className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
-                      docType === 'eob'
-                        ? 'bg-brand-600 text-white shadow-subtle'
-                        : 'text-ink-secondary hover:text-ink-primary'
-                    }`}
-                  >
-                    {language === 'en' ? 'Insurance EOB' : 'EOB de Aseguradora'}
-                  </button>
-                </div>
-              </div>
-
-              {/* Asymmetric Dropzone Area (Fixing the 3 same-size buttons!) */}
-              <div
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={handleDrop}
-                className="border-2 border-dashed border-brand-300 hover:border-brand-500 rounded-3xl p-8 text-center bg-brand-50/30 hover:bg-brand-50/60 transition-all cursor-pointer group"
-                onClick={() => handleSimulateUpload(sampleCases[0])}
-              >
-                <div className="w-14 h-14 rounded-2xl bg-white text-brand-600 flex items-center justify-center mx-auto shadow-subtle group-hover:scale-105 transition-transform mb-3 border border-brand-200">
-                  <UploadSimple size={28} weight="bold" />
-                </div>
-                <h4 className="text-sm font-bold text-ink-primary">
-                  {language === 'en'
-                    ? 'Click to browse or drag and drop your document'
-                    : 'Haga clic para examinar o arrastre su documento'}
-                </h4>
-                <p className="text-xs text-ink-muted mt-1">
-                  Supports PDF statements, camera photos (PNG, JPG), or scanned invoices
-                </p>
-
-                <div className="mt-4 flex flex-wrap justify-center gap-2">
-                  <span className="inline-flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-medium bg-white border border-slate-200 text-ink-secondary">
-                    <Camera size={14} /> Camera Capture
-                  </span>
-                  <span className="inline-flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-medium bg-white border border-slate-200 text-ink-secondary">
-                    <Images size={14} /> Photo Library
-                  </span>
-                  <span className="inline-flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-medium bg-white border border-slate-200 text-ink-secondary">
-                    <FilePdf size={14} /> PDF File
-                  </span>
-                </div>
-              </div>
-
-              {/* Fast 1-Click Synthetic Demo Presets (Crucial for Hackathon!) */}
-              <div className="space-y-2 pt-2 border-t border-slate-100">
-                <span className="text-xs font-bold uppercase tracking-wider text-ink-muted block">
-                  {language === 'en' ? 'Or Explore Pre-Configured Test Cases:' : 'O explore casos de prueba de muestra:'}
-                </span>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {sampleCases.map((sample) => (
-                    <button
-                      key={sample.id}
-                      onClick={() => handleSimulateUpload(sample)}
-                      className="p-3.5 rounded-2xl border border-slate-200 hover:border-brand-300 bg-slate-50 hover:bg-brand-50/40 text-left transition-all flex items-center justify-between group shadow-subtle"
-                    >
-                      <div>
-                        <span className="font-bold text-xs text-ink-primary group-hover:text-brand-800 transition-colors block">
-                          {sample.provider_name}
-                        </span>
-                        <span className="text-[11px] text-rose-600 font-semibold block mt-0.5">
-                          ${sample.discrepancy_amount.toFixed(0)} {language === 'en' ? 'Discrepancy' : 'Discrepancia'}
-                        </span>
-                      </div>
-                      <ArrowRight size={16} className="text-slate-400 group-hover:text-brand-600 transition-colors" />
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* Modal Footer */}
-        <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-xs text-ink-muted">
-          <div className="flex items-center gap-1.5">
-            <ShieldCheck size={16} className="text-emerald-600" />
-            <span>{language === 'en' ? 'Encrypted locally on device' : 'Cifrado localmente en el dispositivo'}</span>
-          </div>
-
-          <button
-            onClick={onClose}
-            className="text-ink-secondary hover:text-ink-primary font-semibold"
-          >
-            {language === 'en' ? 'Cancel' : 'Cancelar'}
-          </button>
-        </div>
-      </div>
+    setFiles(next);
+  }
+  async function analyze() {
+    if (busy || !files.length || !backend.configured) return;
+    const token = ++generation.current;
+    setBusy(true); setError('');
+    try {
+      const billCase = await analyzeDocuments(files, language);
+      if (generation.current !== token) return;
+      onCaseParsed(billCase); setFiles([]); onClose();
+    } catch (failure) {
+      if (generation.current !== token) return;
+      setError(failure instanceof BackendError && failure.message === 'unreachable'
+        ? copy('Could not reach Footnote. Your documents are still selected; try again.', 'No se pudo conectar con Footnote. Tus documentos siguen seleccionados; intenta de nuevo.')
+        : copy('Your document could not be read. Check the file and try again.', 'No se pudo leer el documento. Revisa el archivo e intenta de nuevo.'));
+    } finally { if (generation.current === token) setBusy(false); }
+  }
+  if (!isOpen) return null;
+  return <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+    <div role="dialog" aria-modal="true" aria-labelledby="intake-title" className="bg-white rounded-3xl shadow-modal w-full max-w-xl p-6 space-y-5">
+      <div className="flex items-center justify-between"><h2 id="intake-title" className="text-xl font-bold">{copy('Start with your documents', 'Empieza con tus documentos')}</h2><button aria-label={copy('Close', 'Cerrar')} onClick={onClose} className="p-2"><X size={20} /></button></div>
+      <p className="text-ink-secondary">{copy('Add your medical bill, explanation of benefits, or both. Check the extracted details before continuing.', 'Agrega tu factura médica, explicación de beneficios o ambas. Verifica los datos extraídos antes de continuar.')}</p>
+      <input ref={picker} type="file" accept="application/pdf,image/*" multiple hidden onChange={event => choose(Array.from(event.target.files ?? []))} />
+      <button disabled={busy} onClick={() => picker.current?.click()} onDragOver={event => event.preventDefault()} onDrop={event => { event.preventDefault(); if (!busy) choose(Array.from(event.dataTransfer.files)); }} className="w-full rounded-2xl border-2 border-dashed border-brand-300 bg-brand-50/40 p-8 text-center disabled:opacity-50">
+        <FileArrowUp size={32} className="mx-auto mb-3 text-brand-600" />{copy('Choose photos or PDFs, or drop them here', 'Elige fotos o PDF, o arrástralos aquí')}
+      </button>
+      {!!files.length && <ul className="space-y-1 text-sm">{files.map((file, index) => <li key={index}>{file.name}</li>)}</ul>}
+      {!backend.configured && <p role="status">{copy('Document reading is unavailable. Open the Footnote mobile app to enter the details manually.', 'La lectura de documentos no está disponible. Abre la app móvil de Footnote para ingresar los datos manualmente.')}</p>}
+      {error && <p role="alert" className="text-red-700">{error}</p>}
+      <p className="text-xs text-ink-muted">{copy('When you continue, these documents are sent to Footnote for analysis with Gemini and saved with Tiger Data.', 'Al continuar, estos documentos se envían a Footnote para analizarlos con Gemini y guardarlos con Tiger Data.')}</p>
+      <div className="flex justify-end gap-3"><button onClick={onClose} className="px-4 py-2">{copy('Cancel', 'Cancelar')}</button><button disabled={busy || !files.length || !backend.configured} onClick={() => void analyze()} className="flex items-center gap-2 rounded-xl bg-brand-600 px-4 py-2 text-white disabled:opacity-50">{busy && <CircleNotch size={18} className="animate-spin" />}{busy ? copy('Reading your documents…', 'Leyendo tus documentos…') : copy('Use these documents', 'Usar estos documentos')}</button></div>
     </div>
-  );
-};
+  </div>;
+}

@@ -1,6 +1,6 @@
 # Team workflow: for people and their coding assistants
 
-How four people (and their assistants) work on ClaimPulse AI in parallel without stepping on each other.
+How four people (and their assistants) work on Footnote in parallel without stepping on each other.
 
 **Commands below are for Git Bash**, which comes with Git for Windows, and they also work on macOS and Linux.
 In PowerShell, run each part of a `&&` chain as its own line.

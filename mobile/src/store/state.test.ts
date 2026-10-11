@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { createUnfoldStore, type LocalStorage } from './state';
+import { createFootnoteStore, type LocalStorage } from './state';
 import { parseSnapshot, STORAGE_KEY } from './persistence';
 import { documentService } from '../services/local-services';
 import type { DocumentAttachment, ReviewResult } from '../domain/types';
@@ -18,10 +18,10 @@ function memoryStorage() {
 let sequence = 0;
 const clock = () => '2026-10-09T17:00:00.000Z';
 const id = (prefix: string) => `${prefix}-${++sequence}`;
-const imported: DocumentAttachment = { id: 'import', uri: 'file:///app/unfold/a.pdf', name: 'Bill.pdf', mimeType: 'application/pdf', kind: 'bill', origin: 'import', importedAt: clock() };
+const imported: DocumentAttachment = { id: 'import', uri: 'file:///app/footnote/a.pdf', name: 'Bill.pdf', mimeType: 'application/pdf', kind: 'bill', origin: 'import', importedAt: clock() };
 
-async function ready(storage: LocalStorage, options: Parameters<typeof createUnfoldStore>[1] = {}) {
-  const store = createUnfoldStore(storage, { now: clock, id, autoHydrate: false, ...options });
+async function ready(storage: LocalStorage, options: Parameters<typeof createFootnoteStore>[1] = {}) {
+  const store = createFootnoteStore(storage, { now: clock, id, autoHydrate: false, ...options });
   await store.getState().retryHydration(); return store;
 }
 

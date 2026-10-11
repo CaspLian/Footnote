@@ -25,9 +25,9 @@ export async function exportDraftPdf(draft: DraftExport): Promise<{ uri: string 
     // WebKit load dependency when exporting on iOS simulators.
     const result = await Print.printToFileAsync({ html: draftToHtml(draft), base64: false, useMarkupFormatter: Platform.OS === 'ios' });
     temporary = new File(result.uri);
-    const directory = new Directory(Paths.document, 'unfold', 'exports');
+    const directory = new Directory(Paths.document, 'footnote', 'exports');
     directory.create({ intermediates: true, idempotent: true });
-    destination = new File(directory, `${createLocalId('unfold-draft')}.pdf`);
+    destination = new File(directory, `${createLocalId('footnote-draft')}.pdf`);
     await temporary.copy(destination); // asynchronous since expo-file-system 57
     if (!destination.exists || destination.size <= 0) throw new Error('Export did not create a file');
     return { uri: destination.uri };

@@ -53,7 +53,7 @@ from the code. The models are defined in `backend/models.py` and `backend/servic
 | `GET /api/v1/voice/voices` | Voices for a picker: `{"default": "matilda", "language_defaults": {"es": "elio", ...}, "voices": [{key, name, description, accent, gender}]}` (20) | `voice_routes.py`, `text_to_speech/voices.json` |
 | `GET /api/v1/voice/voices/{voice_key}/sample` | A short MP3 sample of one voice | `voice_routes.py` |
 
-### Connected Unfold app usage
+### Connected Footnote app usage
 
 | App action | Backend route |
 |---|---|

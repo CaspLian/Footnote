@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { Keyboard, View } from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router } from 'expo-router';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { FamilyProfile, PersonalContext, Coverage } from '@/domain';
 import { type WorkingLanguage } from '@/domain/languages';
-import { useUnfoldStore } from '@/store';
+import { useFootnoteStore } from '@/store';
 import { Button, Choice, Feedback, Field, Group, Screen, Txt } from '@/components/ui';
 import { LanguageGrid } from '@/components/language-picker';
 import { useMotionPreference, useTheme, motion, space } from '@/theme';
@@ -13,11 +13,10 @@ const coverageOptions: [Coverage, string][] = [['private', 'Employer / private i
 
 export function Onboarding() {
   const { colors } = useTheme();
-  const { demo } = useLocalSearchParams<{ demo?: string }>();
-  const existing = useUnfoldStore(s => s.profiles.find(p => p.relationship === 'self'));
-  const prefs = useUnfoldStore(s => s.personalContext);
-  const savedLanguage = useUnfoldStore(s => s.preferences.workingLanguage);
-  const completed = useUnfoldStore(s => s.onboardingCompleted);
+  const existing = useFootnoteStore(s => s.profiles.find(p => p.relationship === 'self'));
+  const prefs = useFootnoteStore(s => s.personalContext);
+  const savedLanguage = useFootnoteStore(s => s.preferences.workingLanguage);
+  const completed = useFootnoteStore(s => s.onboardingCompleted);
   const [step, setStep] = useState(0);
   const [language, setLanguage] = useState<WorkingLanguage | undefined>(completed ? savedLanguage : undefined);
   const [profile, setProfile] = useState<Omit<FamilyProfile, 'id'>>(existing ?? { firstName: '', relationship: 'self', zipCode: '', coverage: 'unsure', insurer: '', planName: '' });
@@ -39,22 +38,19 @@ export function Onboarding() {
     if (step < 3) { setStep(v => v + 1); return; }
     setBusy(true);
     try {
-      useUnfoldStore.getState().setPreferences({ workingLanguage: language });
-      useUnfoldStore.getState().completeOnboarding(profile, context);
-      await useUnfoldStore.getState().flushPersistence();
-      if (useUnfoldStore.getState().storageError) throw Error();
-      if (demo === '1') {
-        const id = await useUnfoldStore.getState().loadSample();
-        router.replace({ pathname: '/verify', params: { caseId: id } });
-      } else router.replace('/(tabs)/(home)');
+      useFootnoteStore.getState().setPreferences({ workingLanguage: language });
+      useFootnoteStore.getState().completeOnboarding(profile, context);
+      await useFootnoteStore.getState().flushPersistence();
+      if (useFootnoteStore.getState().storageError) throw Error();
+      router.replace('/(tabs)/(home)');
     } catch {
       // The shared storage recovery alert already handles persistence failures.
-      if (!useUnfoldStore.getState().storageError) setError('Your setup could not finish. Keep this screen open and try again.');
+      if (!useFootnoteStore.getState().storageError) setError('Your setup could not finish. Keep this screen open and try again.');
     } finally { setBusy(false); }
   }
 
   const footer = <Group gap={space.sm}>
-    <Button title={step < 3 ? 'Continue' : demo === '1' ? 'Finish & explore sample' : 'Finish setup'} disabled={!canContinue} loading={busy} onPress={() => void next()} />
+    <Button title={step < 3 ? 'Continue' : 'Finish setup'} disabled={!canContinue} loading={busy} onPress={() => void next()} />
     {step > 0 ? <Button title="Previous step" variant="quiet" disabled={busy} onPress={() => { Keyboard.dismiss(); setError(''); setStep(v => v - 1); }} /> : null}
   </Group>;
 
@@ -64,7 +60,7 @@ export function Onboarding() {
       {step === 0 ? <>
         <Group gap={space.lg}><Txt variant="display">Let’s speak{'\n'}your language.</Txt><Txt muted>Select a language for document explanations and conversations.</Txt></Group>
         <LanguageGrid value={language} onChange={value => { setError(''); setLanguage(value); }} />
-        <Txt variant="caption" muted>Your choice is saved locally. App screens are in English for this prototype; the connected agent will use your working language.</Txt>
+        <Txt variant="caption" muted>Your choice is saved locally. App screens are in English; the connected agent will use your working language.</Txt>
       </> : step === 1 ? <>
         <Group gap={space.lg}><Txt variant="display">A little context.{'\n'}A better start.</Txt><Txt muted>Your details help organize bills and put future comparisons in context.</Txt></Group>
         <Field label="First name or nickname" accessibilityHint="Required. Enter your first name or a nickname to continue." placeholder="What should we call you?" autoComplete="given-name" value={profile.firstName} onChangeText={v => patch({ firstName: v })} maxLength={80} />

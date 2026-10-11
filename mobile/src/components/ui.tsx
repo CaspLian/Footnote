@@ -4,7 +4,7 @@ import Animated, { cubicBezier, useSharedValue, useAnimatedStyle, withTiming, Ea
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useUnfoldStore } from '@/store';
+import { useFootnoteStore } from '@/store';
 import { motion, fonts, radius, shadows, sizes, space, type, useTheme, useMotionPreference, type Palette } from '@/theme';
 import { Icon, IconName } from './icon';
 import { GlassSurface, useGlassAvailable } from './glass-surface';
@@ -14,7 +14,7 @@ const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 const ActionLayout = createContext({ row: false, dock: false });
 
 export function useLanguage() {
-  const locale = useUnfoldStore(s => s.locale);
+  const locale = useFootnoteStore(s => s.locale);
   const copy = useCallback((en: string, es: string) => locale === 'es' ? es : en, [locale]);
   return { locale, copy };
 }
@@ -26,7 +26,7 @@ export function Button({ title, onPress, variant = 'primary', material, compact 
   const layout = useContext(ActionLayout);
   const [pressed,setPressed]=useState(false); const [hovered,setHovered]=useState(false);const [focused,setFocused]=useState(false);const reduced=useMotionPreference();
   const isGlass = (material ?? (variant === 'primary' ? 'glass' : 'solid')) === 'glass'; const nativeGlass = useGlassAvailable();
-  const haptics = useUnfoldStore(s => s.preferences.haptics);
+  const haptics = useFootnoteStore(s => s.preferences.haptics);
   const color = disabled ? colors.muted : variant === 'primary' && !isGlass ? scheme === 'dark' ? '#112C22' : '#FFFEFA' : colors.accent;
   return <AnimatedPressable testID={testID} accessibilityRole="button" accessibilityLabel={title} accessibilityState={{ disabled: !!disabled || !!loading, busy: !!loading }} disabled={disabled || loading} onPressIn={()=>setPressed(true)} onPressOut={()=>setPressed(false)} onHoverIn={()=>setHovered(true)} onHoverOut={()=>setHovered(false)} onFocus={()=>setFocused(true)} onBlur={()=>setFocused(false)} onPress={() => { if(Platform.OS!=='web'&&haptics)void Haptics.selectionAsync().catch(() => {}); onPress(); }} style={[styles.button, variant==='link'?styles.link:variant==='quiet'?styles.quiet:variant==='secondary'?styles.secondary:styles.primary, layout.row && !compact ? { flexGrow: 1, flexBasis: 0, minWidth: 88, alignSelf: 'stretch' } : !desktop && !compact && variant !== 'link' ? { alignSelf: 'stretch', width: '100%' } : null, layout.dock ? { minHeight: 48, paddingVertical: 10, paddingHorizontal: 12 } : null, { backgroundColor: isGlass ? 'transparent' : variant === 'primary' ? colors.accent : hovered ? colors.accentSoft : variant === 'secondary' ? colors.surface : variant === 'quiet' ? colors.accentSoft : 'transparent', opacity: nativeGlass && isGlass ? 1 : disabled ? .45 : pressed ? .84 : 1, transform: [{scale:pressed&&!reduced?.98:1}], boxShadow:focused?'0 0 0 3px rgba(23,107,91,.24)':isGlass ? nativeGlass ? 'none' : shadows.control : variant==='primary'?shadows.control:'none', transitionProperty: ['transform','opacity','backgroundColor'], transitionDuration:motion.press,transitionTimingFunction:cubicBezier(.23,1,.32,1) }, style]}>
     {isGlass ? <GlassSurface tinted style={[StyleSheet.absoluteFill, { borderRadius: radius.control }]} /> : null}
@@ -76,9 +76,9 @@ export function Screen({ children, footer, aside, asideWidth, contentWidth, foot
   const reservedHeight = measureOverlay && overlayHeight !== undefined ? overlayHeight + overlayBottom : overlayReserve;
   useEffect(()=>{reserve.set(withTiming(hasOverlay ? reservedHeight : 0,{duration:reducedMotion?0:280,easing:Easing.bezier(.23,1,.32,1)}));},[reservedHeight,hasOverlay,reducedMotion,reserve]);
   const scrollLayout = useAnimatedStyle(()=>({paddingBottom:reserve.get()}));
-  const storageError = useUnfoldStore(s => s.storageError); const { copy } = useLanguage();
+  const storageError = useFootnoteStore(s => s.storageError); const { copy } = useLanguage();
   return <KeyboardAvoidingView testID={testID} style={styles.screen} behavior={Platform.OS === 'ios' ? 'padding' : undefined} automaticOffset keyboardVerticalOffset={0}>
-    {showStorageError && storageError ? <View style={{ paddingHorizontal: space.screen, paddingTop: space.md }}><Feedback danger text={copy('Your changes could not be saved. Keep the app open and try saving again.', 'No se pudieron guardar tus cambios. Mantén la app abierta e intenta guardar de nuevo.')} action={{ title: copy('Try saving again','Intentar guardar de nuevo'), onPress: () => { void useUnfoldStore.getState().retryPersistence().catch(()=>{}); } }} /></View> : null}
+    {showStorageError && storageError ? <View style={{ paddingHorizontal: space.screen, paddingTop: space.md }}><Feedback danger text={copy('Your changes could not be saved. Keep the app open and try saving again.', 'No se pudieron guardar tus cambios. Mantén la app abierta e intenta guardar de nuevo.')} action={{ title: copy('Try saving again','Intentar guardar de nuevo'), onPress: () => { void useFootnoteStore.getState().retryPersistence().catch(()=>{}); } }} /></View> : null}
     <View style={{ flex: 1, minHeight: 0 }}><SoftScrollView softenTopAtRest={Platform.OS==='ios'&&softenSearchEdge&&searchMode} topFadeHeight={searchMode?24:scrollEdgeHeight} bottomFadeHeight={hasOverlay?0:searchMode?24:scrollEdgeHeight} contentContainerStyle={[styles.content,desktop?{padding:space.xxl}:null,overlay?{paddingBottom:overlaySpace}:null,searchMode?{paddingTop:space.md,paddingBottom:space.sm}:null]} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'} contentInsetAdjustmentBehavior="automatic"><Animated.View style={[{width:'100%',maxWidth:contentWidth ?? (desktop?1120:720),alignSelf:'center',flexDirection:desktop&&aside?'row':'column',gap:space.xl},scrollLayout]}>{desktop&&aside?<View style={asideWidth?{width:asideWidth}:{flex:1}}>{aside}</View>:null}<View style={{flex:1,minWidth:0,gap:searchMode?space.lg:space.xl}}>{children}</View></Animated.View></SoftScrollView>{overlay?<View onLayout={measureOverlay ? e => setOverlayHeight(e.nativeEvent.layout.height) : undefined} pointerEvents="box-none" style={{position:'absolute',bottom:overlayBottom,left:0,right:0,alignItems:'center'}}>{overlay}</View>:null}</View>
     {footer ? <View style={[styles.footer, { paddingBottom: footerSafeArea ? Math.max(insets.bottom, space.sm) : footerBottomGap, alignItems: 'center' }]}>{hasOverlay ? <LinearGradient pointerEvents="none" colors={[`${colors.background}00`, colors.background]} style={{ position: 'absolute', top: -20, left: 0, right: 0, height: 20 }}/> : null}<ActionLayout.Provider value={{ row: false, dock: true }}><View style={{ width: '100%', maxWidth: contentWidth ?? 720, gap: space.sm }}>{footerHint ? <Txt variant="caption" muted numberOfLines={1}>{footerHint}</Txt> : null}{footer}</View></ActionLayout.Provider></View> : null}
   </KeyboardAvoidingView>;

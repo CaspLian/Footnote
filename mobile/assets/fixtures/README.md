@@ -8,4 +8,4 @@ The repeated laboratory line and the $250 balance difference are questions to cl
 
 Regenerate using `python3 mobile/scripts/generate-fixtures.py` with ReportLab and pypdf installed. The Codex bundled Python has these packages.
 
-`qa/corrupt-header.pdf` contains a valid header and invalid page data. `qa/password-protected.pdf` has password `unfold-qa`. These recovery-only files are not included in the app's sample resolver and must not be presented as successfully processed documents.
+`qa/corrupt-header.pdf` contains a valid header and invalid page data. `qa/password-protected.pdf` has password `footnote-qa`. These recovery-only files are not included in the app's sample resolver and must not be presented as successfully processed documents.

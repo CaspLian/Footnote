@@ -1,4 +1,4 @@
-"""Developer console: try the whole ClaimPulse backend in a browser. Local only.
+"""Developer console: try the whole Footnote backend in a browser. Local only.
 
     cd backend
     python dev_console.py                       # opens http://127.0.0.1:8770/console
@@ -128,7 +128,7 @@ def main_cli(argv: list[str] | None = None) -> int:
     app, services = build_app(args.tiger_url)
     port = args.port if args.port and _port_is_free(args.port) else _free_port()  # --port 0: any free port
     url = f"http://127.0.0.1:{port}/console"
-    print(f"ClaimPulse developer console: {url}   (Ctrl+C to stop)")
+    print(f"Footnote developer console: {url}   (Ctrl+C to stop)")
     print("Services:", ", ".join(f"{name} {state}" for name, state in services.items()))
     opener = threading.Timer(1.5, webbrowser.open, args=(url,))
     opener.daemon = True  # Ctrl+C before it fires: stop at once, and do not open a page that is gone

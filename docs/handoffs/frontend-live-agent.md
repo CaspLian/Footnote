@@ -1,4 +1,4 @@
-# Live voice behind the Unfold orb
+# Live voice behind the Footnote orb
 
 - Owner: Nimesh, recovered Claude work with Codex
 - Branch: `frontend-ui-v3`, isolated `wt-ui` worktree
@@ -56,8 +56,8 @@ price cards for `doctor_part_only` and `not_compared` labels.
 - Added targeted tests for SDK/microphone order, controls, cancellation, late startup disposal, timeout, remote
   hang-up during/after startup, audio competition, synchronous startup failure, captions, tool validation,
   microphone probe release and app permission configuration.
-- A redundant test run of the recovered scratch prototype failed with sandbox `spawn EPERM`; its escalation
-  was user-aborted. No successful prototype run is claimed from this resumed task.
+- A redundant test run of the recovered scratch design failed with sandbox `spawn EPERM`; its escalation
+  was user-aborted. No successful design run is claimed from this resumed task.
 - Frontend integration ran the app's complete regression suite: 153 passed, 0 failed; whole-app typecheck/lint
   passed. Expo web and Android Hermes exports passed. The separate web app passed 19 tests with 3 live tests
   skipped and its production build passed. Root handles browser/live/device verification; no real conversation

@@ -5,7 +5,7 @@
 
 ## Context
 
-Update, later on 2026-10-10: a multi-screen prototype now exists on `frontend-aarush`, so point 2 becomes
+Update, later on 2026-10-10: a multi-screen design now exists on `frontend-aarush`, so point 2 becomes
 connecting its bill-intake flow to these two routes first.
 
 The whiteboard plans much more than exists: deadline tracking, credit dashboards, phone agents and Solana escrow

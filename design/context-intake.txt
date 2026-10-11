@@ -80,7 +80,7 @@ export default function Intake() {
           </div>
         </a>
         <p className="[word-break:break-word] font-['Geist:Regular'] font-normal leading-[18px] relative shrink-0 text-[12px] text-[color:var(--colors.muted,#56635f)] w-[342px]" data-node-id="3:1142">
-          Imported documents are reviewed manually in this prototype.
+          Imported documents are reviewed manually in this design.
         </p>
         <a className="bg-[var(--colors.accentSoft,#eaf3ef)] content-stretch cursor-pointer flex h-[56px] items-center justify-center px-[24px] py-[16px] relative rounded-[var(--radius.r16,16px)] shrink-0 w-[342px]" data-node-id="3:1143" data-name="Button">
           <p className="[word-break:break-word] font-['Geist:Regular'] font-normal leading-[24px] relative shrink-0 text-[16px] text-[color:var(--colors.accent,#176b5b)] text-center w-[280px]" data-node-id="I3:1143;2:86">
@@ -106,7 +106,7 @@ SUPER CRITICAL: The generated React+Tailwind code MUST be converted to match the
 DO NOT install any Tailwind as a dependency unless the user instructs you to do so.
 
 Node ids have been added to the code as data attributes, e.g. `data-node-id="1:2"`.
-These styles are contained in the design: Unfold/section: Font(family: "Geist", style: SemiBold, size: 20, weight: 600, lineHeight: 26, letterSpacing: 0), Unfold/title: Font(family: "Geist", style: SemiBold, size: 26, weight: 600, lineHeight: 32, letterSpacing: 0), Unfold/body: Font(family: "Geist", style: Regular, size: 16, weight: 400, lineHeight: 24, letterSpacing: 0), Unfold/caption: Font(family: "Geist", style: Regular, size: 12, weight: 400, lineHeight: 18, letterSpacing: 0).
+These styles are contained in the design: Footnote/section: Font(family: "Geist", style: SemiBold, size: 20, weight: 600, lineHeight: 26, letterSpacing: 0), Footnote/title: Font(family: "Geist", style: SemiBold, size: 26, weight: 600, lineHeight: 32, letterSpacing: 0), Footnote/body: Font(family: "Geist", style: Regular, size: 16, weight: 400, lineHeight: 24, letterSpacing: 0), Footnote/caption: Font(family: "Geist", style: Regular, size: 12, weight: 400, lineHeight: 18, letterSpacing: 0).
 Component descriptions: The following components have usage descriptions or documentation links defined in Figma. These descriptions provide important context about the intended usage, best practices, and any constraints for each component. Follow these guidelines when implementing or using these components.
 
 ## Variant=secondary, State=default

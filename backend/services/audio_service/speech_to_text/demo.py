@@ -152,7 +152,7 @@ def _words(text: str, ignore_numbers: bool = False) -> list[str]:
 
 
 def _as_spoken(text: str) -> str:
-    """The mock text the way the voice said it: text_to_speech replaces words like ClaimPulse first."""
+    """The mock text the way the voice said it: text_to_speech replaces words like Footnote first."""
     try:
         sounds = json.loads(TTS_PRONUNCIATIONS_FILE.read_text(encoding="utf-8-sig"))
     except (OSError, ValueError):

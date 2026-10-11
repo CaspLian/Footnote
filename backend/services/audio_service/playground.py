@@ -53,7 +53,7 @@ MODEL_NOTES = {
     "eleven_v4": (0.44, "newest quality model. First audio in about 0.7-1.7 s, slow to finish"),
 }
 
-app = FastAPI(title="ClaimPulse voice playground")
+app = FastAPI(title="Footnote voice playground")
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=["127.0.0.1", "localhost"])
 
 

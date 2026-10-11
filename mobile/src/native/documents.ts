@@ -1,3 +1,4 @@
+import { LEGACY_DOCUMENT_DIRECTORY } from '../domain/legacy-identity';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import { Directory, File, FileMode, Paths } from 'expo-file-system';
@@ -24,7 +25,7 @@ export function appendAttachmentToForm(form: FormData, attachment: DocumentAttac
 }
 
 function storageDirectory() {
-  return new Directory(Paths.document, 'unfold', 'attachments');
+  return new Directory(Paths.document, 'footnote', 'attachments');
 }
 
 export function createLocalId(prefix = 'attachment') {
@@ -105,15 +106,17 @@ export async function importDocument(source: ImportSource, kind: DocumentKind = 
 
 export async function deleteAttachment(attachment: DocumentAttachment): Promise<void> {
   if (attachment.origin !== 'import') return;
-  const directory = storageDirectory();
   if (!attachment.uri.startsWith('file://')) return;
   const file = new File(attachment.uri);
-  if (file.parentDirectory.uri.replace(/\/$/, '') !== directory.uri.replace(/\/$/, '')) return;
+  const directories = [storageDirectory(), new Directory(Paths.document, LEGACY_DOCUMENT_DIRECTORY, 'attachments')];
+  if (!directories.some(directory => file.parentDirectory.uri.replace(/\/$/, '') === directory.uri.replace(/\/$/, ''))) return;
   if (file.exists) file.delete();
 }
 
-/** Removes app-owned imports and exported drafts; bundled sample documents stay available. */
+/** Removes app-owned imports and exported drafts from current and earlier installs. */
 export async function clearLocalAttachments(): Promise<void> {
-  const directory = new Directory(Paths.document, 'unfold');
-  if (directory.exists) directory.delete();
+  for (const name of ['footnote', LEGACY_DOCUMENT_DIRECTORY]) {
+    const directory = new Directory(Paths.document, name);
+    if (directory.exists) directory.delete();
+  }
 }
