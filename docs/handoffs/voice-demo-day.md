@@ -52,8 +52,9 @@ backend-frontend connection, because new UIs will be added.
   `docs/API_CONTRACTS.md` and keep provider keys on the backend.
 - Connection audit (at `deeffff`; the cleanup changed no route): the backend has 21 method and path pairs. Every
   app call matches a route and its fields, and every route answered a live request (synthetic data, Tiger Data
-  test schema). After the cleanup every test suite passes again. A live rerun at 11:00 could not connect to Tiger
-  Data from the venue network (connection timeouts), so it was not repeated.
+  test schema). On `main` at `b466d09` (11:29): a fresh clone from GitHub passes every test suite and the web
+  export, and the live check of every route passed 45 of 45. Earlier attempts failed only while the laptop's phone
+  hotspot dropped out.
 
 Left for later (not wrong, only stale): test counts and dates in `docs/PROJECT_CONTEXT.md`'s feature table,
 `docs/IOS_TESTING.md` (written for `merged-v1`), and the route lists in the audio READMEs (20 voices, English
