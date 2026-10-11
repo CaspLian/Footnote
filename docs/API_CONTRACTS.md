@@ -363,8 +363,9 @@ null (`"null"`, `"none"`, `"n/a"`, empty) become null in `cpt_code`, `date_of_se
 `due_date`.
 
 `PriceSummary`:
-- `source`: `snowflake`, `local_csv` or `unavailable`. On repeat lookups it can wrongly say `snowflake`: a known
-  bug.
+- `source`: `snowflake`, `local_csv` or `unavailable`. Cached values retain their original source, including
+  cached missing-code results. A set containing any CSV-backed result reports `local_csv`. An empty code set
+  reports `unavailable` without claiming a provider was queried.
 - `items_checked`, `items_flagged`
 - `billed_total_checked`, `medicare_total_checked`: in dollars
 - `error`: string or null

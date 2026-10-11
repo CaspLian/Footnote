@@ -1,4 +1,3 @@
-import { LEGACY_DOCUMENT_DIRECTORY } from '../domain/legacy-identity';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import { Directory, File, FileMode, Paths } from 'expo-file-system';
@@ -108,15 +107,12 @@ export async function deleteAttachment(attachment: DocumentAttachment): Promise<
   if (attachment.origin !== 'import') return;
   if (!attachment.uri.startsWith('file://')) return;
   const file = new File(attachment.uri);
-  const directories = [storageDirectory(), new Directory(Paths.document, LEGACY_DOCUMENT_DIRECTORY, 'attachments')];
-  if (!directories.some(directory => file.parentDirectory.uri.replace(/\/$/, '') === directory.uri.replace(/\/$/, ''))) return;
+  if (file.parentDirectory.uri.replace(/\/$/, '') !== storageDirectory().uri.replace(/\/$/, '')) return;
   if (file.exists) file.delete();
 }
 
-/** Removes app-owned imports and exported drafts from current and earlier installs. */
+/** Removes Footnote-owned imports and exported drafts. */
 export async function clearLocalAttachments(): Promise<void> {
-  for (const name of ['footnote', LEGACY_DOCUMENT_DIRECTORY]) {
-    const directory = new Directory(Paths.document, name);
-    if (directory.exists) directory.delete();
-  }
+  const directory = new Directory(Paths.document, 'footnote');
+  if (directory.exists) directory.delete();
 }

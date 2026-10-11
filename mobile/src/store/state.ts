@@ -11,7 +11,6 @@ import { backendConfigured } from '../services/backend';
 import { documentService } from '../services/connected-services';
 import { draftService, sampleEntriesChanged } from '../services/local-services';
 import { parseSnapshot, STORAGE_KEY, type PersistedSnapshot } from './persistence';
-import { LEGACY_STORAGE_KEY } from '../domain/legacy-identity';
 import { defaultPreferences, normalizePreferences, type AppPreferences } from '../domain/preferences';
 
 export interface LocalStorage {
@@ -184,8 +183,7 @@ export function createFootnoteStore(storage: LocalStorage, options: StoreOptions
       set({ hydrated: false, hydrationError: null });
       hydration = (async () => {
         try {
-          const current = await storage.getItem(STORAGE_KEY);
-          const serialized = current ?? await storage.getItem(LEGACY_STORAGE_KEY);
+          const serialized = await storage.getItem(STORAGE_KEY);
           const snapshot = serialized === null ? undefined : parseSnapshot(serialized);
           if (snapshot) {
             // Native caches may be cleared and web asset hashes may change after a new build.
@@ -206,10 +204,6 @@ export function createFootnoteStore(storage: LocalStorage, options: StoreOptions
             }
             const { version: _version, ...data } = snapshot;
             set({ ...data, hydrated: true, hydrationError: null, storageError: null });
-            if (current === null) {
-              try { await storage.setItem(STORAGE_KEY, JSON.stringify(snapshot)); }
-              catch { set({ storageError: 'storage_unavailable' }); }
-            }
           } else set({ hydrated: true, hydrationError: null });
         } catch { set({ hydrated: true, hydrationError: 'saved_data_unreadable' }); }
         finally { hydration = undefined; }
@@ -342,7 +336,17 @@ export function createFootnoteStore(storage: LocalStorage, options: StoreOptions
         if (result.details?.serviceDate && !isISODate(result.details.serviceDate)) throw new Error('invalid_date');
         if (result.details?.lineItems?.some(line => !current.attachments.some(a => a.id === line.evidence.attachmentId))) throw new Error('invalid_source');
         // Merge amounts: adding a document to a case keeps the values that the new reading does not provide.
-        if (result.details) get().updateCase(caseId, result.details.financials ? { ...result.details, financials: { ...current.financials, ...result.details.financials } } : result.details);
+        if (result.details) {
+          const documentType = result.details.extraction?.documentType;
+          const kind = documentType === 'hospital_bill' || documentType === 'pharmacy_receipt' ? 'bill'
+            : documentType === 'eob' ? 'eob' : documentType === 'insurance_policy' ? 'policy' : undefined;
+          // One response describes the batch, not each file: only classify a single auto-labelled import.
+          if (kind && current.attachments.length === 1 && current.attachments[0].origin === 'import' && current.attachments[0].kind === 'auto') {
+            change({ cases: get().cases.map(item => item.id === caseId ? { ...item, attachments: [{ ...item.attachments[0], kind }] } : item) });
+          }
+          get().updateCase(caseId, { ...result.details,
+            ...(result.details.financials ? { financials: { ...current.financials, ...result.details.financials } } : {}) });
+        }
         change({ cases: get().cases.map(item => item.id === caseId ? { ...item, evidenceContextId: item.entriesEdited && item.source === 'manual' ? undefined : result.contextId, updatedAt: now() } : item) });
       },
       async verifyCase(caseId) {
@@ -420,7 +424,6 @@ export function createFootnoteStore(storage: LocalStorage, options: StoreOptions
         // Only called from an explicit recovery choice, never on a read failure.
         if (options.clearAllAttachments) await options.clearAllAttachments();
         await storage.removeItem(STORAGE_KEY);
-        await storage.removeItem(LEGACY_STORAGE_KEY);
         set({ ...emptyData(), hydrated: true, hydrationError: null, storageError: null, processingCaseIds: [] });
       },
       async retryPersistence() {

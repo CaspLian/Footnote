@@ -24,7 +24,7 @@ ABOVE_MAX = 6.0     # 3x to 6x: worth asking about; above 6x: far above typical
 
 _conn = None
 _csv_cache: Optional[dict] = None
-_lookup_cache: dict[str, Optional[dict]] = {}
+_lookup_cache: dict[str, tuple[Optional[dict], str, Optional[str]]] = {}
 
 
 def _normalize(code: Optional[str]) -> Optional[str]:
@@ -87,6 +87,8 @@ def _query_csv(codes: list[str]) -> dict[str, dict]:
 async def lookup(codes: list[str]) -> tuple[dict[str, dict], str, Optional[str]]:
     """Returns (benchmarks by code, source used, error message if Snowflake failed)."""
     wanted = sorted({c for c in codes if c})
+    if not wanted:
+        return {}, 'unavailable', None
     missing = [c for c in wanted if c not in _lookup_cache]
     source, error = "snowflake", None
 
@@ -96,12 +98,16 @@ async def lookup(codes: list[str]) -> tuple[dict[str, dict], str, Optional[str]]
         else:
             try:
                 found = await asyncio.wait_for(asyncio.to_thread(_query_snowflake, missing), SNOWFLAKE_TIMEOUT_S)
-            except Exception as e:  # unreachable, bad credentials, timeout...
-                found, source, error = _query_csv(missing), "local_csv", f"Snowflake lookup failed, used local copy: {e}"
+            except Exception:  # unreachable, bad credentials, timeout...
+                found, source, error = _query_csv(missing), "local_csv", "Snowflake was unavailable; the local copy was used."
         for c in missing:
-            _lookup_cache[c] = found.get(c)
+            _lookup_cache[c] = (found.get(c), source, error)
 
-    return {c: _lookup_cache[c] for c in wanted if _lookup_cache.get(c)}, source, error
+    # Cached results keep their original source, including cached missing-code results.
+    entries = [_lookup_cache[c] for c in wanted]
+    source = 'local_csv' if any(item[1] == 'local_csv' for item in entries) else 'snowflake'
+    error = next((item[2] for item in entries if item[2]), None)
+    return {c: _lookup_cache[c][0] for c in wanted if _lookup_cache[c][0] is not None}, source, error
 
 
 def _compare(i: int, item: LineItem, bench: Optional[dict]) -> PriceCheck:

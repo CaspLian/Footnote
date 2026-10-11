@@ -7,14 +7,14 @@
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "bundleIdentifier": "org.hackknights.unfold",
+      "bundleIdentifier": "org.hackknights.footnote",
       "supportsTablet": false,
       "infoPlist": {
         "CADisableMinimumFrameDurationOnPhone": true
       }
     },
     "android": {
-      "package": "org.hackknights.unfold",
+      "package": "org.hackknights.footnote",
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.RECORD_AUDIO",
