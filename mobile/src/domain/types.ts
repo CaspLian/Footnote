@@ -98,6 +98,8 @@ export interface Comparison {
   amountCents: Money;
   retrievedAt: string;
   context: LocalizedText;
+  /** A physician-only reference cannot classify a hospital's total charge. */
+  doctorOnly?: boolean;
 }
 export interface Finding {
   id: string;

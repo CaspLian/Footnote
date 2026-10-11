@@ -2,6 +2,7 @@ import { isRelationshipLabel } from '../domain/profiles';
 import { isMoney } from '../domain/money';
 import type { AppealDraft, BillCase, CaseEvent, FamilyProfile, PersonalContext, IconWeight, Language } from '../domain/types';
 import { normalizePreferences, type AppPreferences } from '../domain/preferences';
+import { refreshDoctorOnlyFindings } from '../services/backend-mapping';
 
 export const STORAGE_KEY = 'unfold-local-v1';
 export interface PersistedSnapshot {
@@ -75,7 +76,7 @@ export function parseSnapshot(serialized: string): PersistedSnapshot {
     savedTermIds: Array.isArray(value.savedTermIds) ? [...new Set(value.savedTermIds.filter((id): id is string => text(id) && id.length > 0 && id.length <= 80))] : [],
     version: 1, onboardingCompleted: value.onboardingCompleted === true && profiles.some(p => p.relationship === 'self'), profiles: profiles as FamilyProfile[], activeProfileId: text(value.activeProfileId) && profiles.some(p => p.id === value.activeProfileId) ? value.activeProfileId : profiles[0]?.id, personalContext: context as unknown as PersonalContext, locale: value.locale as Language, welcomeCompleted: value.welcomeCompleted,
     iconWeight: value.iconWeight as IconWeight, iconSize: value.iconSize, duotoneOpacity: value.duotoneOpacity,
-    cases: value.cases as BillCase[], drafts: value.drafts as AppealDraft[], events: value.events as CaseEvent[],
+    cases: (value.cases as BillCase[]).map(refreshDoctorOnlyFindings), drafts: value.drafts as AppealDraft[], events: value.events as CaseEvent[],
     activeCaseId: text(value.activeCaseId) && ids.has(value.activeCaseId) ? value.activeCaseId : undefined,
   };
 }

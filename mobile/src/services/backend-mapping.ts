@@ -26,8 +26,8 @@ function rateContext(setting: string | null, units: number): LocalizedText {
   const forUnits = units > 1 ? { en: ` for ${units} units`, es: ` por ${units} unidades` } : { en: '', es: '' };
   if (setting?.toLowerCase() === 'facility') {
     return {
-      en: `What Medicare pays nationally for the doctor's part of this service${forUnits.en}. Hospitals usually bill a separate facility charge, so a higher total can be normal.`,
-      es: `Lo que Medicare paga a nivel nacional por la parte del médico de este servicio${forUnits.es}. Los hospitales suelen cobrar aparte un cargo del centro, así que un total más alto puede ser normal.`,
+      en: `What Medicare pays nationally for the doctor's part of this service${forUnits.en}. The hospital's part is not included, so this cannot show whether the hospital charge is high.`,
+      es: `Lo que Medicare paga a nivel nacional por la parte del médico de este servicio${forUnits.es}. La parte del hospital no está incluida, así que esto no indica si el cargo del hospital es alto.`,
     };
   }
   return {
@@ -41,7 +41,7 @@ export function comparisonFor(line: LineItem, benchmark: BackendBenchmark | null
   if (line.amountMissing) return null;
   const rateCents = dollarsToCents(benchmark?.medicare_rate);
   if (!benchmark || !rateCents) return null;
-  return { source: MEDICARE_SOURCE, url: MEDICARE_URL, amountCents: rateCents * line.units, retrievedAt, context: rateContext(benchmark.setting, line.units) };
+  return { source: MEDICARE_SOURCE, url: MEDICARE_URL, amountCents: rateCents * line.units, retrievedAt, context: rateContext(benchmark.setting, line.units), doctorOnly: benchmark.setting?.toLowerCase() === 'facility' };
 }
 
 function times(ratio: number, language: Language): string {
@@ -49,9 +49,27 @@ function times(ratio: number, language: Language): string {
   return language === 'es' ? text.replace('.', ',') : text;
 }
 
-/** A question worth asking when a line is billed well above Medicare's rate; null otherwise. */
+/** Clarify doctor-only scope; comparable references above the threshold become price questions. */
 export function priceFinding(line: LineItem, comparison: Comparison): Finding | null {
   if (line.amountMissing || !line.code || line.billedCents <= 0 || comparison.amountCents <= 0) return null;
+  if (comparison.doctorOnly) {
+    return {
+      id: `price-${line.id}`,
+      title: {
+        en: `${line.description.en || line.code}: Medicare's reference covers only the doctor's part`,
+        es: `${line.description.es || line.code}: la referencia de Medicare cubre solo la parte del médico`,
+      },
+      explanation: {
+        en: `${comparison.context.en} This reference is not proof of an error or a fair hospital price.`,
+        es: `${comparison.context.es} Esta referencia no prueba un error ni un precio hospitalario justo.`,
+      },
+      question: {
+        en: `Can you separate the doctor's charge and the hospital's charge for code ${line.code} on an itemized statement?`,
+        es: `¿Pueden separar el cargo del médico y el del hospital para el código ${line.code} en un estado de cuenta detallado?`,
+      },
+      label: 'needs_clarification', evidence: [line.evidence], comparison, action: 'billing_correction',
+    };
+  }
   const ratio = line.billedCents / comparison.amountCents;
   if (ratio <= WORTH_ASKING_RATIO) return null;
   return {
@@ -103,4 +121,21 @@ export function reviewFindings(billCase: BillCase, benchmarks: Map<string, Backe
     if (price) findings.push(price);
   }
   return findings;
+}
+
+/** Recover old saved doctor-only cards without changing confirmed amounts, drafts or case revisions. */
+export function refreshDoctorOnlyFindings(billCase: BillCase): BillCase {
+  let changed = false;
+  const findings = billCase.findings.map(finding => {
+    const comparison = finding.comparison;
+    if (!finding.id.startsWith('price-') || !comparison ||
+        !(comparison.doctorOnly || (typeof comparison.context?.en === 'string' && comparison.context.en.includes("doctor's part")))) return finding;
+    const line = billCase.lineItems.find(item => finding.id === `price-${item.id}`);
+    if (!line) return finding;
+    const updated = priceFinding(line, { ...comparison, doctorOnly: true });
+    if (!updated) return finding;
+    changed = true;
+    return updated;
+  });
+  return changed ? { ...billCase, findings } : billCase;
 }

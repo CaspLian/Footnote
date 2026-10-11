@@ -281,6 +281,10 @@ The app prepares each reading this way (`docs/decisions/2026-10-10-voice-prepare
 never text sent to it. Each voice is its own paid clip; the same
 text in the same voice comes from the cache, free.
 
+Spoken price findings describe Medicare rates as references, not proof of an error or a fair hospital price.
+Doctor-only references are explained separately, without a ratio or a claim that the hospital charge is high.
+This changes the reading text, not the existing `PriceCheck` fields or flags.
+
 Errors carry `detail.stage = "audit"`:
 - 400: not a UUID
 - 404: no such analysis
@@ -411,8 +415,9 @@ How values are stored:
 - NUL characters become U+FFFD.
 - Deleting a `bill_analyses` row deletes its lines.
 
-The teammate's tables in `services/tigerdata_services/` (`audit_records`, `audit_line_items`, `cpt_benchmarks`) are
-not used by any route.
+The claim routes use the teammate's tables in `services/tigerdata_services/` (`audit_records`, `audit_line_items`,
+and lifecycle data). Saved extraction audits remain in `bill_analyses`; a claim's optional `analysis_audit_id`
+links the two. Medicare lookups use Snowflake/CSV, not the teammate's regional benchmark table.
 
 ## Small synthetic examples
 

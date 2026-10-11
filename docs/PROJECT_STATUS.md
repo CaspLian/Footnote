@@ -2,103 +2,59 @@
 
 | | |
 |---|---|
-| Checked on | 2026-10-10 |
-| Branch | `Backend-Frontend-Connection-V1`: the backend from `Gemini-Tiger-Snow-Integration-V1` (`d1753db`), these docs, the frontend from `frontend-aarush`, and the connection between them. `main` is older, at `8c1a321` |
-| Code | The results below apply to this branch on 2026-10-10 |
-| Last updated by | Nimesh, with Claude Code. Update this file only at integration checkpoints (see `docs/TEAM_WORKFLOW.md`) |
+| Checked on | 2026-10-10, America/New_York |
+| Branch | `Backend-Frontend-Connection-V1` |
+| Integrated code | `7bd92f0`, plus the final review-wording and verification checkpoint recorded in the resume handoff |
+| Last updated by | Nimesh with Codex, recovering the interrupted Claude Code session |
 
-## What is integrated
+## Integrated behavior
 
-- **Merged into `f86e22f`:** `nimesh/audio-service`, `backend-gemini` and `Tiger-data`.
-- **The wiring, in `d1753db`:**
-  - Every analysis is saved.
-  - Saved analyses can be read back and spoken again.
-  - The voice routes are mounted in the app.
-  - Each service has its own folder under `backend/services/`.
-  - A developer console tries every route.
-- **After `d1753db`:** Gemini sometimes writes a missing value as the text "null". Such placeholder texts ("null",
-  "none", "n/a", empty) now become real nulls (`backend/models.py`; tests in `backend/tests/test_models.py`).
-- **The frontend, merged and connected (2026-10-10):** `frontend-aarush` (Aarush Kumar) merged without conflicts.
-  With `EXPO_PUBLIC_API_URL` set (`mobile/.env.example`):
-  - a newly imported bill or EOB is read by the backend and fills the verify screen
-  - the review compares the confirmed codes with Medicare's rates (new route `GET /api/v1/benchmarks/{code}`)
-    and adds Gemini's notes
-  - the review can play the saved analysis in an ElevenLabs voice (`expo-audio`)
+- Aarush's UI through `c04f38f` is merged, together with the 42-locale backend and live voice implementation.
+- With `EXPO_PUBLIC_API_URL` configured, the app imports photos/PDFs, runs Gemini extraction, verifies entries,
+  looks up Medicare references, reopens saved audits, and records/refreshes claims, deadlines and actions.
+- Voice choices use the backend catalog, samples and cached saved-bill readings. The live orb uses a private
+  ElevenLabs agent with Gemini, saved bill context, WebRTC audio, captions and local highlight tools.
+- Corrected amounts/codes invalidate original spoken readings and agent context. Missing amounts stay unknown.
+- Doctor-only references are clarification questions, without a hospital-price ratio, in new and reopened app
+  reviews and spoken findings. The underlying backend `PriceCheck` flags remain unchanged; their proposed
+  shared-interface fix is still open.
+- Without a backend URL, the app remains local. The synthetic demo does not create claims or paid analyses.
 
-  Without it, the app stays fully local. See `mobile/README.md`, "Integration boundary".
-- **Not integrated:**
-  - **`Tiger-data` commit `67c4c3a`** (claim audit lifecycle tracking, 2026-10-10). It is still at the old path,
-    `services/tigerdata_service.py`.
-  - **The teammate's Tiger Data audit tables** (`tigerdata_service.py`): no route calls them.
+## Executed verification
 
-## What has been verified (2026-10-10)
+- Combined backend: **165 passed, 2 skipped**, with dotenv disabled and a separate local PostgreSQL database.
+- Combined audio: **648 passed**, including private sessions, bounded context, cancellation and cautious readings.
+- Frontend: final typecheck and lint passed, **156 tests passed**. Web and Android JavaScript exports passed
+  before the final wording changes; native build/device results are recorded separately.
+- Live HTTP, synthetic bill and isolated Tiger Data schema: health, all 42 locale entries, voice catalog/sample,
+  analysis, identical audit reopening, benchmarks, saved reading/range playback, claim creation/status/deadlines/
+  action/resolution, image analysis, recorded question/audio, and private session creation passed.
+- Expo web: onboarding, image import, Gemini extraction, confirmation, review, claim creation, saved reading
+  playback and persistent reopening passed. The bill retained its $4,850 total and $1,940 balance.
+- Live web conversation: the synthetic microphone question was transcribed, answered with saved amounts,
+  captioned and accompanied by a CT card highlight. Mute and End passed. ElevenLabs records Gemini 3.5 Flash
+  usage and normal client termination for the 40-second test conversation.
+- Android APK built successfully (637 Gradle tasks) and installed on `emulator-5554`. Its merged manifest retains
+  microphone permission. Android System UI became unresponsive; the emulator was restarted with less memory
+  and preserved data. The updated Android Home/import screens loaded with the new bundle. Nimesh is using
+  the emulator, so native upload/live voice checks were left unverified and control returned to him.
 
-- **The real server over HTTP, live.** `uvicorn main:app` ran with the team's keys, saving into a throwaway Tiger
-  Data schema. Every route the app calls worked, with requests built like React Native's `FormData`. Times on
-  this computer, before any phone network delay:
-  - bill photo 13.1 s, PDF bill 7.6 s, EOB PDF 6.1 s (the first live PDFs), typed question 7.6 s
-  - saved analyses read back identical (0.24 s)
-  - speaking a saved analysis 6.5 s, or 0.25 s from the cache
-  - voice question 6.6 s; with a photo and streaming, 7.4 s to the answer
+Evidence and exact remaining work: [Claude resume handoff](handoffs/claude-resume-integration.md).
+Earlier evidence remains in `BACKEND_VERIFICATION_REPORT.md` and the relevant feature handoffs.
 
-  Byte ranges, streaming, CORS (Expo web and any origin) and every free error path behaved as documented.
-- **A teammate's fresh setup.** A fresh clone installed and passed 528 audio and 59 backend tests on Python 3.11,
-  3.12 and 3.14. `uvicorn main:app` served the routes, also with `--reload`. Python 3.9 cannot install the
-  requirements, so use 3.10 or newer.
-- **The app's connection code against the live backend:** the ER bill PDF was read in 13.8 s (12 lines, every
-  amount) and passed the app's own validation. The review produced 10 findings (7 price comparisons, 3 Gemini
-  notes, including a possible duplicate). ElevenLabs spoke the saved analysis in 9 s. This ran the app's
-  `src/services` code in Node, not the app on a device.
-- **The app in a browser (Expo web), against the live backend:** Nimesh tested it by hand. The backend log shows
-  2 documents read (`POST /api/v1/analyze`), 28 Medicare lookups, 2 ElevenLabs readings and the reply audio
-  played in the browser, with no errors. Saved analyses went to the test schema `claimpulse_app_test`.
-- **The app's checks:** `npm run typecheck`, `npm run lint` and `npm test` (42 tests) pass. The web build
-  (`expo export --platform web`) succeeds.
-- **Offline:** 528 audio tests and 73 backend tests pass, against a local PostgreSQL 17.
-- **Earlier the same day, at `d1753db`:** the full live test (15 of 15), the developer console in headless Chrome
-  (58 of 58), and both suites in one session (587). Details: `BACKEND_VERIFICATION_REPORT.md`.
-- **Not verified:**
-  - Anything on a phone or simulator: the screens with the backend, uploads from the camera, playback with
-    `expo-audio` (it needs a rebuilt development build), reaching the backend over Wi-Fi.
-  - Live answers in the 10 languages other than English and Spanish.
-  - Spoken replies in other languages, which aren't implemented.
-  - More than a few requests at a time.
+## Limits and remaining work
 
-## Known integration failures and defects
+- Physical camera capture, iOS playback/microphone behavior, Wi-Fi/firewall setup and provider concurrency have
+  not been verified by this checkpoint. Android emulator results must be reported separately.
+- Extraction/readings support 42 locales. Live conversation currently supports the agent provider's language
+  subset; Hebrew and Thai fall back to recorded questions. Native speakers have not validated translations.
+- No application authentication. Session issuance has origin checks and local/provider limits, but the other
+  routes remain reachable by anyone with network access. Local verification binds the API to loopback.
+- Backend physician-only flags, multi-unit analysis ratios and cached price-source labels remain known issues
+  in the shared price service. The app's confirmed-line comparisons use units and explain reference scope.
+- LiveKit logged a signal-stream error on web teardown; both call records report normal termination, the
+  player/microphone closed, and a fresh conversation connected successfully. This provider SDK log remains.
+- Nothing was pushed or deployed; no outbound phone calls or messages were sent. The default branch `main`
+  remains older than this local integration branch.
 
-- **High:** price flags for doctor-only ("facility") Medicare rates are misleading. Ordinary ER charges show
-  "far above typical" (all 7 compared ER lines in the live check). See `snowflake_service.py`; the proposed fix is
-  in `docs/decisions/2026-10-10-proposal-price-flags.md`.
-- **Setup:** by default a phone cannot reach the backend. On 2026-10-10 the Wi-Fi was set to Public and the
-  firewall blocked incoming connections. The steps are in `docs/API_CONTRACTS.md`, "From a phone".
-- **Medium:**
-  - Multi-unit lines are compared with a one-unit rate, and `price_summary.source` can wrongly say `snowflake`.
-  - The code's default `gemini-3.8-flash` did not answer for the team's key. Set `GEMINI_MODEL=gemini-3.5-flash`
-    (see `docs/decisions/2026-10-10-gemini-model-setting.md`).
-  - Gemini retries only 429/500/503; 502, 504, 404 and network errors fail at once.
-  - An invalid ElevenLabs key is reported as `PROVIDER_REJECTED` instead of `AUTH_FAILED`.
-  - A Tiger Data connection that goes silent part-way through a save can hold the store for 15 s.
-- **Tests:**
-  - Plain `python -m pytest` in `backend/` fails at collection.
-  - With a real `backend/.env`, the teammate's Tiger Data tests use the team database unless
-    `PYTHON_DOTENV_DISABLED=1` (see the commands in `AGENTS.md`).
-- **Low:** see `BACKEND_VERIFICATION_REPORT.md` §5 and `docs/handoffs/backend-follow-ups.md`.
-
-## Shared blockers
-
-- **Not yet tried on a phone:** the connected app has run in a browser, not on iOS or Android.
-- **No authentication:** keep the backend on a private network. Anyone who can reach it can spend the team's
-  Gemini and ElevenLabs credits and read a saved analysis by its ID.
-- **Branches:**
-  - `main` (the default branch) does not contain the integrated code.
-  - `nimesh/audio-service` points at `60d279b`, where the backend cannot start.
-
-## Next three integration priorities
-
-1. **Run the connected app on a phone.** Rebuild the development build (it now includes `expo-audio`), set
-   `EXPO_PUBLIC_API_URL`, and follow "From a phone" in `docs/API_CONTRACTS.md`. Then try a real bill photo end to
-   end.
-2. **Fix the doctor-only-rate flags and the price-source label**, because the app shows them and the voice reads
-   them aloud.
-3. **Agree which branch is the shared base**, and retire the stale ones. Bring in `Tiger-data`'s new commit,
-   moved into `services/tigerdata_services/`.
+Local review: app `http://127.0.0.1:8083`, isolated API `http://127.0.0.1:8012` while the development servers run.

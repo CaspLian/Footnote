@@ -19,12 +19,12 @@ elderly patients, and anyone overwhelmed by medical paperwork.
 4. The explanation is shown in the chosen language, with the price comparison and questions to ask.
 5. The answer is spoken aloud (ElevenLabs).
 6. The analysis is saved (Tiger Data / PostgreSQL), so it can be reopened and heard again.
-7. All of this from an accessible mobile app (not built yet; see "Frontend").
+7. Review confirmed details in the Unfold app, prepare a request, track the case, or talk through a saved bill.
 
 ## Architecture (as implemented)
 
 ```
-mobile app (Expo, not wired yet)  or  backend/dev_console.py (local test page)
+Unfold app (Expo, connected when configured)  or  backend/dev_console.py (local test page)
         │  HTTP (multipart form, JSON)
         ▼
 backend/main.py (FastAPI) ── POST /api/v1/analyze ── GET /api/v1/audits/{id} ── /api/v1/voice/* (voice_routes.py)
@@ -47,16 +47,19 @@ Service responsibilities:
   even that fails it returns no checks with `source: "unavailable"`.
 - **Saving (`analytical_services/analysis_store.py`)**: writes each analysis to the tables `bill_analyses` and
   `bill_analysis_lines` (created on first use). Saving never fails a request; `response.audit` says whether it worked.
-- **Tiger Data tables (`tigerdata_services`)**: the teammate's audit and regional-benchmark tables. Implemented and
-  tested, but no route calls them (they require a code and an amount on every line).
+- **Tiger Data tables (`tigerdata_services`)**: claim audit/lifecycle routes record confirmed coded lines, status,
+  deadlines and actions. Extraction audits remain separate and can be linked by `analysis_audit_id`.
+  The regional-benchmark table is separate from the app's national Medicare lookups.
 - **Voice (`audio_service`)**: speech-to-text for questions, text-to-speech for replies, audio delivery with byte
-  ranges and optional streaming, a voice picker (20 voices), and a local playground.
+  ranges and optional streaming, a voice picker (20 voices), and a local playground. `voice_agent/` issues bounded
+  private ElevenLabs sessions using Gemini and saved bill context; the app connects directly over WebRTC.
 
 ## Feature status
 
 Labels: **VERIFIED** (executed; live or mocked as stated), **IMPLEMENTED, UNVERIFIED**, **PARTIAL**, **PLANNED**,
-**BLOCKED**. Evidence: 2026-10-10 at commit `d1753db`, unless dated otherwise. Details and commands:
-`BACKEND_VERIFICATION_REPORT.md`. Only the person who merges updates this table, at integration checkpoints
+**BLOCKED**. Current integration: `7bd92f0` and the final resume checkpoint, 2026-10-10. Older evidence is retained
+in `BACKEND_VERIFICATION_REPORT.md`; current evidence is in `docs/handoffs/claude-resume-integration.md`.
+Only the person who merges updates this table, at integration checkpoints
 (`AGENTS.md`).
 Between checkpoints, record status changes in your handoff.
 
@@ -69,17 +72,17 @@ Between checkpoints, record status changes in your handoff.
 | Price comparison with Medicare rates | PARTIAL: runs live (Snowflake) and offline (CSV), but flags are misleading for doctor-only rates and multi-unit lines | `snowflake_service.py`; report §5; `docs/decisions/2026-10-10-proposal-price-flags.md` |
 | Saving and reopening an analysis | VERIFIED: live (Tiger Data, throwaway schema) and offline | `analysis_store.py`; `GET /api/v1/audits/{id}` |
 | Voice question → transcript → analysis → spoken reply | VERIFIED live (English) | `POST /api/v1/voice/analyze` |
-| Spoken reply includes the price findings | VERIFIED live: in English, and translated by Gemini in the 11 other locales above (2026-10-10). In `zh-TW` the fallback model turned "30 times" into 31 or 3 times (`docs/API_CONTRACTS.md`, "Languages") | `spoken_reply()`, `_spoken_text()` in `voice_routes.py` |
+| Spoken reply includes the price findings | VERIFIED live English in the final integration; earlier live translations in 11 other locales. Changed numbers in translations are now retried/dropped. Doctor-only findings omit ratios and high-price claims | `spoken_reply()`, `_spoken_text()` in `voice_routes.py` |
 | Hear a saved analysis again, without re-analyzing | VERIFIED live | `POST /api/v1/voice/speak` |
 | Voice picker and samples; streamed replies; byte ranges for iPhones | Picker and samples: VERIFIED mocked. Streaming: VERIFIED live (first audio after 0.43 s, 2026-10-09). Byte ranges: live on 2026-10-10 just before `d1753db`, mocked at `d1753db`. iPhone playback: UNVERIFIED | `GET /api/v1/voice/voices`, `/audio/{id}` |
 | Spoken replies in languages other than English | VERIFIED live (2026-10-10): spoken and heard back in 12 languages and both Chinese scripts, full replies in 12 locales. Hebrew and Thai are spoken by v4 Turbo (Flash v2.5 does not speak them), more slowly. In Arabic, speech-to-text heard the formal "two hundred" as "one hundred" | `text_to_speech/config.py`, `voice_routes.py` |
 | Developer console (every route in a browser) | VERIFIED mocked (headless Chrome, a stand-in for ElevenLabs, 58 checks). Its API also answered live requests (curl, 2026-10-10) | `backend/dev_console.py` |
-| Mobile app connected to the backend | VERIFIED in a browser (Expo web, live backend): uploads read, Medicare lookups, ElevenLabs playback. Typecheck, lint and 42 tests pass. Never run on a phone | `mobile/src/services/backend.ts`, `connected-services.ts` |
-| Follow-up questions about a saved bill | PLANNED: no route takes an `audit_id` plus a question | `docs/decisions/2026-10-10-proposal-followup-questions.md` |
-| Authentication, rate limits | PLANNED: none; anyone who can reach the server can spend credits | `main.py` (CORS `*`); `docs/decisions/2026-10-10-proposal-app-key.md` |
-| Tiger Data audit / regional benchmark tables | VERIFIED live by its own 4 tests only (throwaway schema); not connected to any route | `tigerdata_service.py` |
-| Deadline tracking, notifications, credit dashboard | PLANNED (whiteboard only) | — |
-| Phone negotiation script, voice agent, outbound calls | PLANNED (whiteboard only) | — |
+| Mobile app connected to the backend | VERIFIED in Expo web: onboarding, import, extraction, confirmation, review, saved reading and persistent reopening; 156 tests, typecheck and lint pass. Android APK built/installed; updated screens loaded with preserved data. Native fresh upload/live voice remain unverified while Nimesh uses the emulator | `mobile/src/services/backend.ts`, `connected-services.ts` |
+| Follow-up questions about a saved bill | VERIFIED live web conversation: synthetic microphone question, saved amounts, captions, CT card highlight, mute and End. Agent uses Gemini 3.5 Flash; standalone recorded questions remain separate | `voice_agent/`, `mobile/src/components/agent-orb-control.tsx` |
+| Authentication, rate limits | PARTIAL: agent session origin checks, issuance limits and provider limits implemented. No application authentication; other routes remain unprotected | `voice_agent/limits.py`; app-key proposal remains open |
+| Tiger Data audit / regional benchmark tables | Claim audit/lifecycle tables VERIFIED live over HTTP with isolated schema; regional benchmark table not used by app lookups | `claim_routes.py`, `tigerdata_service.py` |
+| Deadline tracking, notifications, credit dashboard | Claim deadlines and actions VERIFIED live HTTP; app tracking implemented and tested offline. Local reminders persist; system notifications and credit dashboard PLANNED | `claim_routes.py`, mobile claim service/store |
+| Phone negotiation script, voice agent, outbound calls | Local request/call-script screens implemented; live bill conversation VERIFIED web. Outbound calls PLANNED, no code places calls | `docs/decisions/2026-10-10-voice-agent.md` |
 | Solana escrow, micro-grants, on-chain receipts | PLANNED: unconfirmed stretch idea, no code, no accepted decision | — |
 
 ## External services and settings
@@ -117,9 +120,10 @@ rows, all from the **CMS 2026 Physician Fee Schedule (RVU26D, October release), 
 - Do not infer **deductible or out-of-pocket balances** without supporting evidence in the document. The
   whiteboard's sample sentence ("your out-of-pocket maximum was already reached… you shouldn't owe this")
   is not something the app can know from a bill alone.
-- **Saving to a database does not mean deadline tracking or notifications.** Neither exists.
-- **Speech-to-text and text-to-speech do not mean a conversation or phone calls.** Each voice question is
-  answered on its own; nothing places calls.
+- **Saving extraction audits does not establish deadlines or notifications.** Claim routes store explicit
+  deadlines and may return labeled estimates; no system notifications or credit-score protection is implemented.
+- **Recorded questions are separate answers.** The live agent converses about a saved bill; corrected bills
+  cannot use stale context. Nothing places outbound phone calls.
 - **A successful Git merge does not prove the parts work together.** Only tests and live runs do.
 - **Solana escrow, micro-grants and on-chain receipts** are unconfirmed stretch ideas. Do not repeat claims that
   escrow or blockchain receipts protect credit scores, stop collections or have legal standing.
@@ -148,7 +152,7 @@ rows, all from the **CMS 2026 Physician Fee Schedule (RVU26D, October release), 
 | Main route | `/api/v1/process-bill` (task plan), `/api/audit-bill` (diagram) | `POST /api/v1/analyze` and `/api/v1/voice/*` |
 | Response | `claim_id`, `fair_market_total`, `potential_savings`, `is_overcharge`, `audio_stream_url` | `AnalyzeResponse` with flags and ratios; no savings or overcharge fields, by design; `audit.audit_id`; `speech.audio_url` |
 | Benchmarks | regional, ZIP code, fair-market medians | national Medicare rates |
-| Tiger Data | time-series hypertables, deadlines, alerts | plain tables for saved analyses |
+| Tiger Data | time-series hypertables, deadlines, alerts | plain tables for saved analyses and claim lifecycle/deadlines; no system alerts |
 | Languages | Gemini "100+", ElevenLabs "30+" | 42 locales (34 languages), in text and voice |
 | Models | Gemini 1.5 Flash/Pro; `eleven_multilingual_v2` / `eleven_v3` | `GEMINI_MODEL` setting (default `gemini-3.8-flash`); `eleven_flash_v2_5` (since 2026-10-10) |
 
@@ -160,7 +164,8 @@ There is a proposal, not a decision: `docs/decisions/2026-10-10-proposal-demo-sc
 
 ## Sources
 
-- This repository at `d1753db`, and `BACKEND_VERIFICATION_REPORT.md`.
+- This repository at `7bd92f0` and the final resume checkpoint; current handoff and `PROJECT_STATUS.md`.
+  Earlier verification at `d1753db` remains in `BACKEND_VERIFICATION_REPORT.md`.
 - The team whiteboard `Untitled-2026-10-10-0922.excalidraw`, which is not in the repository. Of its 126
   non-deleted elements, all 89 text elements and all 7 embedded images were read:
   - **Project material, six images:** an ElevenLabs role table, a "Gemini is the brain, ElevenLabs is the voice"

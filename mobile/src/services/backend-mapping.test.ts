@@ -4,7 +4,9 @@ import { mapGeminiAnalysis, type GeminiAnalyzeResponse } from '../domain/extract
 import { createManualCase } from '../domain/fixtures';
 import type { BillCase, DocumentAttachment } from '../domain/types';
 import type { BackendBenchmark } from './backend';
-import { comparisonFor, normalizeCode, reviewFindings } from './backend-mapping';
+import { comparisonFor, normalizeCode, reviewFindings, refreshDoctorOnlyFindings } from './backend-mapping';
+import { parseSnapshot } from '../store/persistence';
+import { defaultPreferences } from '../domain/preferences';
 
 // Two camera pages, as the camera screen saves them.
 const page = (n: number): DocumentAttachment => ({
@@ -60,15 +62,17 @@ test('codes are normalised like the backend, and unknown rates give no compariso
   assert.equal(comparisonFor(line, undefined, 'now'), null);
 });
 
-test('findings: Gemini notes, and lines above 3x Medicare, worded as questions with the facility caveat', () => {
+test('findings distinguish doctor-only references from comparable rates and preserve Gemini notes', () => {
   const findings = reviewFindings(analyzed(), new Map([['99285', bench('99285', 171.35, 'facility')], ['70450', bench('70450', 106.55, 'non-facility')]]), 'now');
   assert.deepEqual(findings.map(finding => finding.id), ['price-gemini-line-1', 'note-gemini-line-2']);
   const [price, note] = findings;
-  assert.match(price.title.en, /about 14 times Medicare's rate/);
+  assert.match(price.title.en, /reference covers only the doctor's part/);
+  assert.doesNotMatch(price.title.en, /times|high/);
   assert.match(price.explanation.en, /doctor's part/);
   assert.match(price.explanation.en, /not proof of an error/);
   assert.equal(price.comparison?.amountCents, 17135);
-  assert.equal(price.label, 'worth_asking');
+  assert.equal(price.label, 'needs_clarification');
+  assert.equal(price.comparison?.doctorOnly, true);
   assert.equal(note.label, 'needs_clarification');
   assert.equal(note.title.en, 'Listed twice on the same day.');
   assert.equal(note.evidence[0].attachmentId, 'page-2');
@@ -76,7 +80,44 @@ test('findings: Gemini notes, and lines above 3x Medicare, worded as questions w
   assert.ok(!findings.some(finding => finding.id === 'price-gemini-line-2'));
 });
 
+test('doctor-only references never classify a hospital total by ratio, including amounts below the threshold', () => {
+  for (const amount of [1000, 245000]) {
+    const bill = analyzed(); bill.lineItems[0].billedCents = amount;
+    const [finding] = reviewFindings(bill, new Map([['99285', bench('99285', 171.35, 'facility')]]), 'now');
+    assert.equal(finding.label, 'needs_clarification');
+    assert.doesNotMatch(finding.title.en, /times|high/);
+    assert.match(finding.explanation.en, /cannot show whether the hospital charge is high/);
+    assert.match(finding.question.en, /separate the doctor's charge and the hospital's charge/);
+  }
+});
+
+test('a comparable reference still names the deterministic ratio as a question, without proving an error', () => {
+  const bill = analyzed(); bill.lineItems[1].billedCents = 320000;
+  const finding = reviewFindings(bill, new Map([['70450', bench('70450', 106.55, 'non-facility')]]), 'now')
+    .find(item => item.id === `price-${bill.lineItems[1].id}`)!;
+  assert.match(finding.title.en, /about 30 times Medicare's rate/);
+  assert.match(finding.explanation.en, /not proof of an error/);
+  assert.equal(finding.label, 'worth_asking');
+  assert.equal(finding.comparison?.doctorOnly, false);
+});
+
 test('a rate covers every unit of a line', () => {
   const line = { ...analyzed().lineItems[1], units: 3 };
   assert.equal(comparisonFor(line, bench('70450', 106.55, 'non-facility'), 'now')?.amountCents, 31965);
+});
+
+test('reopening an older doctor-only finding removes its ratio while preserving confirmed entries and revision', () => {
+  const bill = analyzed();
+  bill.findings = reviewFindings(bill, new Map([['99285', bench('99285', 171.35, 'facility')]]), 'now');
+  delete bill.findings[0].comparison!.doctorOnly;
+  bill.findings[0].title = { en: 'ER is billed at about 14 times Medicare', es: 'ER 14 veces' };
+  bill.findings[0].label = 'worth_asking';
+  const snapshot = { version: 1, preferences: defaultPreferences, locale: 'en', welcomeCompleted: true,
+    iconWeight: 'regular', iconSize: 24, duotoneOpacity: .2, cases: [bill], drafts: [], events: [] };
+  const [restored] = parseSnapshot(JSON.stringify(snapshot)).cases;
+  assert.match(restored.findings[0].title.en, /covers only the doctor's part/);
+  assert.equal(restored.findings[0].label, 'needs_clarification');
+  assert.deepEqual(restored.lineItems, JSON.parse(JSON.stringify(bill.lineItems)));
+  assert.equal(restored.updatedAt, bill.updatedAt);
+  assert.deepEqual(refreshDoctorOnlyFindings(restored), restored);
 });

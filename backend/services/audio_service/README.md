@@ -1,7 +1,7 @@
 # audio_service: voice for ClaimPulse AI
 
-Lives at `backend/services/audio_service/`. Two features, both tested with real ElevenLabs calls,
-and the endpoints that connect them to the team's Gemini step:
+Lives at `backend/services/audio_service/`: recorded questions, spoken readings, and private live conversations.
+The recorded and reading endpoints connect to the team's Gemini extraction step:
 
 - **text_to_speech**: Gemini's answer → speech the app plays
 - **speech_to_text**: the user's recording → text, handed over ready for Gemini
@@ -12,6 +12,11 @@ and the endpoints that connect them to the team's Gemini step:
   (+ `/voices/{key}/sample`) for the app's voice picker. Mounted in `backend/main.py`.
 - **20 voices to choose from** (10 female, 9 male, 1 neutral; 11 accents), listed in
   `text_to_speech/voices.json`. Matilda is the default; Bunty and Noor are the fun Indian voices.
+- **voice_agent**: `POST /api/v1/voice/agent/session` starts a private ElevenLabs conversation using Gemini
+  and a bounded view of a saved bill. Provision the development agent with
+  `python -m services.audio_service.voice_agent.provision` from `backend/`, then set `ELEVENLABS_AGENT_ID`
+  in the ignored settings file. See [the session contract](../../../docs/API_CONTRACTS.md#live-conversation-session-post-apiv1voiceagentsession)
+  and [the implementation handoff](../../../docs/handoffs/backend-voice-agent.md) for limits, privacy and runtime evidence.
 
 ```
 audio_service/

@@ -46,10 +46,10 @@ export function Intake() {
     <Group gap={space.sm}>
       <Txt variant="label" muted>Document type</Txt>
       <Button title={kindTitles[kind]} variant="secondary" icon={kind==='auto'?'files':kind==='bill'?'document':kind==='eob'?'book':'files'} disabled={busy} onPress={()=>setTypeSheet(true)}/>
-      <Txt variant="caption" muted>{kind==='auto'?'Applies to your next import. AI classification will be available when connected.':'Applies to your next import. You can change the type after adding it.'}</Txt>
+      <Txt variant="caption" muted>{kind==='auto'?backendConfigured()?'Applies to your next import. The document reading will identify its type after you confirm it.':'Applies to your next import. Choose a label yourself while no reading service is connected.':'Applies to your next import. You can change the type after adding it.'}</Txt>
     </Group>
     <AppSheet visible={typeSheet} title="Document type" onClose={()=>setTypeSheet(false)}>
-      <Txt muted>Choose how to label your next document. Auto is recommended for the future AI classification flow.</Txt>
+      <Txt muted>Choose how to label your next document. Auto leaves the type open for the connected document reading.</Txt>
       {(['auto','bill','eob','policy'] as DocumentKind[]).map(k=><Choice key={k} title={kindTitles[k]} detail={k==='auto'?'Let AI identify the document when connected.':k==='bill'?'A provider’s statement or itemized charges.':k==='eob'?'Your insurer’s explanation of how a claim was processed.':'Coverage details from your health plan.'} selected={kind===k} onPress={()=>{setKind(k);setTypeSheet(false);}}/>)}
     </AppSheet>
     {sampleBusy?<Feedback text={copy('Opening the sample…','Abriendo el ejemplo…')}/>:null}{feedback?<Feedback danger onDismiss={() => setFeedback('')} text={feedback}/>:null}

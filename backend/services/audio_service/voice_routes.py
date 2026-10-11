@@ -39,6 +39,7 @@ from models import AnalyzeResponse, PriceCheck
 from services.analytical_services.analysis_store import StoreUnavailable, load_analysis, save_analysis
 from services.audio_service.audio_http import audio_response
 from services.audio_service.voice_agent.client import AgentError
+from services.audio_service.voice_agent.bill_context import doctor_only
 from services.audio_service.voice_agent.session import get_service as get_agent_service, start_session_async
 from services.audio_service.speech_to_text import ErrorCode as STTErrorCode
 from services.audio_service.speech_to_text import STTRequest, to_gemini_handoff, transcribe_async
@@ -399,25 +400,29 @@ def spoken_reply(analysis: AnalyzeResponse, findings: Optional[str] = None) -> s
 
 
 def price_findings(analysis: AnalyzeResponse, quote_names: bool = False) -> str:
-    """What the price check found, in English: "" when no charge could be compared with Medicare's rate.
+    """Medicare reference findings, with doctor-only comparisons kept out of ratios and price claims.
     `quote_names` puts each charge's name in quotes, for translation: Gemini wrote the names in the user's language."""
-    compared = [check for check in analysis.price_checks if check.times_medicare is not None]
+    doctor_checks = [check for check in analysis.price_checks if doctor_only(check.model_dump())]
+    compared = [check for check in analysis.price_checks
+                if check.times_medicare is not None and not doctor_only(check.model_dump())]
+    doctor_note = (f"For {_charges(len(doctor_checks))}, Medicare's reference covers only the doctor's part. "
+                   "The hospital's part is not included, so this cannot show whether those charges are high. "
+                   "Ask the billing office for an itemized explanation.") if doctor_checks else ""
     if not compared:
-        return ""
+        return doctor_note
+    reference_note = "Medicare's rates are a reference, not proof of an error or a fair hospital price."
     # The furthest above Medicare's rate first, so the charges named are the ones most worth asking about.
     flagged = sorted(
         (check for check in compared if check.flag in ("above_typical", "far_above_typical")),
         key=lambda check: (check.flag != "far_above_typical", -check.times_medicare),
     )
     if not flagged:
-        they = "it looks" if len(compared) == 1 else "they look"
-        return (f"I also compared {_charges(len(compared))} with Medicare's national rates, and {they} "
-                "within the usual range for hospital prices.")
+        return _sentences(f"I also compared {_charges(len(compared))} with Medicare's national rates. "
+                          "This check did not flag a price question.", reference_note, doctor_note)
     sentences, named = [], 0
     for check in flagged:
         name = f"“{_line_name(analysis, check)}”" if quote_names else _line_name(analysis, check)
-        sentence = (f"{name} was billed about {_times(check.times_medicare)} times Medicare's national "
-                    f"rate, which is {'far above the usual range' if check.flag == 'far_above_typical' else 'higher than usual'}.")
+        sentence = (f"{name} was billed about {_times(check.times_medicare)} times Medicare's national rate.")
         if sentence in sentences:  # the same charge listed twice on the bill: said once
             named += 1
             continue
@@ -427,9 +432,9 @@ def price_findings(analysis: AnalyzeResponse, quote_names: bool = False) -> str:
         named += 1
     others = len(flagged) - named
     if others > 0:
-        sentences.append(f"{_charges(others, 'other')} also {'looks' if others == 1 else 'look'} high.")
-    if any("facility fee" in check.note for check in flagged):
-        sentences.append("For some services Medicare's rate covers only the doctor's part, so some difference is expected.")
+        sentences.append(f"{_charges(others, 'other')} also {'has' if others == 1 else 'have'} a difference worth asking about.")
+    sentences.append(reference_note)
+    sentences.append(doctor_note)
     sentences.append(f"It's worth asking the billing office about {'it' if len(flagged) == 1 else 'them'}.")
     return _sentences("I also compared the charges with Medicare's national rates.", *sentences)
 

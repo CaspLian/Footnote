@@ -60,7 +60,7 @@ export function Settings() {
     <SettingsGroup title="Appearance">
       <SettingsPicker title="App theme" value={prefs.theme} options={[{ label: 'System', value: 'system' }, { label: 'Light', value: 'light' }, { label: 'Dark', value: 'dark' }]} onChange={theme => set({ theme })} />
     </SettingsGroup>
-    <SettingsGroup title="Voice & explanations" note="Choose a language and voice for two-way conversations. Live ElevenLabs agents will connect through the backend.">
+    <SettingsGroup title="Voice & explanations" note="Live conversations use a saved bill’s analysis. Choose a language and voice for your questions.">
       <SettingsLink title="Agent voice" detail={`${voice.name} · ${backendConfigured() ? resolved?.name ?? 'ElevenLabs' : 'ElevenLabs placeholder'}`} leading={<OrbMark/>} onPress={() => router.navigate('/voices')} />
       <SettingsDivider /><SettingsPicker title="Explanation detail" value={context.explanationDepth} options={[{ label: 'Simple', value: 'simple' }, { label: 'Detailed', value: 'detailed' }]} onChange={useUnfoldStore.getState().setExplanationDepth} />
     </SettingsGroup>

@@ -242,7 +242,8 @@ def test_spoken_question_reaches_gemini_and_the_reply_is_spoken(voice):
     assert spoken.startswith(
         "Your MRI was billed at three thousand two hundred dollars. I also compared the charges with Medicare's national rates."
     )
-    assert "Brain MRI was billed about 8 times Medicare's national rate, which is far above the usual range." in spoken
+    assert "Brain MRI was billed about 8 times Medicare's national rate." in spoken
+    assert "not proof of an error or a fair hospital price" in spoken
     assert body["speech"]["ok"] is True and body["speech"]["mime_type"] == "audio/mpeg"
     assert body["speech"]["text"] == spoken  # the captions are exactly what the voice says
     audio = voice.client.get(body["speech"]["audio_url"])
@@ -662,8 +663,9 @@ def test_the_spoken_reply_adds_what_the_price_check_found(voice):
     checks = [_check(models, 0, "far_above_typical", 30.0), _check(models, 1, "above_typical", 4.5), _check(models, 2, "typical", 1.2)]
     assert voice.routes.spoken_reply(_analysis(models, checks)) == (
         "Here is your bill. I also compared the charges with Medicare's national rates. "
-        "The head CT scan was billed about 30 times Medicare's national rate, which is far above the usual range. "
-        "The ER visit was billed about 4.5 times Medicare's national rate, which is higher than usual. "
+        "The head CT scan was billed about 30 times Medicare's national rate. "
+        "The ER visit was billed about 4.5 times Medicare's national rate. "
+        "Medicare's rates are a reference, not proof of an error or a fair hospital price. "
         "It's worth asking the billing office about them."
     )
 
@@ -681,8 +683,9 @@ def test_the_spoken_reply_names_a_charge_listed_twice_only_once(voice):
     analysis = models.AnalyzeResponse(target_language="en", model="m", mock=True, result=result, price_checks=checks)
     assert voice.routes.spoken_reply(analysis) == (
         "Here is your bill. I also compared the charges with Medicare's national rates. "
-        "The EKG was billed about 20 times Medicare's national rate, which is far above the usual range. "
-        "The head CT scan was billed about 15 times Medicare's national rate, which is far above the usual range. "
+        "The EKG was billed about 20 times Medicare's national rate. "
+        "The head CT scan was billed about 15 times Medicare's national rate. "
+        "Medicare's rates are a reference, not proof of an error or a fair hospital price. "
         "It's worth asking the billing office about them."
     )
 
@@ -691,8 +694,9 @@ def test_the_spoken_reply_when_prices_look_usual_or_were_not_compared(voice):
     models = importlib.import_module("models")
     usual = voice.routes.spoken_reply(_analysis(models, [_check(models, 2, "typical", 1.2)]))
     assert usual == (
-        "Here is your bill. I also compared 1 charge with Medicare's national rates, and it looks within the "
-        "usual range for hospital prices."
+        "Here is your bill. I also compared 1 charge with Medicare's national rates. "
+        "This check did not flag a price question. "
+        "Medicare's rates are a reference, not proof of an error or a fair hospital price."
     )
     no_code = models.PriceCheck(line_index=0, cpt_code=None, billed_amount=3200.0, flag="no_code", note="n")
     assert voice.routes.spoken_reply(_analysis(models, [no_code])) == "Here is your bill."
@@ -706,10 +710,21 @@ def test_the_spoken_reply_never_claims_overcharging(voice):
     facility = "Medicare's rate here covers only the doctor's fee; hospitals also bill a separate facility fee."
     checks = [_check(models, i, "far_above_typical", 30.0, note=facility) for i in range(3)]
     reply = voice.routes.spoken_reply(_analysis(models, checks)).lower()
-    assert "1 other charge also looks high." in reply
-    assert "covers only the doctor's part, so some difference is expected." in reply  # the caveat is spoken too
-    for word in ("overcharg", "illegal", "fraud", "negotiat", "rip"):
+    assert "for 3 charges, medicare's reference covers only the doctor's part" in reply
+    assert "cannot show whether those charges are high" in reply
+    for word in ("times medicare", "looks high", "usual range", "overcharg", "illegal", "fraud", "negotiat", "rip"):
         assert word not in reply
+
+
+def test_spoken_findings_keep_doctor_only_lines_out_of_comparable_ratios(voice):
+    models = importlib.import_module("models")
+    checks = [_check(models, 0, "far_above_typical", 30.0, note="Covers only the doctor's part."),
+              _check(models, 1, "above_typical", 4.5)]
+    reply = voice.routes.spoken_reply(_analysis(models, checks))
+    assert "The ER visit was billed about 4.5 times Medicare's national rate." in reply
+    assert "For 1 charge, Medicare's reference covers only the doctor's part." in reply
+    assert "30 times" not in reply and "head CT scan was billed about" not in reply
+    assert "not proof of an error or a fair hospital price" in reply
 
 
 def test_the_worst_charges_are_named_first(voice):
@@ -717,9 +732,11 @@ def test_the_worst_charges_are_named_first(voice):
     checks = [_check(models, 0, "above_typical", 3.1), _check(models, 1, "above_typical", 3.2), _check(models, 2, "far_above_typical", 50.0)]
     assert voice.routes.spoken_reply(_analysis(models, checks)) == (
         "Here is your bill. I also compared the charges with Medicare's national rates. "
-        "The lab panel was billed about 50 times Medicare's national rate, which is far above the usual range. "
-        "The ER visit was billed about 3.2 times Medicare's national rate, which is higher than usual. "
-        "1 other charge also looks high. It's worth asking the billing office about them."
+        "The lab panel was billed about 50 times Medicare's national rate. "
+        "The ER visit was billed about 3.2 times Medicare's national rate. "
+        "1 other charge also has a difference worth asking about. "
+        "Medicare's rates are a reference, not proof of an error or a fair hospital price. "
+        "It's worth asking the billing office about them."
     )
 
 
@@ -739,8 +756,9 @@ def test_the_reply_reads_well_without_a_final_full_stop_or_a_plain_name(voice):
     analysis.result.line_items[1].original_description = " "  # nothing to say: "Line 2"
     assert voice.routes.spoken_reply(analysis) == (
         "Here is your bill. I also compared the charges with Medicare's national rates. "
-        "CT HEAD was billed about 30 times Medicare's national rate, which is far above the usual range. "
-        "Line 2 was billed about 20 times Medicare's national rate, which is far above the usual range. "
+        "CT HEAD was billed about 30 times Medicare's national rate. "
+        "Line 2 was billed about 20 times Medicare's national rate. "
+        "Medicare's rates are a reference, not proof of an error or a fair hospital price. "
         "It's worth asking the billing office about them."
     )
 

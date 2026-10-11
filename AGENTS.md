@@ -36,7 +36,7 @@ live in `docs/`. **`docs/` is the team's shared memory: never delete or rename i
 | `backend/services/gemini_services/` | Gemini extraction and explanation (`gemini_service.py`, MOCK answer JSON) |
 | `backend/services/snowflake_services/` | Price check against Medicare rates (Snowflake, CSV fallback in `backend/data/`) |
 | `backend/services/analytical_services/` | `analysis_store.py`: saves each analysis to Tiger Data and loads it back |
-| `backend/services/tigerdata_services/` | Tiger Data audit and benchmark tables (not called by the app's routes yet) |
+| `backend/services/tigerdata_services/` | Tiger Data claim audit/lifecycle tables used by claim routes; regional benchmark table remains separate |
 | `backend/services/audio_service/` | ElevenLabs speech-to-text and text-to-speech, `/api/v1/voice/*`, playground |
 | `backend/dev_console.py` | Local test page for every route (http://127.0.0.1:8770/console) |
 | `backend/tests/`, `backend/services/audio_service/**/tests/` | Backend and audio tests |
