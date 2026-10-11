@@ -58,7 +58,7 @@ describe('toConnectedCase', () => {
 
   it('writes the letter and the call script from the findings and Gemini\'s questions', () => {
     expect(connected.dispute_letter_recipient).toBe('billing');
-    expect(connected.dispute_letter_draft).toContain('To: Metropolitan Medical Center — Billing Department');
+    expect(connected.dispute_letter_draft).toContain('To: Metropolitan Medical Center · Billing Department');
     expect(connected.dispute_letter_draft).toContain("- A scan of your head: billed about 30.2× Medicare's national rate");
     expect(connected.dispute_letter_draft_es).toContain('ASUNTO: Solicitud de factura detallada');
     expect(connected.call_script.split('\n')).toEqual([

@@ -15,8 +15,8 @@ export async function resolveSampleAttachments(language: Language = 'en', at = n
     return {
       id: SAMPLE_DOCUMENT_IDS[kind], uri: asset.uri,
       name: language === 'en'
-        ? `Northline — ${kind === 'bill' ? 'itemized bill' : 'explanation of benefits'}.pdf`
-        : `Northline — ${kind === 'bill' ? 'factura detallada' : 'explicación de beneficios'}.pdf`,
+        ? `Northline · ${kind === 'bill' ? 'itemized bill' : 'explanation of benefits'}.pdf`
+        : `Northline · ${kind === 'bill' ? 'factura detallada' : 'explicación de beneficios'}.pdf`,
       mimeType: 'application/pdf', kind, origin: 'sample' as const, importedAt: at, pageCount: 1,
     };
   });

@@ -5,7 +5,7 @@ export function isMoney(value: unknown): value is number {
 }
 
 export function formatMoney(cents: number | undefined, language: Language = 'en'): string {
-  if (cents === undefined || !isMoney(cents)) return '—';
+  if (cents === undefined || !isMoney(cents)) return language === 'es' ? 'No indicado' : 'Not shown';
   return new Intl.NumberFormat(language === 'es' ? 'es-US' : 'en-US', {
     style: 'currency', currency: 'USD', minimumFractionDigits: 2,
     maximumFractionDigits: 2,
@@ -35,9 +35,9 @@ export function isISODate(value: string): boolean {
 }
 
 export function formatDate(date: string | undefined, language: Language = 'en'): string {
-  if (!date) return '—';
+  if (!date) return language === 'es' ? 'No indicado' : 'Not shown';
   const parsed = new Date(date.length === 10 ? `${date}T12:00:00Z` : date);
-  if (!Number.isFinite(parsed.getTime())) return '—';
+  if (!Number.isFinite(parsed.getTime())) return language === 'es' ? 'No indicado' : 'Not shown';
   return new Intl.DateTimeFormat(language === 'es' ? 'es-US' : 'en-US', {
     month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC',
   }).format(parsed);

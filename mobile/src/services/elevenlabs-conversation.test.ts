@@ -35,6 +35,7 @@ function harness(hold = false, timeout = 30_000) {
   const client = createElevenLabsConversation({
     loadSdk: async () => { calls.push('load'); return sdk; },
     requestMicrophone: async () => { calls.push('microphone'); return 'granted'; },
+    activateMicrophone: async () => { calls.push('duplex'); },
     claimAudio(holder) { calls.push('claim'); stopAudio = holder.stop; return () => { releaseCount++; }; }, connectTimeoutMs: timeout,
   });
   const controller = new AgentController({ async connect(value, options) { const prepared = await client.prepare(value, options.signal); return client.open(grant, value, options, prepared); } });
@@ -43,7 +44,7 @@ function harness(hold = false, timeout = 30_000) {
 
 test('voice startup uses a WebRTC ticket, both validated tools, SDK controls and one audio owner', async () => {
   const h = harness(); await h.controller.start(context);
-  assert.deepEqual(h.calls, ['load', 'microphone', 'claim', 'start']);
+  assert.deepEqual(h.calls, ['load', 'microphone', 'claim', 'duplex', 'start', 'mute:false']);
   const options = h.options();
   assert.equal(options.conversationToken, grant.conversationToken);
   assert.equal(options.connectionType, 'webrtc');

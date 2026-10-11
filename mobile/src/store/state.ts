@@ -363,7 +363,7 @@ export function createFootnoteStore(storage: LocalStorage, options: StoreOptions
               cases: get().cases.map(item => item.id === caseId ? { ...item, status: 'ready', findings: result.findings, reviewMode: result.mode, verifiedAt: timestamp, updatedAt: timestamp } : item),
               events: [...get().events, event(caseId, 'verified')],
             });
-            void trackClaim(caseId);
+            await trackClaim(caseId);
           } finally { set({ processingCaseIds: get().processingCaseIds.filter(id => id !== caseId) }); inFlightReviews.delete(caseId); }
         })();
         inFlightReviews.set(caseId, review); return review;

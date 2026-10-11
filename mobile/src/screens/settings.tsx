@@ -6,7 +6,6 @@ import { Platform } from 'react-native';
 import { router } from 'expo-router';
 import { useFootnoteStore } from '@/store';
 import { clearLocalAttachments, nativeErrorMessage } from '@/native';
-import { voiceChoices } from '@/domain/preferences';
 import { Feedback, Group, Screen, Txt } from '@/components/ui';
 import { usePrivacy } from '@/components/privacy';
 import { confirmAction } from '@/components/confirm';
@@ -36,7 +35,7 @@ export function Settings() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const set = useFootnoteStore.getState().setPreferences;
-  const voice = voiceChoices.find(v => v.id === (prefs.voice === 'device' ? 'calm' : prefs.voice))!;
+  const voiceName = resolved?.name ?? 'Choose a voice';
   const language = languageOption(prefs.workingLanguage);
   function clearImports() {
     confirmAction('Delete imported cases?', 'This removes imported documents, drafts and their history from this device. Your family profiles are kept.', 'Delete imports', () => {
@@ -55,7 +54,7 @@ export function Settings() {
       <SettingsPicker title="App theme" value={prefs.theme} options={[{ label: 'System', value: 'system' }, { label: 'Light', value: 'light' }, { label: 'Dark', value: 'dark' }]} onChange={theme => set({ theme })} />
     </SettingsGroup>
     <SettingsGroup title="Voice & explanations" note="Live conversations use a saved bill’s analysis. Choose a language and voice for your questions.">
-      <SettingsLink title="Agent voice" detail={`${voice.name} · ${backendConfigured() ? resolved?.name ?? 'ElevenLabs' : 'Voice unavailable'}`} leading={<OrbMark/>} onPress={() => router.navigate('/voices')} />
+      <SettingsLink title="Agent voice" detail={voiceName} leading={<OrbMark/>} onPress={() => router.navigate('/voices')} />
       <SettingsDivider /><SettingsPicker title="Explanation detail" value={context.explanationDepth} options={[{ label: 'Simple', value: 'simple' }, { label: 'Detailed', value: 'detailed' }]} onChange={useFootnoteStore.getState().setExplanationDepth} />
     </SettingsGroup>
     <SettingsGroup title="Interaction" note="System accessibility preferences are always respected.">

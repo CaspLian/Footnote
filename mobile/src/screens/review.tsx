@@ -53,7 +53,7 @@ export function Review() {
     <Card>
       <Row label="Statement balance" value={formatMoney(c.financials.remainingCents, 'en')} /><Divider />
       <Row label="EOB responsibility" value={formatMoney(c.financials.eobResponsibilityCents, 'en')} />
-      <Row label="Prior payment" value={c.financials.patientPaidCents === undefined ? '—' : '−' + formatMoney(c.financials.patientPaidCents, 'en')} />
+      <Row label="Prior payment" value={c.financials.patientPaidCents === undefined ? 'Not shown' : '−' + formatMoney(c.financials.patientPaidCents, 'en')} />
       <Row label="Calculated remaining" value={formatMoney(remaining, 'en')} accent />
       <Txt variant="caption" muted>{remaining === undefined ? 'Confirm the EOB responsibility and prior payments before calculating a remainder. Leave unknown amounts blank.' : 'Ask billing to explain any difference. This calculation is not a promise of savings.'}</Txt>
     </Card>

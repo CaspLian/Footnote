@@ -22,6 +22,8 @@ export interface ElevenLabsDeps {
   loadSdk(): Promise<AgentSdk>;
   requestMicrophone(): Promise<MicrophoneAccess>;
   claimAudio?(holder: { stop(): void }): () => void;
+  /** Switch from playback-only previews to a duplex native audio session after claiming audio. */
+  activateMicrophone?(): Promise<void>;
   connectTimeoutMs?: number;
   streamAgentText?: boolean;
   devHook?(hook: AgentDebugHook | undefined): void;
@@ -81,6 +83,7 @@ export function createElevenLabsConversation(deps: ElevenLabsDeps) {
       const ended = new Promise<void>(resolve => { resolveEnded = resolve; });
       const events = createAgentEventMapper({
         status: options.onStatus,
+        interruption: options.onInterruption,
         message: options.onMessage,
         end: ending => { closed = true; cleanup(); resolveEnded(); options.onEnd?.(ending); },
       }, { streamAgentText: deps.streamAgentText, log: deps.log });
@@ -96,6 +99,8 @@ export function createElevenLabsConversation(deps: ElevenLabsDeps) {
       let onAbort: (() => void) | undefined;
       try {
         if (closed) throw abortError();
+        throwIfAborted(signal);
+        await deps.activateMicrophone?.();
         throwIfAborted(signal);
         const handlers = agentToolHandlers(context, grant.lines);
         const clientTools = Object.fromEntries(CLIENT_TOOL_NAMES.map(name => [name, (params: unknown) => closed ? 'The conversation has ended.' : handlers[name](params)]));
@@ -119,6 +124,7 @@ export function createElevenLabsConversation(deps: ElevenLabsDeps) {
         throwIfAborted(signal);
         if (closed) throw abortError();
         if (conversation.type !== 'voice') throw new Error('not_a_voice_session');
+        conversation.setMicMuted(false);
       } catch (error) {
         closed = true; events.dispose(); cleanup();
         // SDK startup cannot be cancelled: dispose a connection that arrives after End or timeout.

@@ -24,7 +24,7 @@ function fakeTracker(fail = false) {
   return { tracker, recorded, updates };
 }
 
-async function confirmedCase(claims: ClaimTracker) {
+async function confirmedCase(claims: ClaimTracker, waitForReview = true) {
   const store = createFootnoteStore(memoryStorage(), {
     now: clock, id, autoHydrate: false, claims, processBill: async () => ({ mode: 'manual', findings: [], summary: { en: 'Summary.', es: 'Resumen.' } }),
   });
@@ -36,9 +36,10 @@ async function confirmedCase(claims: ClaimTracker) {
     lineItems: [{ id: 'l1', description: { en: 'ER visit', es: 'ER visit' }, code: '99285', date: '2026-09-14', units: 1, billedCents: 245000,
       evidence: { attachmentId: 'import', page: 1, label: { en: 'Line 1', es: 'Línea 1' }, excerpt: { en: 'ER VISIT', es: 'ER VISIT' } } }],
   });
-  await store.getState().verifyCase(caseId);
+  const review = store.getState().verifyCase(caseId);
+  if (waitForReview) await review;
   await settle();
-  return { store, caseId };
+  return { store, caseId, review };
 }
 
 test('confirming a case records its claim once (which marks the audit complete); later steps update that claim', async () => {
@@ -97,5 +98,5 @@ test('Tiger Data being down never breaks the review or the case', async () => {
 
 test('resolving an unknown confirmed balance logs the action without inventing zero',async()=>{const fake=fakeTracker();const {store,caseId}=await confirmedCase(fake.tracker);store.getState().updateCase(caseId,{financials:{}});store.getState().markResolved(caseId);await settle();assert.deepEqual(fake.updates,[['claim-1',{action:'Case marked resolved',note:'No statement balance was confirmed'}]]);});
 test('opening Track retries a missed claim once and refresh does not modify the case revision',async()=>{let fail=true;const fake=fakeTracker();const tracker={...fake.tracker,record:async(c:BillCase)=>{if(fail)throw new Error('down');return fake.tracker.record(c);}};const {store,caseId}=await confirmedCase(tracker);fail=false;const at=store.getState().cases[0].updatedAt;await Promise.all([store.getState().refreshClaim(caseId),store.getState().refreshClaim(caseId)]);assert.equal(fake.recorded.length,1);assert.equal(store.getState().cases[0].claimId,'claim-1');assert.equal(store.getState().cases[0].updatedAt,at);});
-test('refresh during initial recording shares that same request',async()=>{let release!:(id:string)=>void,count=0;const fake=fakeTracker();const tracker={...fake.tracker,record:async()=>{count++;return new Promise<string>(resolve=>{release=resolve;});}};const {store,caseId}=await confirmedCase(tracker);const refresh=store.getState().refreshClaim(caseId);assert.equal(count,1);release('claim-1');await refresh;assert.equal(count,1);assert.equal(store.getState().cases[0].claimId,'claim-1');});
+test('refresh during initial recording shares that same request',async()=>{let release!:(id:string)=>void,count=0;const fake=fakeTracker();const tracker={...fake.tracker,record:async()=>{count++;return new Promise<string>(resolve=>{release=resolve;});}};const {store,caseId,review}=await confirmedCase(tracker,false);let finished=false;void review.then(()=>{finished=true;});const refresh=store.getState().refreshClaim(caseId);assert.equal(count,1);assert.equal(finished,false);release('claim-1');await Promise.all([refresh,review]);assert.equal(finished,true);assert.equal(count,1);assert.equal(store.getState().cases[0].claimId,'claim-1');});
 test('prepared draft and removed follow-up are mirrored to the claim',async()=>{const fake=fakeTracker();const {store,caseId}=await confirmedCase(fake.tracker);await store.getState().prepareDraft(caseId,'billing_correction');store.getState().setFollowUp(caseId,'2026-12-01');store.getState().setFollowUp(caseId,null);await settle();assert.deepEqual(fake.updates.map(([,change])=>change),[{action:'Prepared a billing request'},{action:'Follow-up reminder set',note:'2026-12-01'},{action:'Follow-up reminder removed'}]);});

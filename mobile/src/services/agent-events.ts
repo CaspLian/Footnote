@@ -9,7 +9,7 @@ type SdkDisconnect =
   | { reason: 'agent'; context?: { type: string; reason?: string; code?: number }; closeCode?: number; closeReason?: string }
   | { reason: 'user' };
 
-export interface AgentEventSink { status(status: AgentStatus): void; message(message: AgentMessage): void; end(ending: AgentEnding): void }
+export interface AgentEventSink { status(status: AgentStatus): void; message(message: AgentMessage): void; end(ending: AgentEnding): void; interruption?(): void }
 export interface AgentEventOptions {
   /** Show the agent's words while they stream (agent_chat_response_part). Off: captions come once per reply. */
   streamAgentText?: boolean;
@@ -94,7 +94,7 @@ export function createAgentEventMapper(sink: AgentEventSink, options: AgentEvent
       sink.message({ role: 'agent', id: lastFinal.id, text: corrected_agent_response, final: true, corrected: true });
       if (mode === 'listening') sink.status(listeningStatus());
     },
-    onInterruption() { if (!ended) { log('interruption'); sink.status(listeningStatus()); } },
+    onInterruption() { if (!ended) { log('interruption'); mode = 'listening'; speechEndedSinceAgentText = true; sink.interruption?.(); sink.status(listeningStatus()); } },
     onDisconnect(details: SdkDisconnect) {
       log('disconnect', { reason: details.reason, type: 'context' in details && details.context ? details.context.type : '' });
       if (details.reason === 'user') return finish(quiet ? undefined : {});

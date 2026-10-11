@@ -1,6 +1,6 @@
 import { languageOption, type WorkingLanguage } from './languages';
 export type AppTheme = 'system' | 'light' | 'dark';
-export type VoiceChoice = 'device' | 'calm' | 'clear' | 'warm';
+export type VoiceChoice = 'device' | 'calm' | 'clear' | 'warm' | `provider:${string}`;
 export type BillSort = 'recent' | 'balance' | 'follow_up';
 export interface AppPreferences {
   theme: AppTheme;
@@ -30,7 +30,7 @@ export function normalizePreferences(value: unknown): AppPreferences {
   return {
     workingLanguage: languageOption(v.workingLanguage).code,
     theme: ['system', 'light', 'dark'].includes(v.theme as string) ? v.theme as AppTheme : 'system',
-    voice: voiceChoices.some(choice => choice.id === v.voice) ? v.voice as VoiceChoice : 'device',
+    voice: voiceChoices.some(choice => choice.id === v.voice) || typeof v.voice === 'string' && /^provider:[a-z0-9_]{1,64}$/.test(v.voice) ? v.voice as VoiceChoice : 'device',
     speechRate: [0.75, 0.92, 1.1].includes(v.speechRate as number) ? v.speechRate as number : 0.92,
     haptics: typeof v.haptics === 'boolean' ? v.haptics : true,
     reduceMotion: typeof v.reduceMotion === 'boolean' ? v.reduceMotion : false,

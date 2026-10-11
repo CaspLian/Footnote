@@ -11,6 +11,10 @@
       "supportsTablet": false,
       "infoPlist": {
         "CADisableMinimumFrameDurationOnPhone": true
+      },
+      "icon": {
+        "light": "../brand/png/appicon/footnote-appicon-light-1024.png",
+        "dark": "../brand/png/appicon/footnote-appicon-dark-1024.png"
       }
     },
     "android": {
@@ -87,6 +91,7 @@
       "eas": {
         "projectId": "4690d017-8cb2-47b9-9e3d-856aae34bcd4"
       }
-    }
+    },
+    "icon": "./assets/icon.png"
   }
 }

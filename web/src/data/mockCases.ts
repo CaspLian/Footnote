@@ -125,7 +125,7 @@ export const mockCases: MedicalCase[] = [
     ],
     dispute_letter_recipient: 'billing',
     dispute_letter_draft: `Date: October 9, 2026
-To: Northline Medical Center — Patient Financial Services
+To: Northline Medical Center · Patient Financial Services
 Account Number: NMC-882941-09
 Patient Name: Alex Rivera
 Date of Service: September 18, 2026
@@ -151,7 +151,7 @@ Alex Rivera
 Contact: alex.rivera@example.com`,
 
     dispute_letter_draft_es: `Fecha: 9 de octubre de 2026
-Para: Northline Medical Center — Servicios Financieros al Paciente
+Para: Northline Medical Center · Servicios Financieros al Paciente
 Número de Cuenta: NMC-882941-09
 Nombre del Paciente: Alex Rivera
 Fecha del Servicio: 18 de septiembre de 2026
@@ -280,8 +280,8 @@ Paso 3: Solicitar Pausa y Registro
         comparison_basis_es: 'El índice Snowflake regional demuestra que la tarifa de Medicare es de $450.00 para el CP 10016',
         question_for_billing: '“Under federal No Surprises Act regulations, please adjust the out-of-network balance to match my in-network copay responsibility.”',
         question_for_billing_es: '“Bajo las regulaciones de la Ley No Surprises Act, solicito ajustar el saldo al copago dentro de la red correspondiente.”',
-        statutory_rule: '45 CFR § 149.410 — Balance Billing Protections for Non-Emergency Services',
-        statutory_rule_es: '45 CFR § 149.410 — Protecciones contra facturación de saldo en servicios médicos',
+        statutory_rule: '45 CFR § 149.410 · Balance Billing Protections for Non-Emergency Services',
+        statutory_rule_es: '45 CFR § 149.410 · Protecciones contra facturación de saldo en servicios médicos',
         potential_savings: 750.00
       }
     ],
