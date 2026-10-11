@@ -31,12 +31,15 @@ import uuid
 from typing import Optional
 
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ValidationError
 
-from locales import language_of, resolve_locale
+from locales import language_name, language_of, resolve_locale
 from models import AnalyzeResponse, PriceCheck
 from services.analytical_services.analysis_store import StoreUnavailable, load_analysis, save_analysis
 from services.audio_service.audio_http import audio_response
+from services.audio_service.voice_agent.client import AgentError
+from services.audio_service.voice_agent.session import get_service as get_agent_service, start_session_async
 from services.audio_service.speech_to_text import ErrorCode as STTErrorCode
 from services.audio_service.speech_to_text import STTRequest, to_gemini_handoff, transcribe_async
 from services.audio_service.speech_to_text.service import get_service as get_stt_service
@@ -177,6 +180,65 @@ async def voice_analyze(
         analysis=analysis,
         speech=speech,
     )
+
+
+@router.post("/agent/session")
+async def voice_agent_session(
+    request: Request,
+    audit_id: Optional[str] = Form(None, description="UUID of a saved analysis; live calls require a bill"),
+    target_language: Optional[str] = Form(None, description="App locale; saved analysis language when omitted"),
+    voice: Optional[str] = Form(None, description="A key from GET /api/v1/voice/voices"),
+    connection_type: str = Form("webrtc", description="webrtc token or websocket signed URL"),
+):
+    """Prepare one private live conversation. The key and agent ID stay on the server."""
+    try:
+        get_agent_service().check_origin(request.headers.get("origin"))
+        if connection_type not in ("webrtc", "websocket"):
+            raise AgentError("INVALID_REQUEST", "connection_type must be webrtc or websocket.", 400)
+        if not audit_id:
+            raise HTTPException(400, detail={"stage": "audit", "message": "audit_id is required for a live conversation."})
+        try:
+            uuid.UUID(audit_id)
+        except ValueError:
+            raise HTTPException(400, detail={"stage": "audit", "message": "audit_id must be a valid UUID."}) from None
+        locale = None
+        if target_language is not None:
+            try:
+                locale = resolve_locale(target_language)
+            except ValueError as exc:
+                raise HTTPException(400, detail={"stage": "language", "message": str(exc)}) from None
+        try:
+            saved = await load_analysis(audit_id)
+        except ValueError as exc:
+            raise HTTPException(400, detail={"stage": "audit", "message": str(exc)}) from None
+        except StoreUnavailable as exc:
+            raise HTTPException(503, detail={"stage": "audit", "message": str(exc)}) from None
+        if saved is None:
+            raise HTTPException(404, detail={"stage": "audit", "message": "No saved analysis with this ID."})
+        try:
+            analysis = AnalyzeResponse.model_validate(saved["analysis"])
+        except (ValidationError, KeyError, TypeError):
+            raise HTTPException(409, detail={"stage": "audit", "message": "This saved analysis is in an older format."}) from None
+        try:
+            analysis_locale = resolve_locale(analysis.target_language)
+            analysis_name = language_name(analysis_locale)
+        except ValueError:
+            analysis_locale, analysis_name = None, analysis.target_language
+        if locale is None:
+            if analysis_locale is None:
+                raise HTTPException(400, detail={"stage": "language", "message": "Send a supported target_language for this saved analysis."})
+            locale = analysis_locale
+        different_language = analysis_locale is None or language_of(analysis_locale) != language_of(locale)
+        session = await start_session_async(
+            analysis=analysis.model_dump(mode="json"), audit_id=audit_id, locale=locale,
+            language_name=language_name(locale), analysis_language_name=analysis_name if different_language else None,
+            voice=voice, connection_type=connection_type, client_address=request.client.host if request.client else "unknown",
+        )
+        return JSONResponse(session, headers={"Cache-Control": "no-store"})
+    except AgentError as exc:
+        headers = {"Retry-After": str(exc.retry_after)} if exc.retry_after is not None else None
+        raise HTTPException(exc.status, detail={"stage": "language" if exc.code == "LANGUAGE_NOT_SUPPORTED" else "agent",
+                                              "message": str(exc), "error_code": exc.code, "retryable": exc.retryable}, headers=headers) from None
 
 
 @router.post("/speak", response_model=Speech)

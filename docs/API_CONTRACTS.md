@@ -47,6 +47,7 @@ from the code. The models are defined in `backend/models.py` and `backend/servic
 | `POST /api/v1/analyze-image` | One bill photo -> its dates and lines -> a claim with estimated deadlines (the Tiger Data flow) | `claim_routes.py`, `gemini_services/bill_image.py` |
 | `POST /api/v1/voice/analyze` | A recorded question (+ optional bill) → transcript, analysis, spoken reply | `voice_routes.py` |
 | `POST /api/v1/voice/speak` | Speak a saved analysis again, without calling Gemini | `voice_routes.py` |
+| `POST /api/v1/voice/agent/session` | A short-lived credential for a private live conversation about a saved bill | `voice_routes.py`, `voice_agent/` |
 | `GET /api/v1/voice/audio/{audio_id}` | The reply audio (MP3) | `voice_routes.py`, `audio_http.py` |
 | `GET /api/v1/voice/voices` | Voices for a picker: `{"default": "matilda", "language_defaults": {"es": "elio", ...}, "voices": [{key, name, description, accent, gender}]}` (20) | `voice_routes.py`, `text_to_speech/voices.json` |
 | `GET /api/v1/voice/voices/{voice_key}/sample` | A short MP3 sample of one voice | `voice_routes.py` |
@@ -396,5 +397,43 @@ Shortened response from the sample bill (`backend/samples/sample_bill.png`, synt
 ## Proposed changes
 
 Proposed interface changes are decision files in `docs/decisions/` with status `proposed`. Examples: the app key,
-one error shape, the price-flag fixes, follow-up questions, and the whiteboard's Hour 1 contract. None is
-implemented until this file documents it.
+one error shape, the price-flag fixes, follow-up questions, the whiteboard's Hour 1 contract, and the voice agent's
+session route is now implemented (`2026-10-10-voice-agent.md`); the other proposals remain unimplemented until
+this file documents them.
+
+## Live conversation session: `POST /api/v1/voice/agent/session`
+
+Form fields: required saved-analysis UUID `audit_id`; optional `target_language` (saved locale by default),
+catalog `voice`; `connection_type` (`webrtc` default, or `websocket`). No profile, insurer, ZIP or arbitrary bill
+text is accepted. The backend loads the saved analysis and builds the conversation context.
+
+Returns JSON with `Cache-Control: no-store`: `connection_type`, `conversation_token` for WebRTC or `signed_url`
+for WebSocket, optional `conversation_id`, `start_within_seconds` (600/900), random `user_id`, `locale`,
+`language`, `voice`, `audit_id`, `bill_loaded: true`, `dynamic_variables`, `overrides`, `client_tools`, `lines`,
+and `privacy_notice`. Never store/log the credential or include it in persistence snapshots.
+
+The eight string variables are `language_name`, `today`, `bill_loaded`, `bill_facts`, `bill_lines`, `price_check`,
+`bill_summary`, and `questions_to_ask`. `today` uses the server's local calendar date. SDK overrides are
+camelCase: `agent.language`, `agent.firstMessage`, `tts.voiceId`, and `asr.keywords`. Client tools are
+`show_line_item` and `show_price_check`, each taking a 1-based integer `line_number` and displaying existing UI.
+
+Each line includes `number`, `name`, nullable `billed_amount`, `medicare_rate`, `times_medicare`, `label`, and
+`in_context`. A doctor-only reference has `label: doctor_part_only` and no quantitative rate/ratio. Omitted
+lines have `in_context: false` and cannot be requested through a client tool.
+
+Errors use `detail: {stage, message, error_code?, retryable?}`: 400 invalid input/language, 403 refused web origin,
+404 missing audit, 409 incompatible saved analysis, 429 local session limit (with `Retry-After`), 502 provider
+rejection, 503 missing setup/database/provider outage. Audit errors use `stage: audit`; unsupported live
+languages use `stage: language`; agent setup/provider errors use `stage: agent`.
+
+The agent is private and uses Gemini 3.5 Flash. Its English base uses Flash v2 as required by the live Agents
+API; other supported presets use Flash v2.5. Regular saved readings keep their existing model behavior.
+Hebrew/Thai live conversations are refused; ordinary Hebrew/Thai readings remain supported. Manual cases and
+Guide terms without a saved audit cannot start live bill conversations.
+
+Local defaults: one successful credential per client address per 10 seconds, 30 per hour; only loopback web
+origins or `ELEVENLABS_AGENT_ALLOWED_ORIGINS`. These are development limits, with no application authentication.
+The UI shows the provider's seven-day retention notice before Start and pauses original-analysis voice when
+confirmed values change. Setup: from `backend/`, run
+`python -m services.audio_service.voice_agent.provision`, set its nonsecret `ELEVENLABS_AGENT_ID` in the ignored
+backend settings and restart. Only synthetic bills are used in this development agent.
