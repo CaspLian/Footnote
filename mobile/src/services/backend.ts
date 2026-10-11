@@ -88,7 +88,7 @@ export function postJson<T>(path: string, body: unknown, signal?: AbortSignal): 
   return call(path, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }, LOOKUP_TIMEOUT_MS, signal);
 }
 
-export interface BackendVoiceCatalog { default: string; language_defaults: Record<string, string>; voices: { key: string; name: string; description: string; accent: string; gender: string }[] }
+export interface BackendVoiceCatalog { default: string; language_defaults: Record<string, string>; voices: { key: string; name: string; description: string; accent: string; gender: string; verified_languages?: { language: string; locale?: string; accent?: string }[] }[] }
 export const voices = () => call<BackendVoiceCatalog>('/api/v1/voice/voices', { method: 'GET' });
 export const voiceSampleUrl = (key: string) => backendUrl(`/api/v1/voice/voices/${encodeURIComponent(key)}/sample`);
 export const backendHealth = (signal?: AbortSignal) => call<{ message: string; mock: boolean; model: string }>('/', { method: 'GET' }, LOOKUP_TIMEOUT_MS, signal);

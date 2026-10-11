@@ -9,12 +9,13 @@ export interface AppPreferences {
   speechRate: number;
   haptics: boolean;
   reduceMotion: boolean;
+  voiceCaptions: boolean;
   billSort: BillSort;
   showResolved: boolean;
 }
 export const defaultPreferences: AppPreferences = {
   theme: 'system', workingLanguage: 'en', voice: 'calm', speechRate: 0.92,
-  haptics: true, reduceMotion: false, billSort: 'recent', showResolved: true,
+  haptics: true, reduceMotion: false, voiceCaptions: true, billSort: 'recent', showResolved: true,
 };
 /** Local slots for a future ElevenLabs voice catalog; these are not provider voice IDs. */
 export const voiceChoices = [
@@ -34,6 +35,7 @@ export function normalizePreferences(value: unknown): AppPreferences {
     speechRate: [0.75, 0.92, 1.1].includes(v.speechRate as number) ? v.speechRate as number : 0.92,
     haptics: typeof v.haptics === 'boolean' ? v.haptics : true,
     reduceMotion: typeof v.reduceMotion === 'boolean' ? v.reduceMotion : false,
+    voiceCaptions: typeof v.voiceCaptions === 'boolean' ? v.voiceCaptions : true,
     billSort: ['recent', 'balance', 'follow_up'].includes(v.billSort as string) ? v.billSort as BillSort : 'recent',
     showResolved: typeof v.showResolved === 'boolean' ? v.showResolved : true,
   };

@@ -50,7 +50,7 @@ from the code. The models are defined in `backend/models.py` and `backend/servic
 | `POST /api/v1/voice/speak` | Speak a saved analysis again, without calling Gemini | `voice_routes.py` |
 | `POST /api/v1/voice/agent/session` | A short-lived credential for a private live conversation about a saved bill | `voice_routes.py`, `voice_agent/` |
 | `GET /api/v1/voice/audio/{audio_id}` | The reply audio (MP3) | `voice_routes.py`, `audio_http.py` |
-| `GET /api/v1/voice/voices` | Voices for a picker: `{"default": "matilda", "language_defaults": {"es": "elio", ...}, "voices": [{key, name, description, accent, gender}]}` (20) | `voice_routes.py`, `text_to_speech/voices.json` |
+| `GET /api/v1/voice/voices` | Voices for a picker: `{"default": "matilda", "language_defaults": {"es": "elio", ...}, "voices": [{key, name, description, accent, gender, verified_languages}]}` (20) | `voice_routes.py`, `text_to_speech/voices.json` |
 | `GET /api/v1/voice/voices/{voice_key}/sample` | A short MP3 sample of one voice | `voice_routes.py` |
 
 ### Connected Footnote app usage
@@ -484,3 +484,6 @@ The UI shows the provider's seven-day retention notice before Start and pauses o
 confirmed values change. Setup: from `backend/`, run
 `python -m services.audio_service.voice_agent.provision`, set its nonsecret `ELEVENLABS_AGENT_ID` in the ignored
 backend settings and restart. Only synthetic bills are used in this development agent.
+
+
+The voice picker uses each voice’s optional `verified_languages` list of `{language, locale?, accent?}` from ElevenLabs provider metadata (checked October 11, 2026). This is additive to the existing response. A voice’s multilingual synthesis model is not treated as proof of verification for every language. The frontend shows only matching verified language entries, with a recoverable empty state when there are none. Samples remain the existing English introductions; selecting a voice still sends its existing catalog key.

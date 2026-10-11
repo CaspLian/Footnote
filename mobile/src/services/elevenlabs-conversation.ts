@@ -13,6 +13,7 @@ export interface SdkConversation {
   getInputVolume(): number;
   getOutputVolume(): number;
   sendUserMessage(text: string): void;
+  sendUserActivity?(): void;
   getId(): string;
 }
 export interface AgentSdk { Conversation: { startSession(options: PartialOptions): Promise<SdkConversation> } }
@@ -140,6 +141,12 @@ export function createElevenLabsConversation(deps: ElevenLabsDeps) {
       return {
         async end() { if (closed) return; closed = true; events.closeQuietly(); cleanup(); await closeSdk(activeConversation); },
         async setMuted(muted) { if (!closed) activeConversation.setMicMuted(muted); },
+        sendText(text) {
+          if (closed) throw new Error('conversation_closed');
+          activeConversation.sendUserMessage(text);
+          events.userTyped(text);
+        },
+        userActivity() { if (!closed) activeConversation.sendUserActivity?.(); },
         levels() {
           if (closed) return { input: 0, output: 0 };
           try { return { input: activeConversation.getInputVolume(), output: activeConversation.getOutputVolume() }; }

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from '@/localization/use-translation';
 import { Pressable, View } from 'react-native';
 import { router } from 'expo-router';
 import { glossary, searchGlossary, type GlossaryTerm } from '@/domain';
@@ -17,18 +18,18 @@ function TermRow({ term }: { term: GlossaryTerm }) {
   </Pressable>;
 }
 export function Guide() {
-  const { locale } = useLanguage();
+  const { locale } = useLanguage(); const { t } = useTranslation();
   const [search, setSearch] = useState('');
   const [focused, setFocused] = useState(false);
   const [savedOnly, setSavedOnly] = useState(false);
   const saved = useFootnoteStore(s => s.savedTermIds);
   const starterTerms=glossary.filter(t=>['eob','deductible','appeal'].includes(t.id));
   const moreTerms=glossary.filter(t=>!['eob','deductible','appeal'].includes(t.id));
-  const filtered = searchGlossary(search, locale).filter(term => !savedOnly || saved.includes(term.id));
+  const filtered = searchGlossary(search, locale, t).filter(term => !savedOnly || saved.includes(term.id));
   const searching = focused || !!search.trim();
   const isSearching = searching || savedOnly;
   return <><Screen softenSearchEdge scrollEdgeHeight={32} contentWidth={760} testID="guide" searchMode={searching}>
-    {!searching ? <SearchTransition reveal><Group gap={space.lg}><Txt variant="display">A little clarity{'\n'}goes a long way.</Txt><Txt muted>Insurance terms, with examples you can read or listen to.</Txt></Group></SearchTransition> : null}
+    {!searching ? <SearchTransition reveal><Group gap={space.lg}><Txt variant="display">Insurance terms</Txt><Txt muted>Definitions, examples and questions to ask.</Txt></Group></SearchTransition> : null}
     <SearchControl key="search" softenBelow active={searching} onActiveChange={setFocused} label="Search insurance terms" placeholder="EOB, deductible, appeal…" value={search} onChange={setSearch} />
     <SearchTransition><Group style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.sm }}>
       <Button compact title="All terms" variant={savedOnly ? 'secondary' : 'quiet'} onPress={() => setSavedOnly(false)} />

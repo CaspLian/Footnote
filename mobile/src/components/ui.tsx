@@ -1,6 +1,6 @@
-import { createContext, ReactNode, useCallback, useContext, useMemo, useRef, useState, useEffect } from 'react';
+import { Children, createContext, ReactNode, useCallback, useContext, useMemo, useRef, useState, useEffect } from 'react';
 import { ActivityIndicator, Alert, Platform, Pressable, StyleProp, StyleSheet, Text, TextInput, TextInputProps, TextProps, useWindowDimensions, View, ViewStyle } from 'react-native';
-import Animated, { cubicBezier, useSharedValue, useAnimatedStyle, withTiming, Easing } from 'react-native-reanimated';
+import Animated, { cubicBezier, useSharedValue, useAnimatedStyle, withTiming, Easing, LinearTransition } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -10,19 +10,27 @@ import { Icon, IconName } from './icon';
 import { GlassSurface, useGlassAvailable } from './glass-surface';
 import { SoftScrollView } from './soft-scroll';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
+import { useTranslation } from '@/localization/use-translation';
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+const SEARCH_REFLOW = LinearTransition.duration(220).easing(Easing.bezier(.23, 1, .32, 1));
 const ActionLayout = createContext({ row: false, dock: false });
 
 export function useLanguage() {
   const locale = useFootnoteStore(s => s.locale);
-  const copy = useCallback((en: string, es: string) => locale === 'es' ? es : en, [locale]);
-  return { locale, copy };
+  const { t, language, formatLocale } = useTranslation();
+  const copy = useCallback((en: string, _es: string) => t(en), [t]);
+  return { locale, copy, language, formatLocale };
 }
 export function useDesktop() { const {width}=useWindowDimensions(); return Platform.OS==='web'&&width>=1080; }
-export function Txt({ variant = 'body', muted, accent, style, ...props }: TextProps & { variant?: keyof typeof type; muted?: boolean; accent?: boolean }) { const { colors } = useTheme();
-  return <Text {...props} style={[type[variant], { color: accent ? colors.accent : muted ? colors.muted : colors.ink }, style]} />;
+function translateChildren(children: ReactNode, t: (value: string) => string) {
+  const parts = Children.toArray(children);
+  return parts.every(part => typeof part === 'string' || typeof part === 'number') ? t(parts.join('')) : Children.map(children, child => typeof child === 'string' ? t(child) : child);
+}
+export function Txt({ variant = 'body', muted, accent, style, translate = true, children, ...props }: TextProps & { variant?: keyof typeof type; muted?: boolean; accent?: boolean; translate?: boolean }) { const { colors } = useTheme(); const { t, direction } = useTranslation();
+  return <Text {...props} accessibilityLabel={props.accessibilityLabel ? t(props.accessibilityLabel) : undefined} style={[type[variant], { color: accent ? colors.accent : muted ? colors.muted : colors.ink, writingDirection: direction }, direction === 'rtl' ? { textAlign: 'right' } : null, style]}>{translate ? translateChildren(children, t) : children}</Text>;
 }
 export function Button({ title, onPress, variant = 'primary', material, compact = false, disabled, loading, icon, style, testID }: { title: string; onPress: () => void; variant?: 'primary'|'secondary'|'quiet'|'link'; material?: 'solid'|'glass'; compact?: boolean; disabled?: boolean; loading?: boolean; icon?: IconName; style?: StyleProp<ViewStyle>; testID?: string }) { const { colors, scheme } = useTheme(); const styles = useUIStyles(); const desktop = useDesktop();
+  const { t } = useTranslation(); title = t(title);
   const layout = useContext(ActionLayout);
   const [pressed,setPressed]=useState(false); const [hovered,setHovered]=useState(false);const [focused,setFocused]=useState(false);const reduced=useMotionPreference();
   const isGlass = (material ?? (variant === 'primary' ? 'glass' : 'solid')) === 'glass'; const nativeGlass = useGlassAvailable();
@@ -34,6 +42,7 @@ export function Button({ title, onPress, variant = 'primary', material, compact 
   </AnimatedPressable>;
 }
 export function IconButton({ name, label, onPress, disabled = false, plain = false }: { name: IconName; label: string; onPress: () => void; disabled?: boolean; plain?: boolean }) { const { colors } = useTheme(); const styles = useUIStyles();
+  const { t } = useTranslation(); label = t(label);
   return <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{disabled}} disabled={disabled} onPress={onPress} style={({ pressed }) => [styles.iconButton, { opacity:disabled?.4:1, backgroundColor:pressed?colors.accentSoft:plain?'transparent':colors.surface }]}><Icon name={name} /></Pressable>;
 }
 export function Card({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) { const styles = useUIStyles(); return <View style={[styles.card, style]}>{children}</View>; }
@@ -42,45 +51,47 @@ export function Divider(){ const { colors } = useTheme();return <View style={{he
 export function Group({ children, gap = space.sm, style }: { children: ReactNode; gap?: number; style?: StyleProp<ViewStyle> }) { return <View style={[{ gap }, style]}>{children}</View>; }
 export function ButtonRow({ children, style, stack = false }: { children: ReactNode; style?: StyleProp<ViewStyle>; stack?: boolean }) { const parent = useContext(ActionLayout); return <ActionLayout.Provider value={{ ...parent, row: !stack }}><View style={[{ flexDirection: stack ? 'column' : 'row', flexWrap: 'wrap', gap: space.md, alignItems: 'stretch' }, style]}>{children}</View></ActionLayout.Provider>; }
 export function Section({title,children}:{title:string;children:ReactNode}) {return <Group gap={space.lg}><Txt variant="heading" accessibilityRole="header">{title}</Txt>{children}</Group>;}
-export function Choice({title,detail,selected,onPress}:{title:string;detail?:string;selected:boolean;onPress:()=>void}){ const { colors } = useTheme();return <Pressable accessibilityRole="radio" aria-checked={selected} accessibilityLabel={title} accessibilityState={{checked:selected}} onPress={onPress} style={({pressed})=>({minHeight:sizes.touch,padding:space.lg,borderRadius:radius.control,backgroundColor:selected?colors.surface:pressed?colors.accentSoft:'transparent',boxShadow:selected?shadows.paper:'none',flexDirection:'row',alignItems:'center',gap:space.lg})}><Group style={{flex:1}} gap={space.xs}><Txt variant="label" accent={selected}>{title}</Txt>{detail?<Txt muted>{detail}</Txt>:null}</Group><Icon name={selected?'check':'next'} color={selected?colors.accent:colors.muted} size={20}/></Pressable>;}
+export function Choice({title,detail,selected,onPress}:{title:string;detail?:string;selected:boolean;onPress:()=>void}){ const { colors } = useTheme(); const { t } = useTranslation();return <Pressable accessibilityRole="radio" aria-checked={selected} accessibilityLabel={t(title)} accessibilityState={{checked:selected}} onPress={onPress} style={({pressed})=>({minHeight:sizes.touch,padding:space.lg,borderRadius:radius.control,backgroundColor:selected?colors.surface:pressed?colors.accentSoft:'transparent',boxShadow:selected?shadows.paper:'none',flexDirection:'row',alignItems:'center',gap:space.lg})}><Group style={{flex:1}} gap={space.xs}><Txt variant="label" accent={selected}>{title}</Txt>{detail?<Txt muted>{detail}</Txt>:null}</Group><Icon name={selected?'check':'next'} color={selected?colors.accent:colors.muted} size={20}/></Pressable>;}
 export function Row({ label, value, accent }: { label: string; value: string; accent?: boolean }) { const styles = useUIStyles();
   return <View style={styles.row}><Txt variant="label" muted style={{ flex: 1 }}>{label}</Txt><Txt accent={accent} style={{ flexShrink: 1, textAlign: 'right' }}>{value}</Txt></View>;
 }
 export function Badge({ text, tone = 'warning' }: { text: string; tone?: 'warning'|'accent'|'info'|'success'|'draft' }) { const { colors } = useTheme(); const styles = useUIStyles(); return <View style={[styles.badge,{backgroundColor:colors[`${tone}Soft`]}]}><Txt variant="caption" style={{ color: colors[tone] }}>{text}</Txt></View>; }
 export function Field({ label, help, error, style, ...props }: TextInputProps & { label: string; help?: string; error?: string; style?: StyleProp<ViewStyle> }) { const { colors } = useTheme(); const styles = useUIStyles();
+  const { t, direction } = useTranslation();
   const [focused,setFocused]=useState(false);
   const input = useRef<TextInput>(null);
   const editable = props.editable !== false;
-  return <Group gap={space.sm}><Pressable accessible={false} focusable={false} onPress={() => { if (editable) input.current?.focus(); }} style={[styles.field, { borderWidth: focused ? 2 : 1, padding: focused ? space.lg - 1 : space.lg, borderColor: error ? colors.error : focused ? colors.accent : colors.line, opacity: editable ? 1 : .65 }, style]}><Group style={{ flexDirection: 'row', alignItems: 'center' }}><Txt variant="label" muted style={{ flex: 1 }}>{label}</Txt>{editable ? <Icon name="edit" size={16} color={colors.muted} /> : null}</Group><TextInput {...props} ref={input} onFocus={e=>{setFocused(true);props.onFocus?.(e);}} onBlur={e=>{setFocused(false);props.onBlur?.(e);}} accessibilityLabel={label} accessibilityHint={props.accessibilityHint ?? (editable ? 'Editable field. Enter or change this value.' : 'Read-only value.')} selectionColor={colors.accent} style={[type.body, { color: colors.ink, padding: 0, minHeight: 38, textAlignVertical: 'top' }]} placeholderTextColor={colors.muted} /></Pressable>{help ? <Txt variant="caption" muted>{help}</Txt> : null}{error ? <Txt variant="caption" accessibilityRole="alert" style={{ color: colors.error }}>{error}</Txt> : null}</Group>;
+  return <Group gap={space.sm}><Pressable accessible={false} focusable={false} onPress={() => { if (editable) input.current?.focus(); }} style={[styles.field, { borderWidth: focused ? 2 : 1, padding: focused ? space.lg - 1 : space.lg, borderColor: error ? colors.error : focused ? colors.accent : colors.line, opacity: editable ? 1 : .65 }, style]}><Group style={{ flexDirection: 'row', alignItems: 'center' }}><Txt variant="label" muted style={{ flex: 1 }}>{label}</Txt>{editable ? <Icon name="edit" size={16} color={colors.muted} /> : null}</Group><TextInput {...props} ref={input} onFocus={e=>{setFocused(true);props.onFocus?.(e);}} onBlur={e=>{setFocused(false);props.onBlur?.(e);}} accessibilityLabel={t(label)} placeholder={props.placeholder ? t(props.placeholder) : undefined} accessibilityHint={t(props.accessibilityHint ?? (editable ? 'Editable field. Enter or change this value.' : 'Read-only value.'))} selectionColor={colors.accent} style={[type.body, { color: colors.ink, padding: 0, minHeight: 38, textAlignVertical: 'top', writingDirection: direction, textAlign: direction === 'rtl' ? 'right' : 'left' }]} placeholderTextColor={colors.muted} /></Pressable>{help ? <Txt variant="caption" muted>{help}</Txt> : null}{error ? <Txt variant="caption" accessibilityRole="alert" style={{ color: colors.error }}>{error}</Txt> : null}</Group>;
 }
 export function EvidenceCard({ source, excerpt, onPress }: { source: string; excerpt: string; onPress?: () => void }) { const { colors } = useTheme(); const styles = useUIStyles();
-  const content = <><Group style={{flexDirection:'row',alignItems:'center'}}><Icon name="document" size={20} color={colors.accent}/><Txt variant="label" accent style={{flex:1}}>{source}</Txt>{onPress ? <Icon name="next" color={colors.accent} size={20} /> : null}</Group><Txt>{excerpt}</Txt></>;
+  const content = <><Group style={{flexDirection:'row',alignItems:'center'}}><Icon name="document" size={20} color={colors.accent}/><Txt variant="label" accent style={{flex:1}}>{source}</Txt>{onPress ? <Icon name="next" color={colors.accent} size={20} /> : null}</Group><Txt translate={false}>{excerpt}</Txt></>;
   return onPress ? <Pressable accessibilityRole="button" accessibilityLabel={source} onPress={onPress} style={({ pressed }) => [styles.evidence, { opacity: pressed ? .7 : 1 }]}>{content}</Pressable> : <View style={styles.evidence}>{content}</View>;
 }
-export function Feedback({ title, text, action, danger, onDismiss }: { title?: string; text: string; action?: { title: string; onPress: () => void }; danger?: boolean; onDismiss?: () => void }) { const { colors } = useTheme(); const styles = useUIStyles();
+export function Feedback({ title, text, action, danger, onDismiss }: { title?: string; text: string; action?: { title: string; onPress: () => void }; danger?: boolean; onDismiss?: () => void }) { const { colors } = useTheme(); const styles = useUIStyles(); const { t } = useTranslation();
   const recovery = useRef(action);
   const dismiss = useRef(onDismiss);
   useEffect(() => { recovery.current = action; dismiss.current = onDismiss; }, [action, onDismiss]);
   useEffect(() => {
     if (Platform.OS !== 'ios' || !danger) return;
     const retry = recovery.current;
-    Alert.alert(title ?? 'Something needs attention', text, retry ? [{ text: 'Dismiss', style: 'cancel', onPress: () => dismiss.current?.() }, { text: retry.title, onPress: () => { dismiss.current?.(); retry.onPress(); } }] : [{ text: 'OK', onPress: () => dismiss.current?.() }]);
-  }, [danger, text, title]);
+    Alert.alert(t(title ?? 'Something needs attention'), t(text), retry ? [{ text: t('Dismiss'), style: 'cancel', onPress: () => dismiss.current?.() }, { text: t(retry.title), onPress: () => { dismiss.current?.(); retry.onPress(); } }] : [{ text: t('OK'), onPress: () => dismiss.current?.() }]);
+  }, [danger, text, title, t]);
   // Keep recovery available after the alert is dismissed, without repeating the error card.
   if (Platform.OS === 'ios' && danger) return action ? <Button {...action} variant="quiet" /> : null;
   return <View accessibilityLiveRegion="polite" style={[styles.evidence, { backgroundColor: danger ? colors.errorSoft : colors.accentSoft }]}>{title ? <Txt variant="section">{title}</Txt> : null}<Txt style={danger ? { color: colors.error } : null}>{text}</Txt>{action ? <Button {...action} variant="quiet" /> : null}</View>;
 }
-export function Screen({ children, footer, aside, asideWidth, contentWidth, footerHint, overlay, overlaySpace = 184, overlayReserve = 0, measureOverlay = false, footerSafeArea = true, footerBottomGap = 16, overlayBottom = 4, showStorageError = true, softenSearchEdge = false, scrollEdgeHeight = 28, searchMode = false, testID }: { children: ReactNode; footerHint?: string; footer?: ReactNode; overlay?: ReactNode; overlaySpace?: number; overlayReserve?: number; measureOverlay?: boolean; footerSafeArea?: boolean; footerBottomGap?: number; overlayBottom?: number; showStorageError?: boolean; softenSearchEdge?: boolean; scrollEdgeHeight?: number; searchMode?: boolean; aside?:ReactNode; asideWidth?:number; contentWidth?:number; testID?: string }) { const styles = useUIStyles();
+export function Screen({ children, footer, aside, asideWidth, contentWidth, footerHint, overlay, overlaySpace = 184, overlayReserve = 0, measureOverlay = false, footerSafeArea = true, footerBottomGap = 16, overlayBottom = 4, showStorageError = true, blockingOverlay, softenSearchEdge = false, scrollEdgeHeight = 28, searchMode = false, testID }: { children: ReactNode; footerHint?: string; footer?: ReactNode; overlay?: ReactNode; overlaySpace?: number; overlayReserve?: number; measureOverlay?: boolean; footerSafeArea?: boolean; footerBottomGap?: number; overlayBottom?: number; showStorageError?: boolean; blockingOverlay?: ReactNode; softenSearchEdge?: boolean; scrollEdgeHeight?: number; searchMode?: boolean; aside?:ReactNode; asideWidth?:number; contentWidth?:number; testID?: string }) { const styles = useUIStyles(); const { direction } = useTranslation();
   const insets = useSafeAreaInsets();const desktop=useDesktop();const {colors,reducedMotion}=useTheme();
   const hasOverlay = !!overlay; const reserve = useSharedValue(overlayReserve); const [overlayHeight, setOverlayHeight] = useState<number>();
   const reservedHeight = measureOverlay && overlayHeight !== undefined ? overlayHeight + overlayBottom : overlayReserve;
   useEffect(()=>{reserve.set(withTiming(hasOverlay ? reservedHeight : 0,{duration:reducedMotion?0:280,easing:Easing.bezier(.23,1,.32,1)}));},[reservedHeight,hasOverlay,reducedMotion,reserve]);
   const scrollLayout = useAnimatedStyle(()=>({paddingBottom:reserve.get()}));
   const storageError = useFootnoteStore(s => s.storageError); const { copy } = useLanguage();
-  return <KeyboardAvoidingView testID={testID} style={styles.screen} behavior={Platform.OS === 'ios' ? 'padding' : undefined} automaticOffset keyboardVerticalOffset={0}>
+  return <KeyboardAvoidingView testID={testID} style={[styles.screen, { direction }]} behavior={Platform.OS === 'ios' ? 'padding' : undefined} automaticOffset keyboardVerticalOffset={0}>
     {showStorageError && storageError ? <View style={{ paddingHorizontal: space.screen, paddingTop: space.md }}><Feedback danger text={copy('Your changes could not be saved. Keep the app open and try saving again.', 'No se pudieron guardar tus cambios. Mantén la app abierta e intenta guardar de nuevo.')} action={{ title: copy('Try saving again','Intentar guardar de nuevo'), onPress: () => { void useFootnoteStore.getState().retryPersistence().catch(()=>{}); } }} /></View> : null}
-    <View style={{ flex: 1, minHeight: 0 }}><SoftScrollView softenTopAtRest={Platform.OS==='ios'&&softenSearchEdge&&searchMode} topFadeHeight={searchMode?24:scrollEdgeHeight} bottomFadeHeight={hasOverlay?0:searchMode?24:scrollEdgeHeight} contentContainerStyle={[styles.content,desktop?{padding:space.xxl}:null,overlay?{paddingBottom:overlaySpace}:null,searchMode?{paddingTop:space.md,paddingBottom:space.sm}:null]} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'} contentInsetAdjustmentBehavior="automatic"><Animated.View style={[{width:'100%',maxWidth:contentWidth ?? (desktop?1120:720),alignSelf:'center',flexDirection:desktop&&aside?'row':'column',gap:space.xl},scrollLayout]}>{desktop&&aside?<View style={asideWidth?{width:asideWidth}:{flex:1}}>{aside}</View>:null}<View style={{flex:1,minWidth:0,gap:searchMode?space.lg:space.xl}}>{children}</View></Animated.View></SoftScrollView>{overlay?<View onLayout={measureOverlay ? e => setOverlayHeight(e.nativeEvent.layout.height) : undefined} pointerEvents="box-none" style={{position:'absolute',bottom:overlayBottom,left:0,right:0,alignItems:'center'}}>{overlay}</View>:null}</View>
-    {footer ? <View style={[styles.footer, { paddingBottom: footerSafeArea ? Math.max(insets.bottom, space.sm) : footerBottomGap, alignItems: 'center' }]}>{hasOverlay ? <LinearGradient pointerEvents="none" colors={[`${colors.background}00`, colors.background]} style={{ position: 'absolute', top: -20, left: 0, right: 0, height: 20 }}/> : null}<ActionLayout.Provider value={{ row: false, dock: true }}><View style={{ width: '100%', maxWidth: contentWidth ?? 720, gap: space.sm }}>{footerHint ? <Txt variant="caption" muted numberOfLines={1}>{footerHint}</Txt> : null}{footer}</View></ActionLayout.Provider></View> : null}
+    <View style={{ flex: 1, minHeight: 0 }}><SoftScrollView softenTopAtRest={Platform.OS==='ios'&&softenSearchEdge} topFadeHeight={searchMode?24:scrollEdgeHeight} bottomFadeHeight={hasOverlay?0:searchMode?24:scrollEdgeHeight} contentContainerStyle={[styles.content,desktop?{padding:space.xxl}:null,overlay?{paddingBottom:overlaySpace}:null,searchMode?{paddingBottom:space.sm}:null]} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'} contentInsetAdjustmentBehavior="automatic"><Animated.View collapsable={false} layout={!reducedMotion && softenSearchEdge ? SEARCH_REFLOW : undefined} style={[{width:'100%',maxWidth:contentWidth ?? (desktop?1120:720),alignSelf:'center',flexDirection:desktop&&aside?'row':'column',gap:space.xl},scrollLayout]}>{desktop&&aside?<View style={asideWidth?{width:asideWidth}:{flex:1}}>{aside}</View>:null}<Animated.View collapsable={false} layout={!reducedMotion && softenSearchEdge ? SEARCH_REFLOW : undefined} style={{flex:1,minWidth:0,gap:space.xl}}>{children}</Animated.View></Animated.View></SoftScrollView>{overlay?<View onLayout={measureOverlay ? e => setOverlayHeight(e.nativeEvent.layout.height) : undefined} pointerEvents="box-none" style={{position:'absolute',bottom:overlayBottom,left:0,right:0,alignItems:'center'}}>{overlay}</View>:null}</View>
+    {footer ? <View style={[styles.footer, { paddingBottom: footerSafeArea ? Math.max(insets.bottom, space.sm) : footerBottomGap, alignItems: 'center' }]}>{hasOverlay || softenSearchEdge ? <LinearGradient pointerEvents="none" colors={[`${colors.background}00`, colors.background]} style={{ position: 'absolute', top: -20, left: 0, right: 0, height: 20 }}/> : null}<ActionLayout.Provider value={{ row: false, dock: true }}><View style={{ width: '100%', maxWidth: contentWidth ?? 720, gap: space.sm }}>{footerHint ? <Txt variant="caption" muted numberOfLines={1}>{footerHint}</Txt> : null}{footer}</View></ActionLayout.Provider></View> : null}
+    {blockingOverlay}
   </KeyboardAvoidingView>;
 }
 const createStyles = (colors: Palette) => StyleSheet.create({

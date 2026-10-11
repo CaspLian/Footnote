@@ -77,7 +77,7 @@ export function createAgentEventMapper(sink: AgentEventSink, options: AgentEvent
       const id = open?.id ?? `agent-${++count}`;
       open = undefined; lastFinal = { id, text: message };
       sink.message({ role: 'agent', id, text: message, final: true });
-      // Its audio already finished: keep it in the transcript, but clear it from under the orb, or it would
+      // Its audio already finished: keep it in the transcript, but clear it from above the orb, or it would
       // reappear at the start of the next reply (Aarush's controller keeps the caption until a status clears it).
       if (late) sink.status(listeningStatus());
     },
@@ -108,7 +108,7 @@ export function createAgentEventMapper(sink: AgentEventSink, options: AgentEvent
 
   return {
     callbacks,
-    /** A typed question (the dev hook, or a later "Type instead" field). Unverified: whether the server also echoes it as a transcript. */
+    /** A typed question (the dev hook or the voice-controls question field). Unverified: whether the server also echoes it as a transcript. */
     userTyped: userTurn,
     /** Before the controller's own end(): the controller already shows idle, so nothing is reported. */
     closeQuietly() { quiet = true; finish(undefined); },

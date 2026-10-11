@@ -25,6 +25,7 @@ export function CameraCapture() {
   const [captured, setCaptured] = useState<CameraCapturedPicture[]>([]);
   const [preview, setPreview] = useState<CameraCapturedPicture | null>(null);
   const [busy, setBusy] = useState(false);
+  const [takingPhoto, setTakingPhoto] = useState(false);
   const [error, setError] = useState('');
 
   const checkPermission = useCallback(async () => {
@@ -61,17 +62,18 @@ export function CameraCapture() {
   }, [permission?.status, checkingPermission, askPermission]);
 
   async function capture() {
-    if (!ready || !camera.current || busy) return;
+    if (!ready || !camera.current || busy || takingPhoto) return;
     if (captured.length >= 10) {
       setError(copy('A scan can include up to 10 pages.','El escaneo admite hasta 10 páginas.'));
       return;
     }
     setError('');
+    setTakingPhoto(true);
     try {
-      setPreview(await camera.current.takePictureAsync({ quality: 1 }));
+      setPreview(await camera.current.takePictureAsync({ quality: 0.85 }));
     } catch {
       setError(copy('The photo could not be captured. Try again.','No se pudo tomar la foto. Inténtalo de nuevo.'));
-    }
+    } finally { setTakingPhoto(false); }
   }
 
   async function commitPages() {
@@ -110,9 +112,16 @@ export function CameraCapture() {
   }
 
   return <Screen testID="camera" footer={preview
-    ? <Group style={{ flexDirection: 'row', gap: space.md }}><Button style={{ flex: 1 }} title={copy('Retake','Repetir')} variant="secondary" onPress={() => setPreview(null)} /><Button style={{ flex: 1 }} title={copy('Keep page','Guardar página')} onPress={() => { setCaptured(pages => [...pages, preview]); setPreview(null); }} /></Group>
-    : <Group style={{ flexDirection: 'row', gap: space.md }}><Button style={{ flex: 1 }} title={copy('Capture page','Capturar página')} disabled={!ready || busy} onPress={() => void capture()} /><Button style={{ flex: 1 }} title={copy('Use photos','Usar fotos')} variant="secondary" disabled={!captured.length || busy} loading={busy} onPress={() => void commitPages()} /></Group>}>
-    <Group><Txt variant="title">{copy('Photograph your bill','Fotografía tu factura')}</Txt><Txt muted>{copy(`Page ${captured.length + (preview ? 1 : 0)}${captured.length ? ' captured' : ''}`,`Página ${captured.length + (preview ? 1 : 0)}${captured.length ? ' capturada' : ''}`)}</Txt></Group>
+    ? <Group gap={space.md}>
+        <Button disabled={busy} title={copy('Retake photo','Repetir foto')} icon="camera" variant="secondary" onPress={() => { setReady(false); setPreview(null); }} />
+        <Button disabled={busy || captured.length >= 9} title="Add another photo" icon="plus" variant="secondary" onPress={() => { setCaptured(pages => [...pages, preview]); setReady(false); setPreview(null); }} />
+        <Button title={captured.length ? 'Use photos' : 'Use photo'} icon="check" loading={busy} onPress={() => void commitPages()} />
+      </Group>
+    : <Group gap={space.md}>
+        <Button title="Capture image" icon="camera" loading={takingPhoto} disabled={!ready || busy} onPress={() => void capture()} />
+        {captured.length ? <Button title={captured.length === 1 ? 'Use photo' : 'Use photos'} icon="check" variant="secondary" disabled={busy || takingPhoto} loading={busy} onPress={() => void commitPages()} /> : null}
+      </Group>}>
+    <Group><Txt variant="title">{copy('Photograph your bill','Fotografía tu factura')}</Txt><Txt muted>{preview ? captured.length ? `${captured.length + 1} photos ready` : 'Photo ready' : captured.length ? `${captured.length} photos saved. Capture another page or continue.` : 'Fit the full page inside the frame.'}</Txt></Group>
     <View style={{ height: 440, overflow: 'hidden', borderRadius: 24, backgroundColor: '#101820' }}>
       {preview ? <Image source={{ uri: preview.uri }} resizeMode="contain" style={{ flex: 1 }} /> : focused ? <CameraView ref={camera} active={appActive} style={{ flex: 1 }} facing="back" mode="picture" onCameraReady={() => setReady(true)} onMountError={() => setError(copy('The camera could not start.','No se pudo iniciar la cámara.'))} /> : null}
       {!preview ? <View pointerEvents="none" style={{ position: 'absolute', top: '9%', bottom: '9%', left: '7%', right: '7%', borderWidth: 2, borderColor: 'rgba(255,255,255,.82)', borderRadius: 16 }} /> : null}

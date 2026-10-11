@@ -1,3 +1,5 @@
+import { findingCopy } from '@/services/finding-copy';
+import { useTranslation } from '@/localization/use-translation';
 import { AccessibilityInfo, Pressable } from 'react-native';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -16,6 +18,7 @@ import { AgentOrbControl } from '@/components/agent-orb-control';
 import { useTheme, radius, space } from '@/theme';
 
 export function Review() {
+  const { t, formatLocale } = useTranslation();
   const { colors } = useTheme();
   const c = useCase();
   const prefs = useFootnoteStore(s => s.preferences);
@@ -35,7 +38,7 @@ export function Review() {
     }).catch(() => { if (!abort.signal.aborted) setAuditError('The saved analysis could not be reopened. Your confirmed details are still available on this device.'); });
     return () => abort.abort();
   }, [auditId, caseId]);
-  useEffect(() => { const finding = c?.findings.find(item => item.id === highlight); if (finding) AccessibilityInfo.announceForAccessibility(`Footnote is showing: ${finding.title.en}`); }, [highlight, c?.findings]);
+  useEffect(() => { const finding = c?.findings.find(item => item.id === highlight); if (finding) AccessibilityInfo.announceForAccessibility(t('Footnote is showing: {0}', {0:t(finding.title.en)})); }, [highlight, c?.findings, t]);
   const depth = useFootnoteStore(s => s.personalContext.explanationDepth);
   const profiles = useFootnoteStore(s => s.profiles);
   const [orbCollapsed, setOrbCollapsed] = useState(false);
@@ -48,8 +51,8 @@ export function Review() {
   const summary = depth === 'simple' ? simple : detailed;
   const original = c.attachments.find(a => a.kind === 'bill') ?? c.attachments.find(a => a.kind === 'auto');
   const sourcePending = c.source === 'manual' && !!c.extraction && !c.extraction.inputFingerprint;
-  return <Screen measureOverlay overlayReserve={orbCollapsed ? 68 : 136} overlayBottom={4} overlaySpace={24} testID="review" aside={original ? <Group gap={space.lg}><Txt variant="section">Original statement</Txt><DocumentPreview attachment={original} language="en" /></Group> : undefined} overlay={<AgentOrbControl billCase={sourcePending ? { ...c, evidenceContextId: undefined } : c} collapsed={orbCollapsed} onCollapsedChange={setOrbCollapsed} />} footer={<Button title="Prepare request" onPress={() => caseRoute('/draft', c.id)} />}>
-    <Group gap={space.lg}><Txt variant="display">Here’s the picture.</Txt><Txt muted>{c.provider} · {profile?.firstName ?? 'Unassigned profile'} · {formatDate(c.serviceDate, 'en')}</Txt></Group>
+  return <Screen measureOverlay overlayReserve={orbCollapsed ? 68 : 136} overlayBottom={-8} overlaySpace={24} testID="review" aside={original ? <Group gap={space.lg}><Txt variant="section">Original statement</Txt><DocumentPreview attachment={original} language="en" /></Group> : undefined} overlay={<AgentOrbControl billCase={sourcePending ? { ...c, evidenceContextId: undefined } : c} collapsed={orbCollapsed} onCollapsedChange={setOrbCollapsed} />} footer={<Button title="Prepare request" onPress={() => caseRoute('/draft', c.id)} />}>
+    <Group gap={space.lg}><Txt variant="display">Bill summary</Txt><Txt muted>{c.provider} · {profile?.firstName ?? 'Unassigned profile'} · {formatDate(c.serviceDate, formatLocale)}</Txt></Group>
     <Card>
       <Row label="Statement balance" value={formatMoney(c.financials.remainingCents, 'en')} /><Divider />
       <Row label="EOB responsibility" value={formatMoney(c.financials.eobResponsibilityCents, 'en')} />
@@ -77,12 +80,12 @@ export function Review() {
       {c.extraction.questions.length ? <Group gap={space.sm}><Txt variant="label">Questions to ask billing</Txt>{c.extraction.questions.map((q, i) => <Txt key={i} selectable>• {q.en}</Txt>)}</Group> : <Txt muted>Gemini suggested no questions for this document.</Txt>}
     </Section> : null}
     <Section title={c.findings.length ? 'Questions worth asking' : 'Your next step'}>
-      <Group gap={space.screen}>{c.findings.map((f, index) => <Group key={f.id} gap={space.lg}>
-        <Pressable accessibilityRole="button" accessibilityLabel={f.title.en} testID={f.id === highlight ? 'finding-highlighted' : undefined} onPress={() => router.push({ pathname: '/finding', params: { caseId: c.id, findingId: f.id } })} style={({ pressed }) => ({ minHeight: 48, opacity: pressed ? .7 : 1, backgroundColor: f.id === highlight ? colors.accentSoft : 'transparent', borderRadius: radius.small })}>
-          <Group gap={space.md}><Group style={{ flexDirection: 'row', gap: space.lg, alignItems: 'center' }}><Txt variant="item" style={{ flex: 1 }}>{f.title.en}</Txt><Icon name="next" color={colors.accent} /></Group><Txt muted>{depth === 'detailed' ? f.explanation.en : f.question.en}</Txt></Group>
+      <Group gap={space.screen}>{c.findings.map((f, index) => { const text=findingCopy(f,c.lineItems.find(line=>f.id===`price-${line.id}`),t); return <Group key={f.id} gap={space.lg}>
+        <Pressable accessibilityRole="button" accessibilityLabel={text.title} testID={f.id === highlight ? 'finding-highlighted' : undefined} onPress={() => router.push({ pathname: '/finding', params: { caseId: c.id, findingId: f.id } })} style={({ pressed }) => ({ minHeight: 48, opacity: pressed ? .7 : 1, backgroundColor: f.id === highlight ? colors.accentSoft : 'transparent', borderRadius: radius.small })}>
+          <Group gap={space.md}><Group style={{ flexDirection: 'row', gap: space.lg, alignItems: 'center' }}><Txt variant="item" style={{ flex: 1 }}>{text.title}</Txt><Icon name="next" color={colors.accent} /></Group><Txt muted>{depth === 'detailed' ? text.explanation : text.question}</Txt></Group>
         </Pressable>
         {index < c.findings.length - 1 ? <Divider /> : null}
-      </Group>)}</Group>
+      </Group>; })}</Group>
       {!c.findings.length ? <Feedback text="No supported discrepancies are shown. You can ask billing to explain the statement and prepare a question from your original documents." /> : null}
     </Section>
     <Button variant="quiet" title={expanded ? 'Hide all amounts' : 'See all amounts'} icon="document" onPress={() => setExpanded(v => !v)} />

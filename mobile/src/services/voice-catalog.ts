@@ -13,13 +13,16 @@ export function resolveVoiceKey(choice: VoiceChoice, locale: string, catalog: Ba
   const desired = choice === 'clear' || choice === 'warm' ? SLOT_VOICES[choice] : calm;
   return catalog.voices.some(voice => voice.key === desired) ? desired : calm;
 }
-/** The configured voices are multilingual; put this locale's recommended voice first. */
+/** Only provider-verified language choices; multilingual model support alone is not verification. */
 export function voicesForLocale(locale: string, catalog: BackendVoiceCatalog) {
   const recommended = resolveVoiceKey('calm', locale, catalog);
-  return [...catalog.voices].sort((a, b) => Number(b.key === recommended) - Number(a.key === recommended));
+  const language = locale.toLowerCase().split('-')[0];
+  return catalog.voices.filter(voice => voice.verified_languages?.some(item => item.language.toLowerCase() === language))
+    .sort((a, b) => Number(b.key === recommended) - Number(a.key === recommended));
 }
 let loading: Promise<BackendVoiceCatalog> | undefined;
-export function loadVoiceCatalog(): Promise<BackendVoiceCatalog> {
+export function loadVoiceCatalog(refresh = false): Promise<BackendVoiceCatalog> {
+  if (refresh) loading = undefined;
   loading ??= voices();
   const pending = loading;
   pending.catch(() => { if (loading === pending) loading = undefined; });

@@ -28,10 +28,15 @@ import { UserCircleIcon } from 'phosphor-react-native/src/icons/UserCircle';
 import { LockKeyIcon } from 'phosphor-react-native/src/icons/LockKey';
 import { BookmarkSimpleIcon } from 'phosphor-react-native/src/icons/BookmarkSimple';
 import { PencilSimpleIcon } from 'phosphor-react-native/src/icons/PencilSimple';
+import { MicrophoneIcon } from 'phosphor-react-native/src/icons/Microphone';
+import { MicrophoneSlashIcon } from 'phosphor-react-native/src/icons/MicrophoneSlash';
+import { ClosedCaptioningIcon } from 'phosphor-react-native/src/icons/ClosedCaptioning';
+import { ArrowDownIcon } from 'phosphor-react-native/src/icons/ArrowDown';
 import { useFootnoteStore } from '@/store';
 import { useTheme } from '@/theme';
 
 const icons = {
+  microphone: MicrophoneIcon, microphoneOff: MicrophoneSlashIcon, captions: ClosedCaptioningIcon, minimize: ArrowDownIcon,
   edit: PencilSimpleIcon,
   bookmark: BookmarkSimpleIcon,
   family: UsersThreeIcon, profile: UserCircleIcon, lock: LockKeyIcon, house: HouseIcon, files: FilesIcon, book: BookOpenIcon, document: FileTextIcon,

@@ -24,16 +24,14 @@ export function ParticleOrb({ status, onPress, onLongPress, label, size = 132, o
   const angle = useSharedValue(.5), tilt = useSharedValue(.32), time = useSharedValue(0), activity = useSharedValue(0);
   const drive = useDerivedValue(() => level ? activity.get() * (.35 + .65 * level.get()) : activity.get());
   const paths = useDerivedValue(() => orbPaths(particles, angle.get(), time.get(), drive.get(), tilt.get()));
-  const elapsed = useSharedValue(0);
   const momentum = useSharedValue(0), dragging = useSharedValue(false), committed = useSharedValue(false), scale = useSharedValue(1), entrance = useSharedValue(enter ? 1 : 0);
   const reveal = useSharedValue(collapsed ? 0 : 1);
   const dragStart = useSharedValue(collapsed ? 0 : 1);
   const collapsedHeight = Math.round(size * 64 / 132), travel = size - collapsedHeight;
   useDerivedValue(() => { collapseProgress?.set((1 - reveal.get()) * travel); });
   const frame = useFrameCallback(info => {
-    elapsed.set(v => v + Math.min(info.timeSincePreviousFrame ?? 0, 64) / 1000);
-    if (elapsed.get() < 1 / 30) return;
-    const dt = elapsed.get(); elapsed.set(0);
+    // Follow the display refresh rate. Projection stays on the UI thread and updates only three paths.
+    const dt = Math.min(info.timeSincePreviousFrame ?? 16.67, 32) / 1000;
     time.set(t => t + dt);
     if (!dragging.get()) {
       angle.set(a => (a + dt * (.22 + drive.get() * .7 + momentum.get())) % (Math.PI * 2));

@@ -4,26 +4,25 @@ import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { Button, ButtonRow, IconButton, Feedback, Group, Screen, Txt } from '@/components/ui';
 import { ParticleOrb } from '@/components/particle-orb';
-import { LanguagePicker } from '@/components/language-picker';
 import { useFootnoteStore } from '@/store';
 import type { VoiceChoice } from '@/domain/preferences';
-import { languageOption } from '@/domain/languages';
 import { voicePreviewService } from '@/services/voice-preview';
 import { backendConfigured, backendLocale, type BackendVoiceCatalog } from '@/services/backend';
 import { resolveVoiceKey, voicesForLocale } from '@/services/voice-catalog';
-import { useVoiceCatalog } from '@/components/use-voice-catalog';
+import { useVoiceCatalogState } from '@/components/use-voice-catalog';
+import { useTranslation } from '@/localization/use-translation';
 import { space, useTheme } from '@/theme';
 
 export function Voices() {
   const language = useFootnoteStore(s => s.preferences.workingLanguage);
   const [revision, setRevision] = useState(0);
-  const catalog = useVoiceCatalog(revision);
+  const { catalog, error } = useVoiceCatalogState(revision);
   const { colors } = useTheme();
-  if (!catalog?.voices.length) return <Screen footer={<Button title="Choose voice" disabled onPress={() => {}}/>}><Txt variant="title">Find your voice.</Txt><Group gap={space.lg} style={{ alignItems: 'center', paddingVertical: 40 }}><ActivityIndicator color={colors.accent}/><Txt muted>{backendConfigured() ? 'Loading available voices' : 'Connect to Footnote to choose a voice.'}</Txt><Button title="Reload voices" variant="secondary" onPress={() => setRevision(v => v + 1)}/></Group></Screen>;
+  if (!catalog?.voices.length) return <Screen footer={<Button title="Choose voice" disabled onPress={() => {}}/>}><Txt variant="title">Choose a voice</Txt><Group gap={space.lg} style={{ alignItems: 'center', paddingVertical: 40 }}>{backendConfigured() && !error ? <ActivityIndicator color={colors.accent}/> : null}<Txt muted>{error || (backendConfigured() ? 'Loading available voices' : 'Connect to Footnote to choose a voice.')}</Txt><Button title="Reload voices" variant="secondary" onPress={() => setRevision(v => v + 1)}/></Group></Screen>;
   return <AvailableVoices key={language} catalog={catalog}/>;
 }
 function AvailableVoices({ catalog }: { catalog: BackendVoiceCatalog }) {
-  const prefs = useFootnoteStore(s => s.preferences);
+  const prefs = useFootnoteStore(s => s.preferences); const { t } = useTranslation();
   const choices = voicesForLocale(backendLocale(prefs.workingLanguage), catalog).map(v => ({ ...v, id: `provider:${v.key}` as VoiceChoice }));
   const { reducedMotion } = useTheme();
   const [initialIndex] = useState(() => Math.max(0, choices.findIndex(v => v.key === resolveVoiceKey(prefs.voice, backendLocale(prefs.workingLanguage), catalog))));
@@ -72,20 +71,21 @@ function AvailableVoices({ catalog }: { catalog: BackendVoiceCatalog }) {
     }
   }
   const selectedVoice = choices[index];
-  return <Screen testID="voices" contentWidth={720} footer={<Button title={selected && selectedVoice ? `${selectedVoice.name} saved` : selectedVoice ? `Choose ${selectedVoice.name}` : 'Choose voice'} disabled={!selectedVoice} onPress={() => { if (!selectedVoice) return; stop(); useFootnoteStore.getState().setPreferences({ voice: selectedVoice.id }); setSelected(true); if (router.canGoBack()) router.back(); }} />}>
-    <Group gap={space.lg}><Txt variant="title">Find your voice.</Txt><Txt muted>A voice for asking questions and talking through your next step.</Txt></Group>
-    <Group gap={space.md}><Txt variant="section">Working language</Txt><LanguagePicker value={prefs.workingLanguage} /></Group>
-    <View onLayout={event => { const nextWidth = event.nativeEvent.layout.width; if (nextWidth !== width) { setPageAnchor(currentIndex.current); setWidth(nextWidth); } }} style={{ minHeight: 420 }}>
+  return <Screen testID="voices" contentWidth={720} footer={<Button title={selected && selectedVoice ? t('{0} saved', {0:selectedVoice.name}) : selectedVoice ? t('Choose {0}', {0:selectedVoice.name}) : 'Choose voice'} disabled={!selectedVoice} onPress={() => { if (!selectedVoice) return; stop(); useFootnoteStore.getState().setPreferences({ voice: selectedVoice.id }); setSelected(true); if (router.canGoBack()) router.back(); }} />}>
+    <Group gap={space.lg}><Txt variant="title">Choose a voice</Txt><Txt muted>Preview a voice for your conversations.</Txt></Group>
+
+    <View onLayout={event => { const nextWidth = event.nativeEvent.layout.width; if (nextWidth !== width) { setPageAnchor(currentIndex.current); setWidth(nextWidth); } }} style={{ minHeight: choices.length ? 420 : 0 }}>
       {width > 0 && choices.length ? <ScrollView key={`${width}-${prefs.workingLanguage}`} ref={pager} horizontal pagingEnabled directionalLockEnabled showsHorizontalScrollIndicator={false} contentInsetAdjustmentBehavior="never" automaticallyAdjustContentInsets={false} contentOffset={{ x: pageAnchor * width, y: 0 }} onScrollBeginDrag={stop} onMomentumScrollEnd={settled} style={{ flexGrow: 0 }} contentContainerStyle={{ alignItems: 'stretch' }}>
         {choices.map((voice, page) => <View key={voice.id} style={{ width, flexShrink: 0, gap: space.lg, paddingVertical: space.sm }} accessibilityElementsHidden={page !== index} importantForAccessibility={page === index ? 'auto' : 'no-hide-descendants'} aria-hidden={page !== index}>
           <View pointerEvents="none" style={{ alignItems: 'center', paddingVertical: space.sm }}><ParticleOrb size={200} enter={false} interactive={false} active={page === index} status={page === index ? status : 'idle'} label={`${voice.name} voice illustration`} /></View>
-          <Group gap={space.sm} style={{ paddingHorizontal: space.md, alignItems: 'center' }}><Txt variant="title" style={{ textAlign: 'center' }}>{voice.name}</Txt><Txt muted style={{ textAlign: 'center' }}>{voice.description}</Txt><Txt variant="caption" muted>{voice.accent} · {languageOption(prefs.workingLanguage).native}</Txt></Group>
+          <Group gap={space.sm} style={{ paddingHorizontal: space.md, alignItems: 'center' }}><Txt variant="title" translate={false} style={{ textAlign: 'center' }}>{voice.name}</Txt><Txt variant="caption" muted translate={false}>ElevenLabs</Txt></Group>
           <ButtonRow><IconButton label="Previous voice" name="back" disabled={page === 0} onPress={() => move(page - 1)} /><Button title={status === 'idle' || page !== index ? 'Preview voice' : status === 'loading' ? 'Cancel preview' : 'Stop preview'} icon={status === 'idle' || page !== index ? 'play' : 'stop'} variant="secondary" loading={false} onPress={() => void preview(voice.id)} /><IconButton label="Next voice" name="next" disabled={page === choices.length - 1} onPress={() => move(page + 1)} /></ButtonRow>
         </View>)}
       </ScrollView> : null}
     </View>
     {selectedVoice ? <Txt variant="caption" muted style={{ textAlign: 'center' }}>{index + 1} / {choices.length} · Swipe to explore</Txt> : null}
+    {!choices.length ? <Group gap={space.lg}><Txt variant="section">No verified voices available</Txt><Txt muted>There are no ElevenLabs voices verified for this language in the connected catalog.</Txt><Button title="Change language" variant="secondary" onPress={() => router.navigate('/languages')} /></Group> : null}
     {error ? <Feedback text={error} /> : null}
-    <Txt variant="caption" muted>These voices can speak your working language. Accents vary. Preview clips introduce the voice in English.</Txt>
+    <Txt variant="caption" muted>Preview clips introduce each voice in English.</Txt>
   </Screen>;
 }

@@ -52,8 +52,8 @@ export const glossary: GlossaryTerm[] = [
   },
 ];
 
-export function searchGlossary(query: string, language: 'en' | 'es'): GlossaryTerm[] {
+export function searchGlossary(query: string, language: 'en' | 'es', translate: (text: string) => string = text => text): GlossaryTerm[] {
   const normalize = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase();
   const needle = normalize(query.trim());
-  return glossary.filter(term => normalize(`${term.title[language]} ${term.definition[language]} ${term.id}`).includes(needle));
+  return glossary.filter(term => normalize(`${translate(term.title.en)} ${translate(term.definition.en)} ${term.title[language]} ${term.definition[language]} ${term.id}`).includes(needle));
 }

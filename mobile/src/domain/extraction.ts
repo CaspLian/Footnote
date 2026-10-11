@@ -39,6 +39,18 @@ const cents = (amount?: number | null) => {
   return Number.isSafeInteger(value) ? value : undefined;
 };
 
+/** Explanatory prose or a guessed provider alone must not unlock a bill review. */
+export function hasSubstantialExtraction(result: Pick<ReturnType<typeof mapGeminiAnalysis>, 'financials' | 'lineItems' | 'extraction'>): boolean {
+  if (/^(other|unrelated|not.a.medical.document)$/i.test(result.extraction.documentType.trim())) return false;
+  const knownAmount = Object.values(result.financials).some(value => Number.isSafeInteger(value) && value! >= 0);
+  const usableLine = result.lineItems.some(line => {
+    const description = line.description.en.trim();
+    return !!description && !/^(unknown|n\/?a|none|not (found|available|provided))$/i.test(description)
+      && (!line.amountMissing && Number.isSafeInteger(line.billedCents) && line.billedCents >= 0 || /^(?:\d{5}|[A-Z]\d{4}|\d{4}[A-Z])$/i.test(line.code?.trim() ?? ''));
+  });
+  return knownAmount || usableLine;
+}
+
 export function mapGeminiAnalysis(response: GeminiAnalyzeResponse, billCase: Pick<BillCase, 'attachments'>, language: Language): { extraction: ExtractedAnalysis; provider?: string; serviceDate?: string; financials: Partial<BillCase['financials']>; lineItems: LineItem[]; findings: Finding[] } {
   const result = response.result;
   const attachments = billCase.attachments.filter(item => item.origin === 'import');

@@ -28,6 +28,8 @@ class Voice:
     gender: str
     voice_id: str  # the ElevenLabs voice ID; stays on the server
 
+    verified_languages: tuple[dict, ...] = field(default=(), hash=False)
+
     def public(self) -> dict:
         """What the app needs for a voice picker."""
         return {
@@ -36,6 +38,7 @@ class Voice:
             "description": self.description,
             "accent": self.accent,
             "gender": self.gender,
+            "verified_languages": list(self.verified_languages),
         }
 
 
@@ -109,6 +112,7 @@ def load_catalog(path: Path = VOICES_FILE) -> VoiceCatalog:
                 accent=str(entry.get("accent") or "").strip(),
                 gender=str(entry.get("gender") or "").strip(),
                 voice_id=str(entry["voice_id"]).strip(),
+                verified_languages=tuple({k: str(item[k]).strip() for k in ("language", "locale", "accent") if item.get(k)} for item in entry.get("verified_languages", []) if isinstance(item, dict) and item.get("language")),
             )
         )
 

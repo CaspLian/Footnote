@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { BackendVoiceCatalog } from './backend';
 import { resolveVoiceKey, voicesForLocale } from './voice-catalog';
-const catalog: BackendVoiceCatalog = { default: 'matilda', language_defaults: { 'en-GB': 'alice', es: 'elio', zh: 'andy', hi: 'saavi' }, voices: ['matilda', 'alice', 'george', 'elio', 'andy', 'saavi'].map(key => ({ key, name: key, description: '', accent: '', gender: '' })) };
+const catalog: BackendVoiceCatalog = { default: 'matilda', language_defaults: { 'en-GB': 'alice', es: 'elio', zh: 'andy', hi: 'saavi' }, voices: ['matilda', 'alice', 'george', 'elio', 'andy', 'saavi'].map(key => ({ key, name: key, description: '', accent: '', gender: '', verified_languages: [{ language: key === 'elio' ? 'es' : key === 'andy' ? 'zh' : key === 'saavi' ? 'hi' : 'en' }] })) };
 test('Calm follows exact locale, language and default voice rules', () => {
   for (const [locale, expected] of [['en-US','matilda'], ['en-GB','alice'], ['EN-gb','alice'], ['es-ES','elio'], ['zh-TW','andy'], ['hi-IN','saavi']]) assert.equal(resolveVoiceKey('calm', locale, catalog), expected);
 });
@@ -15,5 +15,8 @@ test('explicit provider names stay selected while missing provider voices recove
   assert.equal(resolveVoiceKey('provider:removed', 'es-ES', catalog), 'elio');
   assert.equal(voicesForLocale('es-ES', catalog)[0].name, 'elio');
   assert.equal(voicesForLocale('zh-TW', catalog)[0].name, 'andy');
-  assert.equal(voicesForLocale('zh-TW', catalog).length, catalog.voices.length);
+  assert.deepEqual(voicesForLocale('zh-TW', catalog).map(v => v.key), ['andy']);
+  assert.deepEqual(voicesForLocale('es-ES', catalog).map(v => v.key), ['elio']);
+  assert.equal(voicesForLocale('fr-FR', catalog).length, 0);
+  assert.equal(voicesForLocale('en-US', {...catalog, voices:catalog.voices.map(({verified_languages,...v}) => v)}).length, 0);
 });

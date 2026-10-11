@@ -12,7 +12,7 @@ export interface AgentContext {
   preferences: PersonalContext;
   term?: { id: string; title: string; definition: string; example: string };
 }
-export interface AgentSession { end(): Promise<void>; setMuted(muted: boolean): Promise<void>; levels?(): { input: number; output: number }; }
+export interface AgentSession { end(): Promise<void>; setMuted(muted: boolean): Promise<void>; levels?(): { input: number; output: number }; sendText?(text: string): void; userActivity?(): void; }
 export interface AgentMessage { role: 'user' | 'agent'; text: string; id?: string; final?: boolean; corrected?: boolean; }
 export interface AgentEnding { error?: string }
 export interface AgentConnectOptions { signal: AbortSignal; onStatus: (status: AgentStatus) => void; onMessage: (message: AgentMessage) => void; onEnd?: (ending: AgentEnding) => void; onInterruption?: () => void }
@@ -80,6 +80,13 @@ export class AgentController {
     const session = this.session;
     if (!session) return;
     try { const muted = !this.snapshot.muted; await session.setMuted(muted); if (this.session === session) this.update({ muted }); } catch { if (this.session === session) this.update({ error: 'Microphone control failed. End the conversation and try again.' }); }
+  }
+  userActivity() { try { this.session?.userActivity?.(); } catch { /* Typing remains available if activity signaling fails. */ } }
+  sendText(text: string): boolean {
+    const message = text.trim();
+    if (!message || !this.session?.sendText) return false;
+    try { this.session.sendText(message); return true; }
+    catch { this.update({ error: 'Your question could not be sent. Try again.' }); return false; }
   }
   async end() {
     this.abort?.abort(); this.abort = undefined;

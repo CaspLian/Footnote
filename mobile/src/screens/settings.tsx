@@ -44,7 +44,7 @@ export function Settings() {
     }, true);
   }
   return <Screen contentWidth={720} testID="settings">
-    <Group gap={space.lg}><Txt variant="display">Make it feel{'\n'}like yours.</Txt><Txt muted>Useful preferences, saved on this device.</Txt></Group>
+    <Group gap={space.lg}><Txt variant="display">Settings</Txt><Txt muted>Preferences saved on this device.</Txt></Group>
     <SettingsGroup title="Your household">
       <SettingsLink title="Family profiles" detail={`${profiles.length} ${profiles.length === 1 ? 'profile' : 'profiles'} saved locally`} icon="family" onPress={openProfiles} />
       <SettingsDivider /><SettingsLink title="Personal context" detail="Your insurance, region and review goals" icon="profile" onPress={() => router.navigate('/onboarding')} />
@@ -53,7 +53,7 @@ export function Settings() {
     <SettingsGroup title="Appearance">
       <SettingsPicker title="App theme" value={prefs.theme} options={[{ label: 'System', value: 'system' }, { label: 'Light', value: 'light' }, { label: 'Dark', value: 'dark' }]} onChange={theme => set({ theme })} />
     </SettingsGroup>
-    <SettingsGroup title="Voice & explanations" note="Live conversations use a saved bill’s analysis. Choose a language and voice for your questions.">
+    <SettingsGroup title="Voice & explanations" note="Choose a voice and the level of detail in explanations.">
       <SettingsLink title="Agent voice" detail={voiceName} leading={<OrbMark/>} onPress={() => router.navigate('/voices')} />
       <SettingsDivider /><SettingsPicker title="Explanation detail" value={context.explanationDepth} options={[{ label: 'Simple', value: 'simple' }, { label: 'Detailed', value: 'detailed' }]} onChange={useFootnoteStore.getState().setExplanationDepth} />
     </SettingsGroup>
@@ -76,7 +76,7 @@ export function Settings() {
       <SettingsLink title="Delete imported cases" detail={`${cases.filter(c => c.source === 'manual').length} imported ${cases.filter(c => c.source === 'manual').length === 1 ? 'case' : 'cases'}`} icon="files" danger onPress={clearImports} disabled={busy || !cases.some(c => c.source === 'manual')} />
     </SettingsGroup>
     {error ? <Feedback danger onDismiss={() => setError('')} text={error} /> : null}
-    {backendConfigured() ? <SettingsGroup title="Backend connection"><SettingsLink title={connection} detail="Tap to check again" icon="document" onPress={() => { setConnection('Checking connection…'); setHealthRevision(v => v + 1); }} /></SettingsGroup> : null}
-    <Group gap={space.sm}><Txt variant="label">Footnote · 0.1</Txt><Txt variant="caption" muted>{backendConfigured() ? 'Bills you analyze are sent to your Footnote backend (Gemini, Medicare rates, Tiger Data, ElevenLabs).' : 'No account. No family cloud. Sponsor services are not connected.'}</Txt></Group>
+    {backendConfigured() ? <SettingsGroup title="Connection"><SettingsLink title={connection} detail="Tap to check again" icon="document" onPress={() => { setConnection('Checking connection…'); setHealthRevision(v => v + 1); }} /></SettingsGroup> : null}
+    <Group gap={space.sm}><Txt variant="label">Footnote · 0.1</Txt><Txt variant="caption" muted>{backendConfigured() ? 'Bill review uses Gemini, Medicare reference data and Tiger Data. Voice conversations use ElevenLabs.' : 'No account. No family cloud. Sponsor services are not connected.'}</Txt></Group>
   </Screen>;
 }
