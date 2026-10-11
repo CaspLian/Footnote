@@ -6,7 +6,8 @@ backend/main.py mounts this router (app.include_router(voice_router)):
     POST /api/v1/voice/speak                a saved analysis (audit_id) -> reply audio URL, without analyzing again
     GET  /api/v1/voice/audio/{id}           the reply audio (MP3)
     GET  /api/v1/voice/voices               the voices users can choose for replies (from voices.json)
-    GET  /api/v1/voice/voices/{key}/sample  a short sample of one voice (MP3), to hear it before choosing
+    GET  /api/v1/voice/voices/{key}/sample  a short sample of one voice (MP3) in the listener's language (?language=)
+    POST /api/v1/voice/agent/session         a private live conversation about a saved bill, or about one Guide term
 
 The Gemini step is the team's services.gemini_services.gemini_service.analyze(), followed by the team's
 Snowflake price check (services.snowflake_services.snowflake_service.check_prices) and saving to Tiger Data
@@ -30,7 +31,7 @@ import re
 import uuid
 from typing import Optional
 
-from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
+from fastapi import APIRouter, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ValidationError
 
@@ -52,12 +53,14 @@ from services.audio_service.text_to_speech import (
     synthesize_async,
     synthesize_streaming_async,
 )
+from services.audio_service.text_to_speech.voices import load_catalog, sample_text
 from services.gemini_services.gemini_service import SUPPORTED_MIME, analyze, is_mock, model_name, translate_for_speech
 from services.snowflake_services.snowflake_service import check_prices
 
 MAX_BILL_MB = 15  # same limits as /api/v1/analyze in main.py
 GEMINI_TIMEOUT_S = 150  # same as main.py: covers 2 attempts x 2 models
-SAMPLE_TEXT = "Hi, I'm {name}. I can read your medical bill explanations out loud."
+# A Guide term the live agent explains: the app's own glossary text, bounded like other untrusted input.
+TERM_LIMITS = {"term_id": 80, "term_title": 120, "term_definition": 1500, "term_example": 1000}
 TRANSLATION_TIMEOUT_S = 15  # the longest a reply waits for its price findings' translation; then it is said without them
 # Where ElevenLabs' speech-to-text knows a language by another code than backend/locales.py: Norwegian is "no".
 # Scribe takes the ISO 639-1 codes and uses them: "he" is heard as Hebrew, "th" as Thai, "zh" as Chinese in either
@@ -190,18 +193,26 @@ async def voice_analyze(
 @router.post("/agent/session")
 async def voice_agent_session(
     request: Request,
-    audit_id: Optional[str] = Form(None, description="UUID of a saved analysis; live calls require a bill"),
+    audit_id: Optional[str] = Form(None, description="UUID of a saved analysis, for a conversation about that bill"),
     target_language: Optional[str] = Form(None, description="App locale; saved analysis language when omitted"),
     voice: Optional[str] = Form(None, description="A key from GET /api/v1/voice/voices"),
     connection_type: str = Form("webrtc", description="webrtc token or websocket signed URL"),
+    term_id: Optional[str] = Form(None, description="Without audit_id: the Guide term to talk about"),
+    term_title: Optional[str] = Form(None, description="The Guide term's title, e.g. Deductible"),
+    term_definition: Optional[str] = Form(None, description="The Guide's definition of the term"),
+    term_example: Optional[str] = Form(None, description="The Guide's example for the term"),
 ):
-    """Prepare one private live conversation. The key and agent ID stay on the server."""
+    """Prepare one private live conversation about a saved bill (audit_id) or, without one, about a Guide term
+    (term_title and target_language). The key and agent ID stay on the server."""
     try:
         get_agent_service().check_origin(request.headers.get("origin"))
         if connection_type not in ("webrtc", "websocket"):
             raise AgentError("INVALID_REQUEST", "connection_type must be webrtc or websocket.", 400)
+        if not audit_id and term_title and term_title.strip():
+            return await _guide_session(request, target_language, voice, connection_type,
+                                        {"id": term_id, "title": term_title, "definition": term_definition, "example": term_example})
         if not audit_id:
-            raise HTTPException(400, detail={"stage": "audit", "message": "audit_id is required for a live conversation."})
+            raise HTTPException(400, detail={"stage": "audit", "message": "audit_id or a Guide term (term_title) is required for a live conversation."})
         try:
             uuid.UUID(audit_id)
         except ValueError:
@@ -244,6 +255,26 @@ async def voice_agent_session(
         headers = {"Retry-After": str(exc.retry_after)} if exc.retry_after is not None else None
         raise HTTPException(exc.status, detail={"stage": "language" if exc.code == "LANGUAGE_NOT_SUPPORTED" else "agent",
                                               "message": str(exc), "error_code": exc.code, "retryable": exc.retryable}, headers=headers) from None
+
+
+async def _guide_session(request: Request, target_language: Optional[str], voice: Optional[str], connection_type: str,
+                         term: dict) -> JSONResponse:
+    """A live conversation about one Guide term: no saved analysis is loaded."""
+    for name, value in (("term_id", term["id"]), ("term_title", term["title"]),
+                        ("term_definition", term["definition"]), ("term_example", term["example"])):
+        if value is not None and len(value) > TERM_LIMITS[name]:
+            raise HTTPException(400, detail={"stage": "term", "message": f"{name} is longer than {TERM_LIMITS[name]} characters."})
+    if not target_language:
+        raise HTTPException(400, detail={"stage": "language", "message": "Send target_language for a Guide conversation."})
+    try:
+        locale = resolve_locale(target_language)
+    except ValueError as exc:
+        raise HTTPException(400, detail={"stage": "language", "message": str(exc)}) from None
+    session = await start_session_async(
+        analysis=None, audit_id=None, term=term, locale=locale, language_name=language_name(locale),
+        voice=voice, connection_type=connection_type, client_address=request.client.host if request.client else "unknown",
+    )
+    return JSONResponse(session, headers={"Cache-Control": "no-store"})
 
 
 @router.post("/speak", response_model=Speech)
@@ -295,18 +326,26 @@ def voices():
 
 
 @router.get("/voices/{voice_key}/sample")
-async def voice_sample(voice_key: str, request: Request):
-    """A short sample of one voice, so users can hear it before choosing. Made once, then cached.
-    Supports byte ranges, like the reply audio, because iPhones ask for them."""
+async def voice_sample(voice_key: str, request: Request,
+                       language: Optional[str] = Query(None, description="The listener's locale, e.g. ja-JP; English when omitted")):
+    """A short sample of one voice in the listener's language, so users hear the accent it will speak with before
+    choosing. A voice ElevenLabs has not verified for that language speaks one it is verified for instead. Made
+    once per voice and language, then cached. Supports byte ranges, like the reply audio, because iPhones ask for them."""
     try:
-        catalog = list_voices()
+        catalog = load_catalog()
     except ValueError as e:
         raise HTTPException(500, detail={"stage": "voices", "message": str(e)})
-    entry = next((v for v in catalog["voices"] if v["key"] == voice_key.strip().lower()), None)
-    if entry is None:
+    voice = catalog.get(voice_key)
+    if voice is None:
         raise HTTPException(404, detail={"stage": "voices", "message": f"Unknown voice {voice_key!r}."})
+    try:
+        locale = resolve_locale(language) if language else "en-US"
+    except ValueError as exc:
+        raise HTTPException(400, detail={"stage": "language", "message": str(exc)}) from None
+    spoken_in = voice.preview_language(locale)
     spoken = await synthesize_async(
-        TTSRequest(request_id=f"sample-{entry['key']}", text=SAMPLE_TEXT.format(name=entry["name"]), voice=entry["key"])
+        TTSRequest(request_id=f"sample-{voice.key}-{spoken_in}", text=sample_text(spoken_in, voice.name),
+                   voice=voice.key, language=spoken_in)
     )
     if not spoken.ok:
         raise HTTPException(

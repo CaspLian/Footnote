@@ -1,15 +1,48 @@
 {
-  "_comment": "Voices users can choose in the app. 'key' is what the app sends; 'voice_id' is the ElevenLabs voice. Default voices expire on December 31, 2026. Voice Library voices work directly on paid plans; all chosen here cost the standard rate, have no live moderation, and their owners must give 90-730 days' notice before withdrawing them (checked 2026-10-09). Find more with GET https://api.elevenlabs.io/v1/shared-voices. Restart the server after editing this file.",
+  "_comment": "Voices users can choose in the app. 'key' is what the app sends; 'voice_id' is the ElevenLabs voice. Default voices expire on December 31, 2026. Voice Library voices work directly on paid plans; all chosen here cost the standard rate, have no live moderation, and their owners must give 90-730 days' notice before withdrawing them (checked 2026-10-09). Find more with GET https://api.elevenlabs.io/v1/shared-voices. Restart the server after editing this file. Voices for languages the default voices are not verified for (Finnish, Hebrew, Thai, Taiwan Mandarin, regional accents) come from the Voice Library, chosen 2026-10-11 by verified language, model and notice period.",
   "default": "matilda",
   "language_defaults": {
-    "_comment": "The voice used when the user has not chosen one: for an exact locale, then for a language alone, else the default above. Any voice speaks every language its model speaks, with its own accent; these suit the language.",
+    "_comment": "The voice used when the user has not chosen one, or chose a voice ElevenLabs has not verified for the language: for an exact locale, then for the language alone. Every default is verified for its language (verified_languages) and was heard speaking it on 2026-10-11 (each spoke the preview sentence through the app's model and Scribe v2 transcribed it back in that language). en-US uses the default above.",
     "en-GB": "alice",
     "en-AU": "charlie",
-    "hi": "saavi",
-    "ta": "saavi",
-    "fil": "rachel",
-    "es": "elio",
-    "zh": "andy"
+    "en-CA": "stephanie",
+    "es": "anamaria",
+    "es-ES": "patrick",
+    "fr": "claire",
+    "fr-CA": "jeanne",
+    "de": "matilda",
+    "it": "matilda",
+    "pt": "saavi",
+    "pt-PT": "mariza",
+    "nl": "brian",
+    "sv": "saavi",
+    "da": "noor",
+    "nb": "andy",
+    "fi": "soili",
+    "pl": "alice",
+    "cs": "jessica",
+    "sk": "noor",
+    "hu": "claire",
+    "ro": "claire",
+    "bg": "milena",
+    "hr": "saavi",
+    "el": "claire",
+    "ru": "saavi",
+    "uk": "claire",
+    "tr": "elio",
+    "ar": "claire",
+    "he": "dana",
+    "hi": "zara",
+    "ta": "meera",
+    "ja": "alice",
+    "ko": "noor",
+    "zh": "sarah",
+    "zh-TW": "annasu",
+    "id": "arunika",
+    "ms": "claire",
+    "fil": "pilar",
+    "vi": "harris",
+    "th": "siriporn"
   },
   "voices": [
     {
@@ -1133,6 +1166,290 @@
           "language": "en",
           "locale": "en-US",
           "accent": "other"
+        }
+      ]
+    },
+    {
+      "key": "stephanie",
+      "name": "Stephanie",
+      "description": "Confident, clear and calm",
+      "accent": "Canadian",
+      "gender": "female",
+      "voice_id": "oAoF4NpW2Aqxplg9HdYB",
+      "source": "ElevenLabs Voice Library (paid plans only)",
+      "verified_languages": [
+        {
+          "language": "en",
+          "locale": "en-CA",
+          "accent": "canadian"
+        }
+      ]
+    },
+    {
+      "key": "anamaria",
+      "name": "Ana María",
+      "description": "Calm, natural and clear",
+      "accent": "Mexican",
+      "gender": "female",
+      "voice_id": "m7yTemJqdIqrcNleANfX",
+      "source": "ElevenLabs Voice Library (paid plans only)",
+      "verified_languages": [
+        {
+          "language": "es",
+          "locale": "es-MX",
+          "accent": "mexican"
+        }
+      ]
+    },
+    {
+      "key": "jeanne",
+      "name": "Jeanne",
+      "description": "Warm, clear and friendly",
+      "accent": "Québécois",
+      "gender": "female",
+      "voice_id": "K7gx0ylJdff0yjM2uVQS",
+      "source": "ElevenLabs Voice Library (paid plans only)",
+      "verified_languages": [
+        {
+          "language": "fr",
+          "locale": "fr-CA",
+          "accent": "quebec"
+        }
+      ]
+    },
+    {
+      "key": "mariza",
+      "name": "Mariza",
+      "description": "Clear, calm and warm",
+      "accent": "European Portuguese",
+      "gender": "female",
+      "voice_id": "zKjRewuiqTkXNUVAMwat",
+      "source": "ElevenLabs Voice Library (paid plans only)",
+      "verified_languages": [
+        {
+          "language": "pt",
+          "locale": "pt-PT",
+          "accent": "european"
+        }
+      ]
+    },
+    {
+      "key": "tiago",
+      "name": "Tiago",
+      "description": "Calm and conversational",
+      "accent": "European Portuguese",
+      "gender": "male",
+      "voice_id": "c0rzOw18hxEhaSybUod2",
+      "source": "ElevenLabs Voice Library (paid plans only)",
+      "verified_languages": [
+        {
+          "language": "pt",
+          "locale": "pt-PT",
+          "accent": "european"
+        }
+      ]
+    },
+    {
+      "key": "annasu",
+      "name": "Anna",
+      "description": "Trustworthy, clear and natural",
+      "accent": "Taiwan Mandarin",
+      "gender": "female",
+      "voice_id": "r6qgCCGI7RWKXCagm158",
+      "source": "ElevenLabs Voice Library (paid plans only)",
+      "verified_languages": [
+        {
+          "language": "zh",
+          "locale": "cmn-TW",
+          "accent": "taiwan mandarin"
+        }
+      ]
+    },
+    {
+      "key": "zara",
+      "name": "Zara",
+      "description": "Soft, professional and gentle",
+      "accent": "Hindi",
+      "gender": "female",
+      "voice_id": "OtEfb2LVzIE45wdYe54M",
+      "source": "ElevenLabs Voice Library (paid plans only)",
+      "verified_languages": [
+        {
+          "language": "hi",
+          "locale": "hi-IN",
+          "accent": "standard"
+        }
+      ]
+    },
+    {
+      "key": "meera",
+      "name": "Meera",
+      "description": "Friendly, calm explainer",
+      "accent": "Tamil",
+      "gender": "female",
+      "voice_id": "gCr8TeSJgJaeaIoV4RWH",
+      "source": "ElevenLabs Voice Library (paid plans only)",
+      "verified_languages": [
+        {
+          "language": "ta",
+          "locale": "ta-IN",
+          "accent": "standard"
+        }
+      ]
+    },
+    {
+      "key": "nila",
+      "name": "Nila",
+      "description": "Calm, wise and clear",
+      "accent": "Tamil",
+      "gender": "female",
+      "voice_id": "gqFUMFHCD2nbbcYVtPGB",
+      "source": "ElevenLabs Voice Library (paid plans only)",
+      "verified_languages": [
+        {
+          "language": "ta",
+          "locale": "ta-IN",
+          "accent": "standard"
+        }
+      ]
+    },
+    {
+      "key": "arunika",
+      "name": "Arunika",
+      "description": "Crystal-clear and neutral",
+      "accent": "Indonesian",
+      "gender": "female",
+      "voice_id": "o5s6XRBkPSTD4syv6mZg",
+      "source": "ElevenLabs Voice Library (paid plans only)",
+      "verified_languages": [
+        {
+          "language": "id",
+          "locale": "id-ID",
+          "accent": "standard"
+        }
+      ]
+    },
+    {
+      "key": "milena",
+      "name": "Milena",
+      "description": "Optimistic, clear and balanced",
+      "accent": "Bulgarian",
+      "gender": "female",
+      "voice_id": "M1ydWt7KnBCiuv4CnEDC",
+      "source": "ElevenLabs Voice Library (paid plans only)",
+      "verified_languages": [
+        {
+          "language": "bg",
+          "locale": "bg-BG",
+          "accent": "standard"
+        }
+      ]
+    },
+    {
+      "key": "soili",
+      "name": "Soili",
+      "description": "Calm, neutral and light",
+      "accent": "Finnish",
+      "gender": "female",
+      "voice_id": "RiWFFlzYFZuu4lPMig3i",
+      "source": "ElevenLabs Voice Library (paid plans only)",
+      "verified_languages": [
+        {
+          "language": "fi",
+          "locale": "fi-FI",
+          "accent": "standard"
+        }
+      ]
+    },
+    {
+      "key": "jaakko",
+      "name": "Jaakko",
+      "description": "Calm, reflective and soft",
+      "accent": "Finnish",
+      "gender": "male",
+      "voice_id": "JMfkzZiSsox62UXcXUqM",
+      "source": "ElevenLabs Voice Library (paid plans only)",
+      "verified_languages": [
+        {
+          "language": "fi",
+          "locale": "fi-FI",
+          "accent": "standard"
+        }
+      ]
+    },
+    {
+      "key": "pilar",
+      "name": "Pilar",
+      "description": "Warm host and narrator",
+      "accent": "Filipino",
+      "gender": "female",
+      "voice_id": "mOYuoC0AAGM3erLKflvc",
+      "source": "ElevenLabs Voice Library (paid plans only)",
+      "verified_languages": [
+        {
+          "language": "fil",
+          "locale": "fil-PH",
+          "accent": "standard"
+        }
+      ]
+    },
+    {
+      "key": "dana",
+      "name": "Dana",
+      "description": "Warm, plain and patient",
+      "accent": "Hebrew",
+      "gender": "female",
+      "voice_id": "V0stpogHp8KBgdErUZbd",
+      "source": "ElevenLabs Voice Library (paid plans only)",
+      "verified_languages": [
+        {
+          "language": "he",
+          "accent": "standard"
+        }
+      ]
+    },
+    {
+      "key": "amit",
+      "name": "Amit",
+      "description": "Calm, measured narrator",
+      "accent": "Hebrew",
+      "gender": "male",
+      "voice_id": "uwHajH4FhtzVp6X17pr7",
+      "source": "ElevenLabs Voice Library (paid plans only)",
+      "verified_languages": [
+        {
+          "language": "he",
+          "accent": "standard"
+        }
+      ]
+    },
+    {
+      "key": "siriporn",
+      "name": "Siriporn",
+      "description": "Warm, gentle and calm",
+      "accent": "Thai",
+      "gender": "female",
+      "voice_id": "v2NF9R77fF8wZRdbGYTg",
+      "source": "ElevenLabs Voice Library (paid plans only)",
+      "verified_languages": [
+        {
+          "language": "th",
+          "accent": "standard"
+        }
+      ]
+    },
+    {
+      "key": "somchai",
+      "name": "Somchai",
+      "description": "Warm, unhurried baritone",
+      "accent": "Thai",
+      "gender": "male",
+      "voice_id": "XLXcyPK1jTjw1pYLLcM9",
+      "source": "ElevenLabs Voice Library (paid plans only)",
+      "verified_languages": [
+        {
+          "language": "th",
+          "accent": "standard"
         }
       ]
     }

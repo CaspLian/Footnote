@@ -93,7 +93,8 @@ def build_context(analysis: dict, language_name: str, analysis_language_name: st
     variables = {"language_name": clean(language_name, 120), "today": date.today().isoformat(),
                  "bill_loaded": "yes", "bill_facts": clean("\n".join(facts), 1000), "bill_lines": "none",
                  "price_check": price_text, "bill_summary": clean(result.get("plain_summary"), 2400) or "not shown",
-                 "questions_to_ask": clean("\n".join(f"{n + 1}. {clean(q, 300)}" for n, q in enumerate(result.get("questions_to_ask", [])[:8])), 1600) or "none"}
+                 "questions_to_ask": clean("\n".join(f"{n + 1}. {clean(q, 300)}" for n, q in enumerate(result.get("questions_to_ask", [])[:8])), 1600) or "none",
+                 "guide_topic": "none"}
     selected = []
     # Leave room for JSON escaping, the SDK envelope and an omission notice.
     for index in sorted(range(len(lines)), key=lambda n: (lines[n]["label"] not in ("far_above_usual", "above_usual"), n)):
@@ -108,3 +109,17 @@ def build_context(analysis: dict, language_name: str, analysis_language_name: st
     if missing:
         variables["bill_lines"] += f"\n{missing} other lines are not included here because of the size limit. Do not guess about them."
     return variables, lines
+
+
+def build_term_context(term: dict, language_name: str) -> dict:
+    """The variables for a conversation about one Guide term with no bill: the term with Footnote's own
+    definition and example (from the app's glossary, still treated as data)."""
+    topic = [f"Term: {clean(term.get('title'), 120) or 'not shown'}"]
+    if clean(term.get("definition")):
+        topic.append(f"Footnote's Guide definition: {clean(term.get('definition'), 1200)}")
+    if clean(term.get("example")):
+        topic.append(f"Guide example: {clean(term.get('example'), 800)}")
+    return {"language_name": clean(language_name, 120), "today": date.today().isoformat(), "bill_loaded": "no",
+            "bill_facts": "No bill is loaded.", "bill_lines": "No lines are available.",
+            "price_check": "No bill is loaded, so there is no price check.", "bill_summary": "not shown",
+            "questions_to_ask": "none", "guide_topic": clean("\n".join(topic), 2400)}

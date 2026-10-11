@@ -25,7 +25,7 @@ export const voiceSamplePreview: VoicePreviewAdapter = { async play(voice, langu
     await setIsAudioActiveAsync(true);
     throwIfAborted(signal);
     if (released) throw new Error('Voice preview cancelled.');
-    player = createAudioPlayer({ uri: voiceSampleUrl(key) }, { downloadFirst: true, updateInterval: 100 });
+    player = createAudioPlayer({ uri: voiceSampleUrl(key, backendLocale(language)) }, { downloadFirst: true, updateInterval: 100 });
     player.volume = 1; player.muted = false;
     subscription = player.addListener('playbackStatusUpdate', status => {
       if (status.error) { fail(new Error('Voice playback failed.')); void stop(); }

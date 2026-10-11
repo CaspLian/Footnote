@@ -53,6 +53,45 @@ GREETINGS = {
     "sk": "Dobrý deň! Som pomocník Footnote. Čo chcete vedieť o svojom účte?",
     "hu": "Üdvözlöm! A Footnote segítője vagyok. Mit szeretne tudni a számlájáról?",
 }
+# Not Hebrew or Thai: v4 Turbo speaks both, but agents accept preset languages only from Flash's list
+# (ElevenLabs refused "he" and "th" presets on 2026-10-11), so the app says live calls are unavailable in them.
+# A conversation about a Guide term starts with no greeting: once connected, the app sends this request in the
+# call's language, and the agent answers it by explaining the term (guide_topic) in that language.
+GUIDE_OPENERS = {
+    "en": "Please explain this term in simple words, with a short example.",
+    "es": "Explícame este término con palabras sencillas y un ejemplo corto, por favor.",
+    "fr": "Expliquez-moi ce terme avec des mots simples et un court exemple, s'il vous plaît.",
+    "pt": "Explique-me este termo em palavras simples, com um pequeno exemplo, por favor.",
+    "pt-br": "Me explique este termo com palavras simples e um exemplo curto, por favor.",
+    "de": "Bitte erklären Sie mir diesen Begriff in einfachen Worten, mit einem kurzen Beispiel.",
+    "it": "Spiegami questo termine con parole semplici e un breve esempio, per favore.",
+    "nl": "Leg deze term alsjeblieft uit in eenvoudige woorden, met een kort voorbeeld.",
+    "pl": "Proszę wyjaśnić mi to pojęcie prostymi słowami, z krótkim przykładem.",
+    "sv": "Förklara gärna det här begreppet med enkla ord och ett kort exempel.",
+    "da": "Forklar venligst dette begreb med enkle ord og et kort eksempel.",
+    "no": "Forklar dette begrepet med enkle ord og et kort eksempel, takk.",
+    "fi": "Selitä tämä termi yksinkertaisin sanoin ja lyhyen esimerkin avulla.",
+    "tr": "Lütfen bu terimi basit kelimelerle ve kısa bir örnekle açıklayın.",
+    "id": "Tolong jelaskan istilah ini dengan kata-kata sederhana dan contoh singkat.",
+    "ms": "Sila terangkan istilah ini dengan perkataan yang mudah dan contoh ringkas.",
+    "tl": "Pakipaliwanag ang terminong ito sa simpleng salita, na may maikling halimbawa.",
+    "vi": "Hãy giải thích thuật ngữ này bằng lời đơn giản, kèm một ví dụ ngắn.",
+    "ja": "この用語を、短い例を挙げてわかりやすく説明してください。",
+    "zh": "请用简单的话解释这个术语，并举一个简短的例子。",
+    "ko": "이 용어를 쉬운 말로, 짧은 예를 들어 설명해 주세요.",
+    "hi": "कृपया इस शब्द को आसान शब्दों में, एक छोटे उदाहरण के साथ समझाइए।",
+    "ta": "இந்தச் சொல்லை எளிய வார்த்தைகளில், ஒரு சிறிய எடுத்துக்காட்டுடன் விளக்குங்கள்.",
+    "ar": "من فضلك اشرح لي هذا المصطلح بكلمات بسيطة مع مثال قصير.",
+    "ru": "Пожалуйста, объясните этот термин простыми словами и приведите короткий пример.",
+    "uk": "Будь ласка, поясніть цей термін простими словами й наведіть короткий приклад.",
+    "bg": "Моля, обяснете ми този термин с прости думи и кратък пример.",
+    "ro": "Vă rog să-mi explicați acest termen în cuvinte simple, cu un exemplu scurt.",
+    "cs": "Vysvětlete mi prosím tento pojem jednoduchými slovy a krátkým příkladem.",
+    "el": "Εξηγήστε μου, παρακαλώ, αυτόν τον όρο με απλά λόγια και ένα σύντομο παράδειγμα.",
+    "hr": "Molim vas, objasnite mi ovaj pojam jednostavnim riječima i kratkim primjerom.",
+    "sk": "Vysvetlite mi, prosím, tento pojem jednoduchými slovami a krátkym príkladom.",
+    "hu": "Kérem, magyarázza el ezt a fogalmat egyszerű szavakkal, egy rövid példával.",
+}
 
 
 def agent_language(locale: str) -> str:
@@ -69,6 +108,13 @@ def greeting_for_locale(locale: str) -> str:
     if locale == "zh-TW":
         return "您好！我是Footnote助手。關於您的帳單，您想了解什麼？"
     return GREETINGS[agent_language(locale)]
+
+
+def guide_opener_for_locale(locale: str) -> str:
+    if locale == "zh-TW":
+        return "請用簡單的話解釋這個術語，並舉一個簡短的例子。"
+    return GUIDE_OPENERS[agent_language(locale)]
+
 
 
 def tool_configs() -> list[dict]:
@@ -98,7 +144,8 @@ def agent_body(tool_ids: list[str]) -> dict:
                               "bill_facts": "Synthetic hospital bill. Total billed $1,200.00. Amount owed not shown.",
                               "bill_lines": "Line 1: Emergency room visit. Code 99284. Billed $1,200.00.",
                               "price_check": "Only the doctor's part is compared. The hospital charge cannot be judged.",
-                              "bill_summary": "This is a synthetic emergency-room bill.", "questions_to_ask": "Can I get an itemized bill?"}},
+                              "bill_summary": "This is a synthetic emergency-room bill.", "questions_to_ask": "Can I get an itemized bill?",
+                              "guide_topic": "none"}},
                           "prompt": {"prompt": Path(__file__).with_name("system_prompt.md").read_text(encoding="utf-8"),
                                      "llm": LLM, "temperature": 0.2, "tool_ids": tool_ids,
                                      "backup_llm_config": {"preference": "override", "order": ["gemini-3.5-flash-lite", "gemini-2.5-flash"]},

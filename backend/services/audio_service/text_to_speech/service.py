@@ -320,19 +320,18 @@ class TTSService:
     # --- Steps --------------------------------------------------------------------
 
     def _resolve_voice(self, choice: str | None, language: str = "en") -> tuple[str, str]:
-        """(voice key, ElevenLabs voice ID) for the user's choice. No choice = the default voice for the language
-        (voices.json's language_defaults, else the default voice, whose ID ELEVENLABS_VOICE_ID may replace)."""
-        if choice is None or not choice.strip():
-            default = self.voices.default_for(language)
-            if default.key != self.voices.default_key:
-                return default.key, default.voice_id
-            return default.key, self.config.voice_id or default.voice_id
-        voice = self.voices.get(choice)
-        if voice is None:
+        """(voice key, ElevenLabs voice ID) for the user's choice. No choice, or a voice ElevenLabs has not verified
+        for the language = the default voice for the language (voices.json's language_defaults, else a voice
+        verified for it; the default voice's ID ELEVENLABS_VOICE_ID may replace)."""
+        if choice is not None and choice.strip() and self.voices.get(choice) is None:
             raise TTSError(
                 ErrorCode.INVALID_REQUEST,
                 f"Unknown voice {choice!r}. Choose one of: {', '.join(self.voices.keys())}.",
             )
+        voice = self.voices.choose(choice, language)
+        chosen = choice is not None and voice.key == choice.strip().lower()
+        if not chosen and voice.key == self.voices.default_key:
+            return voice.key, self.config.voice_id or voice.voice_id
         return voice.key, voice.voice_id
 
     def _settings_for(self, model: str | None, language: str = "en") -> dict:

@@ -7,7 +7,7 @@ import requests
 from voice_agent.bill_context import build_context, money
 from voice_agent.client import AgentError, ConvaiClient
 from voice_agent.config import AgentConfig
-from voice_agent.definition import ALLOWED_OVERRIDES, GREETINGS, agent_body, agent_language
+from voice_agent.definition import ALLOWED_OVERRIDES, GREETINGS, GUIDE_OPENERS, agent_body, agent_language
 from voice_agent.limits import SessionLimiter, check_origin
 from voice_agent.provision import matches, provision
 from voice_agent.session import SessionService
@@ -102,10 +102,11 @@ def test_session_checks_private_agent_caches_check_and_returns_only_credential()
     fake = FakeClient()
     service = SessionService(AgentConfig("fake-key", "agent-test"), fake, lambda: 100)
     grant = service.start(analysis=analysis(), audit_id="saved-id", locale="es-MX", language_name="Spanish (Mexico)", client_address="a")
-    assert grant["language"] == "es" and grant["voice"] == "elio"
-    assert grant["conversation_token"] == "test-token" and grant["bill_loaded"]
+    assert grant["language"] == "es" and grant["voice"] == "anamaria"  # the Mexican Spanish voice
+    assert grant["conversation_token"] == "test-token" and grant["bill_loaded"] and grant["opening_message"] is None
     assert "fake-key" not in json.dumps(grant) and "agent-test" not in json.dumps(grant)
-    assert set(grant["dynamic_variables"]) == {"language_name", "today", "bill_loaded", "bill_facts", "bill_lines", "price_check", "bill_summary", "questions_to_ask"}
+    assert set(grant["dynamic_variables"]) == {"language_name", "today", "bill_loaded", "bill_facts", "bill_lines", "price_check", "bill_summary", "questions_to_ask", "guide_topic"}
+    assert grant["dynamic_variables"]["guide_topic"] == "none"
     service.start(analysis=analysis(), audit_id="saved-id", locale="en-US", language_name="English", client_address="b", connection_type="websocket")
     assert fake.checks == 1 and fake.mints == ["webrtc", "websocket"]
 
@@ -140,12 +141,14 @@ def test_language_aliases_and_agent_is_gemini_with_no_outbound_tools():
     assert [agent_language(x) for x in ("pt-BR", "pt-PT", "fil-PH", "nb-NO")] == ["pt-br", "pt", "tl", "no"]
     body = agent_body(["tool-a", "tool-b"])
     assert body["conversation_config"]["agent"]["prompt"]["llm"] == "gemini-3.5-flash"
-    assert len(GREETINGS) == 33
+    assert len(GREETINGS) == 33 and set(GUIDE_OPENERS) == set(GREETINGS)  # agents refuse Hebrew and Thai presets
     assert set(body["conversation_config"]["agent"]["prompt"]["built_in_tools"]) == {"end_call", "language_detection"}
     assert not body["conversation_config"]["conversation"]["file_input"]["enabled"]
     assert body["conversation_config"]["tts"]["model_id"] == "eleven_flash_v2"
-    assert all(preset["overrides"]["tts"]["model_id"] == "eleven_flash_v2_5"
-               for preset in body["conversation_config"]["language_presets"].values())
+    presets = body["conversation_config"]["language_presets"]
+    assert all(preset["overrides"]["tts"]["model_id"] == "eleven_flash_v2_5" for preset in presets.values())
+    assert presets["fi"]["overrides"]["tts"]["voice_id"] == "RiWFFlzYFZuu4lPMig3i"  # Soili: a Finnish voice speaks Finnish
+    assert body["conversation_config"]["agent"]["dynamic_variables"]["dynamic_variable_placeholders"]["guide_topic"] == "none"
 
 
 @pytest.mark.parametrize("status,code", [(401, "AUTH_FAILED"), (403, "AUTH_FAILED"), (404, "AGENT_NOT_FOUND"), (429, "RATE_LIMITED"), (503, "PROVIDER_UNAVAILABLE")])
@@ -216,3 +219,34 @@ def test_config_uses_existing_settings_loader_with_explicit_synthetic_env(tmp_pa
     assert "fake-key" not in repr(config)
     import os
     assert "GEMINI_API_KEY" not in os.environ
+
+
+def test_a_guide_term_session_needs_no_bill_and_opens_with_a_request_in_the_calls_language():
+    fake = FakeClient()
+    service = SessionService(AgentConfig("fake-key", "agent-test"), fake, lambda: 100)
+    term = {"id": "deductible", "title": "Deductible", "definition": "An amount you pay first.", "example": "A $1,000 deductible."}
+    grant = service.start(analysis=None, audit_id=None, term=term, locale="ja-JP", language_name="Japanese", client_address="a")
+    assert grant["bill_loaded"] is False and grant["audit_id"] is None and grant["term_id"] == "deductible"
+    assert grant["lines"] == [] and grant["overrides"]["agent"] == {"language": "ja", "firstMessage": ""}
+    assert grant["opening_message"] == GUIDE_OPENERS["ja"] and grant["voice"] == "alice"  # verified for Japanese
+    variables = grant["dynamic_variables"]
+    assert variables["bill_loaded"] == "no" and "Deductible" in variables["guide_topic"] and "$1,000" in variables["guide_topic"]
+    assert "Deductible" in grant["overrides"]["asr"]["keywords"]
+    with pytest.raises(AgentError) as exc:
+        service.start(analysis=None, audit_id=None, term={"title": "  "}, locale="en-US", language_name="English", client_address="b")
+    assert exc.value.code == "INVALID_REQUEST"
+
+
+def test_the_agent_speaks_with_a_voice_verified_for_the_call_language():
+    fake = FakeClient()
+    service = SessionService(AgentConfig("fake-key", "agent-test"), fake, lambda: 100)
+    term = {"title": "Copayment"}
+    finnish = service.start(analysis=None, audit_id=None, term=term, locale="fi-FI", language_name="Finnish", voice="george", client_address="a")
+    assert finnish["voice"] == "soili" and finnish["language"] == "fi"  # George is not verified for Finnish
+    taiwan = service.start(analysis=None, audit_id=None, term=term, locale="zh-TW", language_name="Chinese (Taiwan)", client_address="b")
+    assert taiwan["voice"] == "annasu" and taiwan["opening_message"].startswith("\u8acb")  # Traditional characters
+    with pytest.raises(AgentError) as exc:
+        service.start(analysis=None, audit_id=None, term=term, locale="he-IL", language_name="Hebrew", client_address="d")
+    assert exc.value.code == "LANGUAGE_NOT_SUPPORTED"
+    with pytest.raises(AgentError):
+        service.start(analysis=None, audit_id=None, term=term, locale="en-US", language_name="English", voice="nobody", client_address="c")

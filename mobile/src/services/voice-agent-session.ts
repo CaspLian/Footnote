@@ -10,7 +10,8 @@ export const AGENT_SESSION_ROUTE = '/api/v1/voice/agent/session';
 export const SESSION_TIMEOUT_MS = 20_000;
 export type ConnectionType = 'webrtc' | 'websocket';
 
-export interface AgentSessionRequest { auditId: string; targetLanguage: string; voice?: string; connectionType: ConnectionType }
+/** A conversation is about a saved bill analysis (auditId) or, with no bill, about one Guide term. */
+export interface AgentSessionRequest { auditId?: string; term?: NonNullable<AgentContext['term']>; targetLanguage: string; voice?: string; connectionType: ConnectionType }
 /** The SDK's camelCase overrides, passed through untouched (the backend only sends ones the agent allows). */
 export interface AgentOverrides {
   agent?: { language?: string; firstMessage?: string };
@@ -36,11 +37,14 @@ export interface AgentSessionGrant {
   lines: AgentLine[];
   /** Must be shown before the call starts (backend rule). */
   privacyNotice?: string;
+  /** A Guide conversation starts with no greeting: the app sends this request, in the call's language, once connected. */
+  openingMessage?: string;
+  termId?: string;
 }
 
 export const NO_ANALYSIS_TEXT = 'Live conversations need a bill that Footnote has read. Add the bill’s pages to this case, then try again.';
 export const CORRECTED_ANALYSIS_TEXT = 'Your confirmed details differ from the saved document reading. Live bill conversations are paused so the helper does not describe old amounts. Use your confirmed review and contact billing about the correction.';
-export const GUIDE_TEXT = 'Live conversations work from a bill’s review for now. Open a bill that Footnote has read to talk it through.';
+export const GUIDE_TEXT = 'Live conversations need a bill’s review or a Guide term. Open a bill that Footnote has read, or a term in Guide, to talk it through.';
 export const ORIGIN_TEXT = 'This page isn’t allowed to start live conversations. Open Footnote at http://localhost or http://127.0.0.1.';
 export const busyText = (seconds?: number) => `Too many conversations were started just now. Try again in ${seconds && seconds > 0 ? Math.ceil(seconds) : 10} seconds.`;
 export const NOT_SET_UP_TEXT = 'Live conversations aren’t set up on this server yet.';
@@ -60,10 +64,20 @@ export function sessionAuditId(context: AgentContext): string {
   throw new AgentUnavailable(NO_ANALYSIS_TEXT);
 }
 
+/** What the conversation is about: the bill when one is open, else the Guide term on screen. */
+export function sessionSubject(context: AgentContext): Pick<AgentSessionRequest, 'auditId' | 'term'> {
+  if (!context.case && context.term?.title.trim()) return { term: context.term };
+  return { auditId: sessionAuditId(context) };
+}
+
+// The backend's limits for a Guide term (TERM_LIMITS in voice_routes.py).
+const TERM_FIELDS = [['term_id', 'id', 80], ['term_title', 'title', 120], ['term_definition', 'definition', 1500], ['term_example', 'example', 1000]] as const;
+
 /** Form fields, like /voice/speak: never JSON (FastAPI's Form() would silently ignore a JSON body). Empty values are left out. */
 export function agentSessionForm(request: AgentSessionRequest): FormData {
   const form = new FormData();
-  form.append('audit_id', request.auditId);
+  if (request.auditId) form.append('audit_id', request.auditId);
+  for (const [field, key, limit] of TERM_FIELDS) { const value = request.term?.[key]?.trim(); if (value) form.append(field, value.slice(0, limit)); }
   form.append('target_language', request.targetLanguage);
   if (request.voice) form.append('voice', request.voice);
   form.append('connection_type', request.connectionType);
@@ -92,6 +106,7 @@ export function parseAgentSession(body: unknown, expected: ConnectionType): Agen
     clientTools: Array.isArray(b.client_tools) ? b.client_tools.filter((t): t is string => typeof t === 'string') : [],
     lines: Array.isArray(b.lines) ? b.lines.flatMap(parseLine) : [],
     privacyNotice: text(b.privacy_notice),
+    openingMessage: text(b.opening_message), termId: text(b.term_id),
   };
 }
 
@@ -154,14 +169,14 @@ export function createVoiceAgentSessionAdapter<P>(deps: SessionAdapterDeps<P>): 
     async connect(context, options) {
       if (!(deps.backendConfigured ?? backendConfigured)()) return deps.fallback.connect(context, options);
       throwIfAborted(options.signal);
-      const auditId = sessionAuditId(context);                       // before the microphone prompt and any request
+      const subject = sessionSubject(context);                       // before the microphone prompt and any request
       const prepared = deps.prepare ? await deps.prepare(context, options.signal) : (undefined as P);
       throwIfAborted(options.signal);
       const locale = (deps.backendLocale ?? backendLocale)(context.language);
       const voice = await (deps.resolveVoice ?? voiceKeyFor)(context.voice, locale);
       throwIfAborted(options.signal);
       let grant: AgentSessionGrant;
-      try { grant = await requestAgentSession({ auditId, targetLanguage: locale, voice, connectionType: 'webrtc' }, { url: deps.sessionUrl?.() ?? backendUrl(AGENT_SESSION_ROUTE), signal: options.signal, fetchImpl: deps.fetchImpl }); }
+      try { grant = await requestAgentSession({ ...subject, targetLanguage: locale, voice, connectionType: 'webrtc' }, { url: deps.sessionUrl?.() ?? backendUrl(AGENT_SESSION_ROUTE), signal: options.signal, fetchImpl: deps.fetchImpl }); }
       catch (e) { if (e instanceof AgentSessionError && e.kind === 'http') throw sessionFailure(e.status, e.detail, deps.languageName?.(context.language) ?? languageOption(context.language).name, e.retryAfterSeconds); throw e; }
       throwIfAborted(options.signal);
       if (!deps.open) throw new AgentUnavailable('Live voice conversations need an app update before they can start here.');

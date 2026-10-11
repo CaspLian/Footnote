@@ -8,7 +8,7 @@ import { useFootnoteStore } from '@/store';
 import type { VoiceChoice } from '@/domain/preferences';
 import { voicePreviewService } from '@/services/voice-preview';
 import { backendConfigured, backendLocale, type BackendVoiceCatalog } from '@/services/backend';
-import { resolveVoiceKey, voicesForLocale } from '@/services/voice-catalog';
+import { accentFor, resolveVoiceKey, voicesForLocale } from '@/services/voice-catalog';
 import { useVoiceCatalogState } from '@/components/use-voice-catalog';
 import { useTranslation } from '@/localization/use-translation';
 import { space, useTheme } from '@/theme';
@@ -78,7 +78,7 @@ function AvailableVoices({ catalog }: { catalog: BackendVoiceCatalog }) {
       {width > 0 && choices.length ? <ScrollView key={`${width}-${prefs.workingLanguage}`} ref={pager} horizontal pagingEnabled directionalLockEnabled showsHorizontalScrollIndicator={false} contentInsetAdjustmentBehavior="never" automaticallyAdjustContentInsets={false} contentOffset={{ x: pageAnchor * width, y: 0 }} onScrollBeginDrag={stop} onMomentumScrollEnd={settled} style={{ flexGrow: 0 }} contentContainerStyle={{ alignItems: 'stretch' }}>
         {choices.map((voice, page) => <View key={voice.id} style={{ width, flexShrink: 0, gap: space.lg, paddingVertical: space.sm }} accessibilityElementsHidden={page !== index} importantForAccessibility={page === index ? 'auto' : 'no-hide-descendants'} aria-hidden={page !== index}>
           <View pointerEvents="none" style={{ alignItems: 'center', paddingVertical: space.sm }}><ParticleOrb size={200} enter={false} interactive={false} active={page === index} status={page === index ? status : 'idle'} label={`${voice.name} voice illustration`} /></View>
-          <Group gap={space.sm} style={{ paddingHorizontal: space.md, alignItems: 'center' }}><Txt variant="title" translate={false} style={{ textAlign: 'center' }}>{voice.name}</Txt><Txt variant="caption" muted translate={false}>ElevenLabs</Txt></Group>
+          <Group gap={space.sm} style={{ paddingHorizontal: space.md, alignItems: 'center' }}><Txt variant="title" translate={false} style={{ textAlign: 'center' }}>{voice.name}</Txt><Txt variant="caption" muted translate={false}>{[accentFor(voice, backendLocale(prefs.workingLanguage)) ? t('{0} accent', { 0: accentFor(voice, backendLocale(prefs.workingLanguage))! }) : undefined, voice.source?.includes('Voice Library') ? 'ElevenLabs Voice Library' : 'ElevenLabs'].filter(Boolean).join(' · ')}</Txt></Group>
           <ButtonRow><IconButton label="Previous voice" name="back" disabled={page === 0} onPress={() => move(page - 1)} /><Button title={status === 'idle' || page !== index ? 'Preview voice' : status === 'loading' ? 'Cancel preview' : 'Stop preview'} icon={status === 'idle' || page !== index ? 'play' : 'stop'} variant="secondary" loading={false} onPress={() => void preview(voice.id)} /><IconButton label="Next voice" name="next" disabled={page === choices.length - 1} onPress={() => move(page + 1)} /></ButtonRow>
         </View>)}
       </ScrollView> : null}
@@ -86,6 +86,6 @@ function AvailableVoices({ catalog }: { catalog: BackendVoiceCatalog }) {
     {selectedVoice ? <Txt variant="caption" muted style={{ textAlign: 'center' }}>{index + 1} / {choices.length} · Swipe to explore</Txt> : null}
     {!choices.length ? <Group gap={space.lg}><Txt variant="section">No verified voices available</Txt><Txt muted>There are no ElevenLabs voices verified for this language in the connected catalog.</Txt><Button title="Change language" variant="secondary" onPress={() => router.navigate('/languages')} /></Group> : null}
     {error ? <Feedback text={error} /> : null}
-    <Txt variant="caption" muted>Preview clips introduce each voice in English.</Txt>
+    <Txt variant="caption" muted>Each preview speaks your working language, with the accent ElevenLabs verified for this voice.</Txt>
   </Screen>;
 }

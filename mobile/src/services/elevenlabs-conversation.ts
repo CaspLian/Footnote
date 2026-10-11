@@ -149,6 +149,8 @@ export function createElevenLabsConversation(deps: ElevenLabsDeps) {
         if (onAbort) signal.removeEventListener('abort', onAbort);
       }
       const activeConversation = conversation;
+      // A Guide conversation has no greeting: this request asks the agent to explain the term in the call's language.
+      if (grant.openingMessage) activeConversation.sendUserMessage(grant.openingMessage);
       deps.devHook?.({ send: text => { if (!closed) { events.userTyped(text); activeConversation.sendUserMessage(text); } }, id: () => activeConversation.getId() });
       return {
         async end() { if (closed) return; closed = true; events.closeQuietly(); cleanup(); await closeSdk(activeConversation); },

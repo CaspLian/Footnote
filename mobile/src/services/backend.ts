@@ -88,9 +88,10 @@ export function postJson<T>(path: string, body: unknown, signal?: AbortSignal): 
   return call(path, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }, LOOKUP_TIMEOUT_MS, signal);
 }
 
-export interface BackendVoiceCatalog { default: string; language_defaults: Record<string, string>; voices: { key: string; name: string; description: string; accent: string; gender: string; verified_languages?: { language: string; locale?: string; accent?: string }[] }[] }
+export interface BackendVoiceCatalog { default: string; language_defaults: Record<string, string>; voices: { key: string; name: string; description: string; accent: string; gender: string; source?: string; verified_languages?: { language: string; locale?: string; accent?: string }[] }[] }
 export const voices = () => call<BackendVoiceCatalog>('/api/v1/voice/voices', { method: 'GET' });
-export const voiceSampleUrl = (key: string) => backendUrl(`/api/v1/voice/voices/${encodeURIComponent(key)}/sample`);
+/** A short preview of one voice, spoken in the listener's locale when given. */
+export const voiceSampleUrl = (key: string, locale?: string) => backendUrl(`/api/v1/voice/voices/${encodeURIComponent(key)}/sample${locale ? `?language=${encodeURIComponent(locale)}` : ''}`);
 export const backendHealth = (signal?: AbortSignal) => call<{ message: string; mock: boolean; model: string }>('/', { method: 'GET' }, LOOKUP_TIMEOUT_MS, signal);
 export const supportedLanguages = (signal?: AbortSignal) => call<Record<string, string>>('/api/v1/languages', { method: 'GET' }, LOOKUP_TIMEOUT_MS, signal);
 export async function loadAudit(id: string, signal?: AbortSignal): Promise<GeminiAnalyzeResponse> {

@@ -51,7 +51,7 @@ def test_all_voices_are_listed(client):
     data = client.get("/api/voices").json()
     assert data["default"] == "matilda"
     keys = [v["key"] for v in data["voices"]]
-    assert len(keys) == 20 and keys[:5] == ["matilda", "sarah", "george", "charlie", "bunty"]
+    assert len(keys) == 38 and keys[:5] == ["matilda", "sarah", "george", "charlie", "bunty"]
 
 
 def test_typed_text_is_spoken_in_the_chosen_voice(client):

@@ -282,7 +282,7 @@ def test_the_users_language_goes_to_speech_to_text_gemini_and_the_reply_voice(vo
     assert body["speech"]["ok"] is True and body["speech"]["text"] == voice.speaker.texts[-1]
     assert body["speech"]["text"].startswith(voice.gemini.spoken_summary + " es-MX: I also compared the charges")
     # In Elio's voice (voices.json's default for Spanish), with Flash told the language.
-    assert body["speech"]["voice"] == "elio" and voice.speaker.settings[-1]["language_code"] == "es"
+    assert body["speech"]["voice"] == "anamaria" and voice.speaker.settings[-1]["language_code"] == "es"  # Mexican Spanish
 
 
 @pytest.mark.parametrize("language", ["yue", "es-AR", "klingon"])
@@ -310,7 +310,7 @@ def test_a_hebrew_reply_is_spoken_by_v4_turbo(voice):
     assert body["analysis"]["target_language"] == "he-IL" and voice.gemini.calls[0]["lang"] == "he-IL"
     assert voice.gemini.translations[0]["lang"] == "he-IL"
     speech = body["speech"]
-    assert speech["ok"] is True and speech["voice"] == "matilda"  # no Hebrew voice in voices.json: the default
+    assert speech["ok"] is True and speech["voice"] == "dana"  # voices.json's Hebrew voice
     assert speech["text"] == voice.gemini.spoken_summary + " " + voice.gemini.translated["he-IL"]
     # Flash v2.5 does not speak Hebrew, so v4 Turbo does, without Flash's language_code and number reading setting.
     settings = voice.speaker.settings[-1]
@@ -333,7 +333,7 @@ def test_a_traditional_chinese_reply_is_spoken_by_flash_like_mandarin(voice):
     body = ask(voice, target_language="zh-Hant-TW").json()
     assert body["analysis"]["target_language"] == "zh-TW" and voice.gemini.translations[0]["lang"] == "zh-TW"
     speech = body["speech"]
-    assert speech["ok"] is True and speech["voice"] == "andy"  # voices.json's default for Chinese
+    assert speech["ok"] is True and speech["voice"] == "annasu"  # voices.json's Taiwan Mandarin voice
     assert speech["text"] == "您的核磁共振檢查收費三千二百美元。我也將費用與聯邦醫療保險的全國費率做了比較。"  # no space
     assert voice.speaker.settings[-1]["model_id"] == "eleven_flash_v2_5"
     assert voice.speaker.settings[-1]["language_code"] == "zh"
@@ -364,7 +364,7 @@ def test_an_analysis_saved_with_a_bare_language_code_is_spoken_in_it(voice):
     audit_id = ask(voice).json()["analysis"]["audit"]["audit_id"]
     voice.store.saved[audit_id]["analysis"]["target_language"] = "es"  # how analyses were saved before locales
     speech = voice.client.post("/api/v1/voice/speak", data={"audit_id": audit_id}).json()
-    assert speech["ok"] is True and speech["voice"] == "elio" and "es-MX: I also compared" in speech["text"]
+    assert speech["ok"] is True and speech["voice"] == "anamaria" and "es-MX: I also compared" in speech["text"]
 
 
 def test_an_analysis_in_a_language_no_longer_offered_still_gets_an_answer(voice):
@@ -487,19 +487,28 @@ def test_the_app_can_list_the_voices(voice):
     body = voice.client.get("/api/v1/voice/voices").json()
     assert body["default"] == "matilda"
     keys = [v["key"] for v in body["voices"]]
-    assert len(keys) == 20 and keys[:5] == ["matilda", "sarah", "george", "charlie", "bunty"]
+    assert len(keys) == 38 and keys[:5] == ["matilda", "sarah", "george", "charlie", "bunty"]
     assert body["voices"][4]["accent"] == "Indian"
-    assert body["language_defaults"]["es"] == "elio" and body["language_defaults"]["en-GB"] == "alice"
+    assert body["language_defaults"]["es"] == "anamaria" and body["language_defaults"]["en-GB"] == "alice"
     assert all("voice_id" not in v for v in body["voices"])
 
 
 def test_a_voice_sample_is_spoken_in_that_voice_and_made_only_once(voice):
     first = voice.client.get("/api/v1/voice/voices/bunty/sample")
     assert first.status_code == 200 and first.headers["content-type"] == "audio/mpeg"
-    assert first.content == b"ID3Hi, I'm Bunty. I can read your medical bill explanations out loud."
+    assert first.content == b"ID3Hi, I'm Bunty. I can read your bill aloud and explain it in plain words."
     again = voice.client.get("/api/v1/voice/voices/Bunty/sample")
     assert again.content == first.content
     assert voice.speaker.voice_ids == ["nwj0s2LU9bDWRKND5yzA"]  # the second one came from the cache
+
+
+def test_a_voice_sample_is_spoken_in_the_listeners_language(voice):
+    japanese = voice.client.get("/api/v1/voice/voices/george/sample", params={"language": "ja-JP"})
+    assert japanese.status_code == 200 and "George".encode() in japanese.content
+    assert "\u3053\u3093\u306b\u3061\u306f".encode() in japanese.content and voice.speaker.settings[-1]["language_code"] == "ja"
+    hebrew = voice.client.get("/api/v1/voice/voices/dana/sample")  # a Hebrew voice previews in Hebrew, by v4 Turbo
+    assert hebrew.status_code == 200 and "\u05e9\u05dc\u05d5\u05dd".encode() in hebrew.content
+    assert voice.client.get("/api/v1/voice/voices/george/sample", params={"language": "xx-YY"}).status_code == 400
 
 
 def test_sample_of_an_unknown_voice_is_404(voice):
@@ -886,12 +895,34 @@ def test_agent_session_uses_saved_analysis_and_returns_uncached_grant(agent_voic
     response = voice.client.post("/api/v1/voice/agent/session", data={"audit_id": voice.agent_audit_id, "target_language": "es"})
     assert response.status_code == 200 and response.headers["cache-control"] == "no-store"
     body = response.json()
-    assert body["locale"] == "es-MX" and body["language"] == "es" and body["voice"] == "elio"
+    assert body["locale"] == "es-MX" and body["language"] == "es" and body["voice"] == "anamaria"
     assert body["conversation_token"] == "test-token" and body["bill_loaded"] is True
     assert "Brain MRI" in body["dynamic_variables"]["bill_lines"]
     assert body["lines"][0]["number"] == 1 and body["lines"][0]["in_context"]
     assert "fake-key" not in response.text and "agent-test" not in response.text
     assert voice.agent_provider.mints == ["webrtc"] and len(voice.gemini.calls) == 1  # no second analysis
+
+
+def test_a_guide_term_conversation_needs_no_saved_bill(agent_voice):
+    voice = agent_voice
+    form = {"target_language": "es-MX", "term_id": "deductible", "term_title": "Deductible",
+            "term_definition": "An amount you pay for certain covered care first.", "term_example": "A $1,000 deductible."}
+    response = voice.client.post("/api/v1/voice/agent/session", data=form)
+    assert response.status_code == 200 and response.headers["cache-control"] == "no-store"
+    body = response.json()
+    assert body["bill_loaded"] is False and body["audit_id"] is None and body["term_id"] == "deductible"
+    assert body["voice"] == "anamaria" and body["overrides"]["agent"]["firstMessage"] == ""
+    assert body["opening_message"].startswith("Expl") and "Deductible" in body["dynamic_variables"]["guide_topic"]
+    assert body["lines"] == [] and voice.agent_provider.mints == ["webrtc"] and len(voice.gemini.calls) == 1  # only the fixture's analysis
+
+
+@pytest.mark.parametrize("form,stage", [({"term_title": "Deductible"}, "language"),
+    ({"term_title": "Deductible", "target_language": "yue"}, "language"),
+    ({"term_title": "x" * 121, "target_language": "en-US"}, "term")])
+def test_a_guide_conversation_refuses_bad_input_before_mint(agent_voice, form, stage):
+    response = agent_voice.client.post("/api/v1/voice/agent/session", data=form)
+    assert response.status_code == 400 and response.json()["detail"]["stage"] == stage
+    assert not agent_voice.agent_provider.mints
 
 
 @pytest.mark.parametrize("form,status,stage", [({}, 400, "audit"), ({"audit_id": "bad"}, 400, "audit"),

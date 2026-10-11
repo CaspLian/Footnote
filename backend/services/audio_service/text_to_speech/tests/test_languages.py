@@ -107,8 +107,15 @@ def test_english_settings_and_audio_ids_are_unchanged():
 
 def test_one_clip_serves_every_locale_of_a_language():
     service, provider = make_service()
-    first, second = say(service, language="es-MX"), say(service, language="es-ES")
+    first, second = say(service, language="es-MX", voice="george"), say(service, language="es-ES", voice="george")
     assert first.audio_id == second.audio_id and second.cached and len(provider.calls) == 1
+
+
+def test_each_region_has_its_own_native_voice():
+    service, provider = make_service()
+    mexico, spain = say(service, language="es-MX"), say(service, language="es-ES")
+    assert (mexico.voice, spain.voice) == ("anamaria", "patrick")  # Mexican and Peninsular accents
+    assert mexico.audio_id != spain.audio_id and len(provider.calls) == 2
 
 
 def test_multilingual_v2_is_not_sent_a_language_code():
@@ -193,10 +200,10 @@ def test_a_requested_model_must_speak_the_language_too():
 def test_traditional_chinese_is_mandarin_on_flash():
     service, provider = make_service()
     traditional = say(service, "\u8acb\u6838\u5c0d\u5e33\u55ae\u3002", language="zh-TW")  # Traditional characters
-    assert traditional.ok and traditional.model == "eleven_flash_v2_5" and traditional.voice == "andy"
+    assert traditional.ok and traditional.model == "eleven_flash_v2_5" and traditional.voice == "annasu"  # Taiwan Mandarin
     assert provider.calls[-1][2]["language_code"] == "zh"
-    again = say(service, "\u8acb\u6838\u5c0d\u5e33\u55ae\u3002", language="zh-CN")
-    assert again.audio_id == traditional.audio_id and again.cached  # the same Mandarin audio for the same text
+    again = say(service, "\u8acb\u6838\u5c0d\u5e33\u55ae\u3002", language="zh-CN", voice="annasu")
+    assert again.audio_id == traditional.audio_id and again.cached  # the same Mandarin audio for the same text and voice
 
 
 @pytest.mark.parametrize("language", ["", "   ", None, 7])
@@ -209,11 +216,16 @@ def test_a_missing_language_is_refused(language):
 # --- The default voice for each language -------------------------------------------------------------
 
 
-def test_the_default_voice_suits_the_language():
+def test_every_locale_has_a_native_default_voice():
     catalog = load_catalog()
+    for code in FLASH_LOCALES + ["zh-TW", "he-IL", "th-TH"]:
+        voice = catalog.default_for(code)
+        assert voice.speaks(code), f"{code}: {voice.key} is not verified for it"
     expected = {
-        "es-MX": "elio", "es-ES": "elio", "en-GB": "alice", "en-AU": "charlie", "hi-IN": "saavi", "ta-IN": "saavi",
-        "fil-PH": "rachel", "zh-CN": "andy", "en-US": "matilda", "en-CA": "matilda", "de-DE": "matilda",
+        "es-MX": "anamaria", "es-ES": "patrick", "en-GB": "alice", "en-AU": "charlie", "en-CA": "stephanie",
+        "hi-IN": "zara", "ta-IN": "meera", "fil-PH": "pilar", "zh-CN": "sarah", "zh-TW": "annasu", "fr-CA": "jeanne",
+        "pt-PT": "mariza", "en-US": "matilda", "de-DE": "matilda", "fi-FI": "soili", "he-IL": "dana",
+        "th-TH": "siriporn", "nb-NO": "andy",
     }
     assert {code: catalog.default_for(code).key for code in expected} == expected
     assert catalog.default_for(None).key == "matilda"
@@ -221,27 +233,41 @@ def test_the_default_voice_suits_the_language():
 
 def test_no_choice_uses_the_languages_voice_and_a_choice_still_wins():
     service, provider = make_service(voice_id="override-id")
-    assert say(service, language="es-MX").voice == "elio"
-    assert provider.calls[-1][1] == service.voices.get("elio").voice_id  # ELEVENLABS_VOICE_ID replaces only "matilda"
+    assert say(service, language="es-MX").voice == "anamaria"
+    assert provider.calls[-1][1] == service.voices.get("anamaria").voice_id  # ELEVENLABS_VOICE_ID replaces only "matilda"
     assert say(service, "Hello.", language="en-US").voice == "matilda" and provider.calls[-1][1] == "override-id"
-    assert say(service, "Hola otra vez.", language="es-MX", voice="george").voice == "george"
+    assert say(service, "Hola otra vez.", language="es-MX", voice="george").voice == "george"  # verified for Spanish
+
+
+def test_a_voice_not_verified_for_the_language_gives_way_to_its_native_voice():
+    service, provider = make_service()
+    japanese = say(service, "\u3053\u3093\u306b\u3061\u306f\u3002", language="ja-JP", voice="ololade")  # English only
+    assert japanese.ok and japanese.voice == "alice" and provider.calls[-1][1] == service.voices.get("alice").voice_id
+    assert say(service, "\u3053\u3093\u306b\u3061\u306f\u3002", language="ja-JP", voice="george").voice == "george"
+    assert say(service, "Hello.", language="en-US", voice="dana").voice == "matilda"  # a Hebrew voice
+    hebrew = say(service, "\u05e9\u05dc\u05d5\u05dd.", language="he-IL", voice="george")
+    assert hebrew.ok and hebrew.voice == "dana" and hebrew.model == "eleven_v4_turbo"
 
 
 def test_the_app_gets_the_language_defaults_with_the_voice_list():
     defaults = load_catalog().public()["language_defaults"]
-    assert defaults["es"] == "elio" and defaults["en-GB"] == "alice" and "_comment" not in defaults
+    assert defaults["es"] == "anamaria" and defaults["en-GB"] == "alice" and "_comment" not in defaults
 
 
 def test_language_defaults_are_checked(tmp_path):
     def catalog_with(defaults):
         path = tmp_path / "voices.json"
-        voices = [{"key": "a", "name": "A", "voice_id": "id-a"}, {"key": "b", "name": "B", "voice_id": "id-b"}]
+        voices = [{"key": "a", "name": "A", "voice_id": "id-a"},  # no verified languages: English only
+                  {"key": "b", "name": "B", "voice_id": "id-b", "verified_languages": [{"language": "pt", "locale": "pt-BR"}]},
+                  {"key": "c", "name": "C", "voice_id": "id-c", "verified_languages": [{"language": "es"}]}]
         path.write_text(json.dumps({"default": "a", "language_defaults": defaults, "voices": voices}), encoding="utf-8")
         return load_catalog(path)
 
     assert catalog_with({"pt_br": "b"}).default_for("pt-BR").key == "b"
     assert catalog_with({"pt_br": "b"}).public()["language_defaults"] == {"pt-BR": "b"}
-    assert catalog_with({"pt_br": "b"}).default_for("pt-PT").key == "a"
+    assert catalog_with({"pt_br": "b"}).default_for("pt-PT").key == "b"  # the only voice verified for Portuguese
+    assert catalog_with({"es": "b"}).default_for("es-MX").key == "c"  # a default not verified for Spanish is skipped
+    assert catalog_with({}).default_for("ja-JP").key == "a"  # no voice is verified for Japanese: the default
     with pytest.raises(ValueError, match="not one of the voices"):
         catalog_with({"es": "nobody"})
     with pytest.raises(ValueError, match="not a language code"):

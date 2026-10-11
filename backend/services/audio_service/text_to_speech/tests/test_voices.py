@@ -11,21 +11,25 @@ ALL_KEYS = [
     "matilda", "sarah", "george", "charlie", "bunty",  # the first five, in their original order
     "alice", "jessica", "noor", "saavi", "ololade", "harris", "rachel", "claire", "river",
     "brian", "bill", "patrick", "dayo", "elio", "andy",
+    # Native voices from the Voice Library for languages and regions the voices above are not verified for (2026-10-11)
+    "stephanie", "anamaria", "jeanne", "mariza", "tiago", "annasu", "zara", "meera", "nila", "arunika", "milena",
+    "soili", "jaakko", "pilar", "dana", "amit", "siriporn", "somchai",
 ]
 
 
-def test_the_shipped_catalog_has_twenty_voices():
+def test_the_shipped_catalog_has_thirty_eight_voices():
     catalog = load_catalog()
     assert catalog.keys() == ALL_KEYS
     assert catalog.default.key == "matilda"
     bunty = catalog.get("bunty")
     assert bunty.accent == "Indian" and bunty.voice_id == "nwj0s2LU9bDWRKND5yzA"
-    assert len({voice.voice_id for voice in catalog.voices}) == 20  # no ElevenLabs voice listed twice
+    assert len({voice.voice_id for voice in catalog.voices}) == 38  # no ElevenLabs voice listed twice
+    assert all(voice.verified_languages for voice in catalog.voices)  # every voice says which languages it speaks
 
 
 def test_the_choice_is_varied_and_every_voice_is_described():
     catalog = load_catalog()
-    assert Counter(voice.gender for voice in catalog.voices) == {"female": 10, "male": 9, "neutral": 1}
+    assert Counter(voice.gender for voice in catalog.voices) == {"female": 24, "male": 13, "neutral": 1}
     assert len({voice.accent for voice in catalog.voices}) >= 10
     for voice in catalog.voices:
         assert voice.name and voice.description and voice.accent and voice.gender, voice.key
@@ -47,7 +51,7 @@ def test_the_app_gets_names_and_descriptions_but_not_elevenlabs_ids():
     assert all(set(item) <= {"language", "locale", "accent"} for item in verified)
     assert entry == {
         "key": "bunty", "name": "Bunty", "description": "Energetic, expressive and fun",
-        "accent": "Indian", "gender": "male",
+        "accent": "Indian", "gender": "male", "source": "ElevenLabs Voice Library (paid plans only)",
     }
     assert all("voice_id" not in voice for voice in public["voices"])
 
@@ -97,3 +101,24 @@ def test_file_saved_with_a_bom_still_loads(tmp_path):
 
 def test_the_catalog_file_lives_next_to_the_code():
     assert VOICES_FILE.name == "voices.json" and VOICES_FILE.is_file()
+
+
+def test_a_voice_speaks_only_the_languages_it_is_verified_for():
+    catalog = load_catalog()
+    george, dana, andy = catalog.get("george"), catalog.get("dana"), catalog.get("andy")
+    assert george.speaks("ja-JP") and george.speaks("fil-PH") and not george.speaks("he-IL")
+    assert dana.speaks("he-IL") and dana.speaks("he") and not dana.speaks("en-US")
+    assert andy.speaks("nb-NO")  # ElevenLabs lists Norwegian as "no"
+    assert catalog.choose("dana", "en-US").key == "matilda" and catalog.choose("george", "ja-JP").key == "george"
+    assert catalog.choose("nobody", "en-US") is None and catalog.choose(None, "fi-FI").key == "soili"
+
+
+def test_previews_are_spoken_in_the_listeners_language():
+    from text_to_speech.voices import sample_text
+
+    catalog = load_catalog()
+    assert catalog.get("george").preview_language("ja-JP") == "ja-JP"
+    assert catalog.get("dana").preview_language("en-US") == "he"  # a Hebrew voice previews in Hebrew
+    assert sample_text("ja-JP", "George").startswith("\u3053\u3093\u306b\u3061\u306f\u3001George")
+    assert sample_text("pt-PT", "Mariza") != sample_text("pt-BR", "Saavi").replace("Saavi", "Mariza")
+    assert sample_text("xx", "Matilda") == sample_text("en-US", "Matilda")  # unknown: English
