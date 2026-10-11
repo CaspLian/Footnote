@@ -1,3 +1,7 @@
+"""Live check of the Snowflake connection (it logs in): cd backend && python check_snowflake.py
+
+Renamed from test_snowflake.py on 2026-10-11 so pytest never collects it by accident.
+"""
 import os
 from dotenv import load_dotenv
 import snowflake.connector

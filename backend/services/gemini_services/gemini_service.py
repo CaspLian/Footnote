@@ -98,7 +98,7 @@ def _get_client() -> genai.Client:
     if _client is None:
         key = os.getenv("GEMINI_API_KEY")
         if not key:
-            raise RuntimeError("GEMINI_API_KEY is not set. Add it to api/.env or set MOCK=true.")
+            raise RuntimeError("GEMINI_API_KEY is not set. Add it to backend/.env or set MOCK=true.")
         _client = genai.Client(api_key=key)
     return _client
 

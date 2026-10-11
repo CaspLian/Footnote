@@ -8,7 +8,8 @@ import { voiceKeyFor } from './voice-catalog';
 export interface RecordedAnswer { transcript: { text: string; needs_confirmation?: boolean }; analysis: GeminiAnalyzeResponse; speech: BackendSpeech }
 export async function askRecordedQuestion(recording: Blob, language: WorkingLanguage, voice: VoiceChoice, signal: AbortSignal): Promise<RecordedAnswer> {
   throwIfAborted(signal);
-  if (!recording.size || recording.size > 20 * 1024 * 1024) throw new Error('Record a short question, then try again.');
+  // The backend refuses recordings over STT_MAX_AUDIO_MB (default 10 MB) with a 413.
+  if (!recording.size || recording.size > 10 * 1024 * 1024) throw new Error('Record a short question, then try again.');
   const locale = backendLocale(language), key = await voiceKeyFor(voice, locale);
   throwIfAborted(signal);
   const form = new FormData();

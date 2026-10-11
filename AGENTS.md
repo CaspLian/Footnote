@@ -31,7 +31,9 @@ live in `docs/`. **`docs/` is the team's shared memory: never delete or rename i
 
 | Path | What it is |
 |---|---|
-| `backend/main.py` | FastAPI app: `/api/v1/analyze`, `/api/v1/audits/{id}`, `/api/v1/languages`; mounts the voice router |
+| `backend/main.py` | FastAPI app: `/api/v1/analyze`, `/api/v1/audits/{id}`, `/api/v1/languages`; mounts the voice and claim routers |
+| `backend/claim_routes.py` | Claim workflow on Tiger Data (`/api/v1/claims`: create, read, actions, resolve) and `/api/v1/analyze-image` |
+| `backend/locales.py` | The locales every route accepts |
 | `backend/models.py` | Pydantic models shared by every route (`AnalyzeResponse`, `GeminiResult`, `PriceCheck`, ...) |
 | `backend/services/gemini_services/` | Gemini extraction and explanation (`gemini_service.py`, MOCK answer JSON) |
 | `backend/services/snowflake_services/` | Price check against Medicare rates (Snowflake, CSV fallback in `backend/data/`) |
@@ -39,11 +41,18 @@ live in `docs/`. **`docs/` is the team's shared memory: never delete or rename i
 | `backend/services/tigerdata_services/` | Tiger Data claim audit/lifecycle tables used by claim routes; regional benchmark table remains separate |
 | `backend/services/audio_service/` | ElevenLabs speech-to-text and text-to-speech, `/api/v1/voice/*`, playground |
 | `backend/dev_console.py` | Local test page for every route (http://127.0.0.1:8770/console) |
+| `backend/check_snowflake.py` | Live Snowflake login check, run by hand (not a test) |
 | `backend/tests/`, `backend/services/audio_service/**/tests/` | Backend and audio tests |
 | `backend/samples/` | Sample bills for tests and demos |
-| `mobile/` | Footnote Expo Router/TypeScript app; `Camera-capture` sends imported bill pages to the analysis API |
-| `docs/` | Shared project context (this system) |
+| `mobile/` | The Footnote app: Expo Router/TypeScript for iOS, Android and web (the laptop demo uses Expo web) |
+| `docs/` | Shared project context (this system); `docs/devpost/` holds the Devpost text, scripts and demo plan |
+| `demo/documents/` | Synthetic demo bill and EOB: PDFs, phone photos, ground truth and their validation |
+| `brand/`, `design/` | Footnote brand masters and showcase; design references |
 | `BACKEND_VERIFICATION_REPORT.md` | Dated verification evidence and open bugs (2026-10-10) |
+
+`mobile/` is the only app. The earlier standalone `web/` prototype was removed on 2026-10-11 (it is in git history
+up to `deeffff`). A new UI is another client of the backend: build it against `docs/API_CONTRACTS.md`, keep provider
+keys on the backend, and reuse the backend's routes instead of calling Gemini or ElevenLabs from the UI.
 
 ## Commands
 
@@ -62,7 +71,7 @@ cd backend/services/audio_service && python -m pytest -q
 cd backend && PYTHON_DOTENV_DISABLED=1 python -m pytest tests -q                      # database tests skip or error
 cd backend && PYTHON_DOTENV_DISABLED=1 TIGER_TEST_DATABASE_URL=<test db> TIGER_DATA_POSTGRES_URL=<test db> python -m pytest tests -q
 # Never run plain `python -m pytest` in backend/: collection fails (the audio conftest works only from its own
-# folder), and test_snowflake.py makes a live Snowflake login on import.
+# folder). `python check_snowflake.py` (test_snowflake.py before 2026-10-11) makes a live Snowflake login.
 
 # Run
 cd backend && python dev_console.py   # console + API on 127.0.0.1:8770. With a real backend/.env it spends credits

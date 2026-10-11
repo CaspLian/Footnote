@@ -120,8 +120,6 @@ The recovered code lives on `frontend-aarush`. Start Metro with `npm start`, the
 
 ## Tiger Data deadline design (from `Tiger-data`, 2026-10-10)
 
-`local-timeline.js` was written for the old starter `App.js`: an encrypted local timeline (`expo-sqlite` with
-SQLCipher) and deadline reminders (`expo-notifications`). The Footnote app does not use it yet, and those packages are
-not installed. Its backend side is connected: the claim routes estimate a credit-report warning date (180 days after
+The claim routes estimate a credit-report warning date (180 days after
 the service date) and a collection date (120 days after the bill was received). Both are shown as estimates on the
 case timeline. See `docs/API_CONTRACTS.md`, "The claim workflow".

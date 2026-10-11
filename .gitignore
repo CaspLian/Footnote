@@ -3,8 +3,6 @@ mobile/.expo/
 mobile/dist/
 mobile/ios/build/
 mobile/ios/Pods/
-web/node_modules/
-web/dist/
 backend/venv/
 backend/.env
 backend/__pycache__/
@@ -19,3 +17,10 @@ backend/api.env
 
 # Demo documents: the 300-dpi page images are rebuilt by demo/documents/build.py (the PDFs and photos are kept)
 demo/documents/out/png/
+
+# Settings with real values, anywhere in the repo (the .env.example templates stay tracked)
+.env
+.env.*
+!.env.example
+.venv/
+.pytest_cache/

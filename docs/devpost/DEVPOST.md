@@ -165,7 +165,7 @@ FastAPI backend (Python) ----> Gemini API: read, explain, translate   |
 - **Gemini** (`google-genai`). We run `gemini-3.5-flash` with `gemini-3.5-flash-lite` as the fallback. Gemini
   returns structured JSON that Pydantic validates. The prompt treats each upload as its own document, keeps missing
   values null and asks Gemini to flag duplicate charges, vague fees and uncoded lines as questions. Each attempt has
-  a 40-second limit.
+  a 60-second limit.
 - **Snowflake** holds 7,745 national rates from the CMS 2026 Physician Fee Schedule. Lookups send only the codes,
   time out after 15 seconds and fall back to a bundled CSV. The API response says which source answered.
 - **Tiger Data** stores each analysis (`bill_analyses`, `bill_analysis_lines`), so it reopens without calling

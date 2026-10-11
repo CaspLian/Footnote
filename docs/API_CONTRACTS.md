@@ -48,10 +48,11 @@ from the code. The models are defined in `backend/models.py` and `backend/servic
 | `POST /api/v1/analyze-image` | One bill photo -> its dates and lines -> a claim with estimated deadlines (the Tiger Data flow) | `claim_routes.py`, `gemini_services/bill_image.py` |
 | `POST /api/v1/voice/analyze` | A recorded question (+ optional bill) → transcript, analysis, spoken reply | `voice_routes.py` |
 | `POST /api/v1/voice/speak` | Speak a saved analysis again, without calling Gemini | `voice_routes.py` |
-| `POST /api/v1/voice/agent/session` | A short-lived credential for a private live conversation about a saved bill | `voice_routes.py`, `voice_agent/` |
+| `POST /api/v1/voice/agent/session` | A short-lived credential for a private live conversation about a saved bill, or about one Guide term | `voice_routes.py`, `voice_agent/` |
+| `POST /api/v1/voice/example-call` | A short example phone call about a saved bill, performed by two ElevenLabs voices (Text to Dialogue) | `voice_routes.py`, `example_call.py` |
 | `GET /api/v1/voice/audio/{audio_id}` | The reply audio (MP3) | `voice_routes.py`, `audio_http.py` |
-| `GET /api/v1/voice/voices` | Voices for a picker: `{"default": "matilda", "language_defaults": {"es": "elio", ...}, "voices": [{key, name, description, accent, gender, verified_languages}]}` (20) | `voice_routes.py`, `text_to_speech/voices.json` |
-| `GET /api/v1/voice/voices/{voice_key}/sample` | A short MP3 sample of one voice | `voice_routes.py` |
+| `GET /api/v1/voice/voices` | Voices for a picker: `{"default": "matilda", "language_defaults": {"es": "anamaria", ...}, "voices": [{key, name, description, accent, gender, verified_languages, source}]}` (38) | `voice_routes.py`, `text_to_speech/voices.json` |
+| `GET /api/v1/voice/voices/{voice_key}/sample` | A short MP3 sample of one voice, spoken in `?language=` (a locale) when the voice is verified for it | `voice_routes.py`, `text_to_speech/sample_texts.json` |
 
 ### Connected Footnote app usage
 
@@ -63,17 +64,23 @@ from the code. The models are defined in `backend/models.py` and `backend/servic
 | Reopen unchanged saved pages | `GET /api/v1/audits/{id}`; unwrap `analysis`, preserving confirmed local edits on Review |
 | Missing service/due dates on an eligible image | `POST /api/v1/analyze-image`, `file` only; at most once per case, including failed attempts, persisted before sending; reuse the returned claim |
 | Confirmed code review | `GET /api/v1/benchmarks/{code}`, one parallel lookup per unique code |
-| Voice choices and English samples | `GET /api/v1/voice/voices`, `GET /api/v1/voice/voices/{key}/sample` |
+| Voice choices and previews | `GET /api/v1/voice/voices`; `GET /api/v1/voice/voices/{key}/sample?language=<working locale>` |
 | Saved reading | `POST /api/v1/voice/speak`, `audit_id` and chosen `voice`; `GET /api/v1/voice/audio/{id}` |
 | Recorded question when live is unavailable | `POST /api/v1/voice/analyze`, `audio`, `target_language`, optional `voice`, `speak_reply=true`; no bill is attached in this fallback |
+| Live call about a bill, or about a Guide term | `POST /api/v1/voice/agent/session` with `audit_id`, or with `term_id`, `term_title`, `term_definition`, `term_example` and `target_language`; then the ElevenLabs SDK |
+| Call script: "Hear an example call" | `POST /api/v1/voice/example-call`, `audit_id`, `target_language`, `voice`, `counterpart`; then `GET` its `audio_url` |
 | First confirmation and Track refresh | `POST /api/v1/claims` once, `GET /api/v1/claims/{id}`; retry missed recording after outages |
 | Prepare / submit / reminder / notice / resolve | claim `/actions`, `/status`, `/deadlines`, `/resolve`; unknown resolution balance uses an action with a note instead of `final_amount=0` |
 
-Calm uses exact locale defaults, then language defaults, then the catalog's default; legacy `device` also means
-Calm for backend speech. Clear is `alice`, Warm is `george`, with fallback to Calm if a catalog key disappears.
-Speech generation is memoized by audit ID and voice; previews use the English sample endpoint. No backend
-requests occur with `EXPO_PUBLIC_API_URL` unset. The live agent's separate contract is maintained with its backend
-branch; the app session adapter sends only `audit_id`, `target_language`, optional `voice`, and `connection_type=webrtc`.
+A voice speaks a language only if ElevenLabs verified it for that language (`verified_languages`; `nb` also
+matches ElevenLabs' `no`). The app (`services/voice-catalog.ts`) and the backend (`VoiceCatalog.choose`) apply the
+same rule: a chosen voice that is not verified for the language gives way to that language's default. Calm is
+the exact locale's default, then the language's, then the catalog default if it is verified, else the first
+verified voice. Every one of the 42 locales has a verified default. Legacy `device` also means Calm. Clear is
+`alice` and Warm is `george` where they are verified. Speech generation is memoized by audit ID and voice, and
+previews are spoken in the working language. No backend requests occur with `EXPO_PUBLIC_API_URL` unset. The app's
+session adapter sends `audit_id`, or the Guide term's fields, plus `target_language`, optional `voice` and
+`connection_type=webrtc`.
 
 ### Languages
 
@@ -251,6 +258,15 @@ The bill and the recording size are checked before speech-to-text is called, so 
 Returns `{"transcript": Transcript, "analysis": AnalyzeResponse, "speech": Speech}`. Show `transcript.text` when
 `transcript.needs_confirmation` is true.
 
+Identifiers are removed before the text reaches Gemini or the database:
+- Scribe v2 replaces spoken identifiers with their type, for example `{SSN}` or `{ACCOUNT_NUMBER}`. These cover
+  Social Security, member, account and card numbers, phone, email, date of birth and similar.
+- `transcript.redacted` lists the kinds removed, for example `["ssn", "phone_number"]`.
+- Names, places, conditions and procedures stay.
+- English questions are also sent insurance keyterms (deductible, coinsurance, EOB and others). Other languages
+  are sent only names.
+- `STT_REDACT_ENTITIES` and `STT_KEYTERMS` (comma lists, or `none`) change these defaults.
+
 Errors carry `{"detail": {"stage", "message", "error_code"?, "retryable"?}}`:
 
 | Status | Stage | When |
@@ -306,8 +322,13 @@ Errors carry `detail.stage = "audit"`:
     its URL keeps working after a restart.
   - Audio still being made exists only in the server process making it, so run one process when streaming.
 - **Methods:** `GET` only; `HEAD` gives 405. The OpenAPI schema lists these routes as JSON, but they send audio.
-- **Samples:** each voice's sample ("Hi, I'm Bunty. I can read your medical bill explanations out loud.") is made
-  once, for about 15 credits (Flash v2.5, the default), then served from the cache.
+- **Samples:** `?language=<locale>` (default `en-US`, refused with 400 `stage: language` if unsupported) chooses
+  the sentence from `text_to_speech/sample_texts.json`, for example "Hi, I'm Bunty. I can read your bill aloud and
+  explain it in plain words." in English.
+  - A voice not verified for that language speaks its first verified language instead, so a Hebrew voice
+    previews in Hebrew.
+  - Each voice and language is made once (Flash v2.5, or v4 Turbo for Hebrew and Thai), then served from the
+    cache.
 - **Errors:**
   - Unknown or unsafe IDs give 404.
   - Audio still being made answers in the text shape:
@@ -455,17 +476,28 @@ this file documents them.
 
 ## Live conversation session: `POST /api/v1/voice/agent/session`
 
-Form fields: required saved-analysis UUID `audit_id`; optional `target_language` (saved locale by default),
-catalog `voice`; `connection_type` (`webrtc` default, or `websocket`). No profile, insurer, ZIP or arbitrary bill
-text is accepted. The backend loads the saved analysis and builds the conversation context.
+Form fields: a saved-analysis UUID `audit_id`, or, for a Guide term without a bill, `term_title` with optional
+`term_id`, `term_definition` and `term_example` (at most 120, 80, 1,500 and 1,000 characters; then
+`target_language` is required). Also optional: `target_language` (saved locale by default) and a catalog `voice`
+(replaced by the language's default if not verified for it). `connection_type` is `webrtc` (default) or
+`websocket`. No profile, insurer, ZIP or arbitrary bill text is accepted. For a bill, the backend loads the saved
+analysis and builds the conversation context.
 
 Returns JSON with `Cache-Control: no-store`: `connection_type`, `conversation_token` for WebRTC or `signed_url`
 for WebSocket, optional `conversation_id`, `start_within_seconds` (600/900), random `user_id`, `locale`,
-`language`, `voice`, `audit_id`, `bill_loaded: true`, `dynamic_variables`, `overrides`, `client_tools`, `lines`,
-and `privacy_notice`. Never store/log the credential or include it in persistence snapshots.
+`language`, `voice`, `audit_id`, `bill_loaded`, `term_id`, `dynamic_variables`, `overrides`, `client_tools`,
+`lines`, `opening_message` and `privacy_notice`. Never store/log the credential or include it in persistence
+snapshots.
 
-The eight string variables are `language_name`, `today`, `bill_loaded`, `bill_facts`, `bill_lines`, `price_check`,
-`bill_summary`, and `questions_to_ask`. `today` uses the server's local calendar date. SDK overrides are
+A Guide-term session has these differences:
+- `bill_loaded` is false, `audit_id` is null and `lines` is empty.
+- `overrides.agent.firstMessage` is empty.
+- `opening_message` is a short request in the call's language. The app sends it with `sendUserMessage` once the
+  SDK reports the conversation metadata; a request sent earlier is lost. The agent then explains the term.
+
+The nine string variables are `language_name`, `today`, `bill_loaded`, `bill_facts`, `bill_lines`, `price_check`,
+`bill_summary`, `questions_to_ask` and `guide_topic` (`none` for bills). A backend on older code that sends no
+`guide_topic` still starts bill calls (checked 2026-10-11). `today` uses the server's local calendar date. SDK overrides are
 camelCase: `agent.language`, `agent.firstMessage`, `tts.voiceId`, and `asr.keywords`. Client tools are
 `show_line_item` and `show_price_check`, each taking a 1-based integer `line_number` and displaying existing UI.
 
@@ -480,15 +512,56 @@ languages use `stage: language`; agent setup/provider errors use `stage: agent`.
 
 The agent is private and uses Gemini 3.5 Flash. Its English base uses Flash v2 as required by the live Agents
 API; other supported presets use Flash v2.5. Regular saved readings keep their existing model behavior.
-Hebrew/Thai live conversations are refused; ordinary Hebrew/Thai readings remain supported. Manual cases and
-Guide terms without a saved audit cannot start live bill conversations.
+Hebrew/Thai live conversations are refused (ElevenLabs Agents rejected "he" and "th" language presets on
+2026-10-11); ordinary Hebrew/Thai readings remain supported. Manual cases without a saved audit cannot start live
+bill conversations; Guide terms start term conversations.
 
 Local defaults: one successful credential per client address per 10 seconds, 30 per hour; only loopback web
 origins or `ELEVENLABS_AGENT_ALLOWED_ORIGINS`. These are development limits, with no application authentication.
-The UI shows the provider's seven-day retention notice before Start and pauses original-analysis voice when
-confirmed values change. Setup: from `backend/`, run
+The app shows the provider's seven-day retention notice under "Data use" in the orb's long-press controls (one
+tap on the orb starts a call without showing it), and pauses original-analysis voice when confirmed values change. Setup: from `backend/`, run
 `python -m services.audio_service.voice_agent.provision`, set its nonsecret `ELEVENLABS_AGENT_ID` in the ignored
 backend settings and restart. Only synthetic bills are used in this development agent.
 
 
-The voice picker uses each voice’s optional `verified_languages` list of `{language, locale?, accent?}` from ElevenLabs provider metadata (checked October 11, 2026). This is additive to the existing response. A voice’s multilingual synthesis model is not treated as proof of verification for every language. The frontend shows only matching verified language entries, with a recoverable empty state when there are none. Samples remain the existing English introductions; selecting a voice still sends its existing catalog key.
+The voice picker uses each voice’s `verified_languages` list of `{language, locale?, accent?}` from ElevenLabs
+provider metadata (checked October 11, 2026), and `source` (a default voice or the Voice Library). A voice’s
+multilingual synthesis model is not treated as proof of verification for every language. The picker shows only
+voices verified for the working language, the language's default first, then voices verified for the exact locale,
+each with its accent for that language. Selecting a voice still sends its catalog key.
+
+## Example call: `POST /api/v1/voice/example-call`
+
+Form fields:
+- `audit_id`: a saved-analysis UUID, required.
+- `target_language`: optional; the saved locale by default.
+- `voice`: optional; the patient's catalog voice.
+- `counterpart`: `billing` (default) or `insurer`.
+
+Gemini writes a short call from the same bounded bill view the live agent gets (`write_example_call`). A script is
+refused unless:
+- the turns alternate, starting with the representative;
+- it has 4-10 turns and at most 1,100 characters;
+- it contains no number missing from the bill (small counts up to 12 are allowed);
+- it names nobody, reads out no reference number and promises no refund.
+
+ElevenLabs Text to Dialogue (`eleven_v4`) then performs it:
+- The patient speaks with the user's voice, verified for the language.
+- The representative speaks with another verified voice, of another gender when there is one.
+- It is made once per bill, language, voices and counterpart, then reused: about 15-21 s the first time, about
+  0.3 s after.
+
+Returns `{"ok": true, "audio_url", "mime_type": "audio/mpeg", "turns": [{"speaker": "representative" | "patient",
+"text"}], "voices": {"patient", "representative"}, "counterpart", "model", "characters"}`. `audio_url` is served
+like reply audio. Delivery tags such as `[calm]` are performed but removed from `turns`.
+
+Errors use `detail: {stage, message, error_code?}`:
+- 400 with `stage` `audit`, `language`, `voices` or `example_call`: a bad `audit_id`, an unsupported language, an
+  unknown voice or a bad `counterpart`.
+- 404 `audit`: no such analysis. 409 `audit`: an older format. 503 `audit`: Tiger Data unavailable.
+- 503 `example_call` `SCRIPT_UNAVAILABLE`: no safe script was written; try again.
+- 502 `example_call` `PROVIDER_REJECTED`: ElevenLabs refused. 503 `PROVIDER_UNAVAILABLE`: ElevenLabs unreachable.
+
+The app asks as the call-script screen opens and plays the audio when it is ready (`native/example-call.tsx`). It
+offers the card only for a saved, unedited reading. It is an example to practice with, not a prediction of what the
+office will say.

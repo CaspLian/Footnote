@@ -157,7 +157,7 @@ deployment. Mention an in-progress item only if it shipped: language-verified vo
 reading, the example call and identifier redaction in recorded questions (in progress, confirm before submitting).
 
 **8. What happens when something is slow or fails?**
-Each Gemini attempt has a 40-second limit. A slow, busy or malformed answer is retried, then a lighter fallback
+Each Gemini attempt has a 60-second limit. A slow, busy or malformed answer is retried, then a lighter fallback
 model is tried. Snowflake falls back to a bundled copy, and the API response says so. A failed save never breaks the
 analysis, and readings are cached. Measured: a 918-character reading took 1.89 s to generate on Flash v2.5, and a
 prepared reading starts in about 0.24 s.
@@ -194,7 +194,7 @@ above.
 - Answer 43 says the interface labels are English and the backend lists 12 languages. The interface now has 31
   offline-translated language choices, and the backend serves 42 locales.
 - Answer 44 cites 66 frontend tests. At `802f2a1`: 196 app, 198 backend and 675 voice tests (from the commit
-  message); 26 web tests at the merge `3ad973c`.
+  message).
 - Answer 35: per-file classification and a check of whether the bill and EOB describe the same claim now exist;
   full line-by-line reconciliation still does not.
 - Its judge table predates the current official lists (see DEMO-PLAN.md, "Judges").
