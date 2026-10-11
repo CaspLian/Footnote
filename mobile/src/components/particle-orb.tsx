@@ -14,7 +14,7 @@ const Layer = Animated.createAnimatedComponent(Path);
 const Control = Animated.createAnimatedComponent(Pressable);
 const Reveal = Animated.createAnimatedComponent(Rect);
 const particles = orbParticles();
-export function ParticleOrb({ status, onPress, label, size = 132, onCollapse, onExpand, collapsed = false, enter = true, interactive = true, active = true, collapseProgress }: { status: NarrationStatus; onPress?: () => void; label: string; size?: number; onCollapse?: () => void; onExpand?: () => void; collapsed?: boolean; enter?: boolean; interactive?: boolean; active?: boolean; collapseProgress?: SharedValue<number> }) {
+export function ParticleOrb({ status, onPress, label, size = 132, onCollapse, onExpand, collapsed = false, enter = true, interactive = true, active = true, collapseProgress, level }: { status: NarrationStatus; onPress?: () => void; label: string; size?: number; onCollapse?: () => void; onExpand?: () => void; collapsed?: boolean; enter?: boolean; interactive?: boolean; active?: boolean; collapseProgress?: SharedValue<number>; level?: SharedValue<number> }) {
   const { colors, reducedMotion } = useTheme();
   const gradientId = `orbSoftening${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
   const clipId = `${gradientId}Clip`;
@@ -22,7 +22,8 @@ export function ParticleOrb({ status, onPress, label, size = 132, onCollapse, on
   const focused = useIsFocused();
   const [foreground, setForeground] = useState(AppState.currentState !== 'background' && AppState.currentState !== 'inactive');
   const angle = useSharedValue(.5), tilt = useSharedValue(.32), time = useSharedValue(0), activity = useSharedValue(0);
-  const paths = useDerivedValue(() => orbPaths(particles, angle.get(), time.get(), activity.get(), tilt.get()));
+  const drive = useDerivedValue(() => level ? activity.get() * (.35 + .65 * level.get()) : activity.get());
+  const paths = useDerivedValue(() => orbPaths(particles, angle.get(), time.get(), drive.get(), tilt.get()));
   const elapsed = useSharedValue(0);
   const momentum = useSharedValue(0), dragging = useSharedValue(false), committed = useSharedValue(false), scale = useSharedValue(1), entrance = useSharedValue(enter ? 1 : 0);
   const reveal = useSharedValue(collapsed ? 0 : 1);
@@ -35,7 +36,7 @@ export function ParticleOrb({ status, onPress, label, size = 132, onCollapse, on
     const dt = elapsed.get(); elapsed.set(0);
     time.set(t => t + dt);
     if (!dragging.get()) {
-      angle.set(a => (a + dt * (.22 + activity.get() * .7 + momentum.get())) % (Math.PI * 2));
+      angle.set(a => (a + dt * (.22 + drive.get() * .7 + momentum.get())) % (Math.PI * 2));
       momentum.set(v => v * Math.exp(-2.8 * dt));
     }
   }, false);

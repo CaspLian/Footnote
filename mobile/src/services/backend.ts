@@ -1,5 +1,6 @@
 import { languageOption, type WorkingLanguage } from '../domain/languages';
 import type { ClaimChange, ClaimDeadlines } from '../domain/types';
+import type { GeminiAnalyzeResponse } from '../domain/extraction';
 
 /**
  * The ClaimPulse backend, from EXPO_PUBLIC_API_URL (for example http://192.168.1.23:8000; see mobile/.env.example).
@@ -60,9 +61,12 @@ function detailText(body: unknown): string | undefined {
   return undefined;
 }
 
-async function call<T>(path: string, init: RequestInit, timeoutMs: number): Promise<T> {
+export async function call<T>(path: string, init: RequestInit, timeoutMs: number = LOOKUP_TIMEOUT_MS, signal?: AbortSignal): Promise<T> {
   if (!backendConfigured()) throw new BackendError(0, 'backend_not_configured');
+  signal?.throwIfAborted();
   const controller = new AbortController();
+  const cancel = () => controller.abort();
+  signal?.addEventListener('abort', cancel, { once: true });
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const response = await fetch(backendUrl(path), { ...init, signal: controller.signal });
@@ -70,15 +74,28 @@ async function call<T>(path: string, init: RequestInit, timeoutMs: number): Prom
     if (!response.ok) throw new BackendError(response.status, detailText(body) ?? `HTTP ${response.status}`);
     return body as T;
   } catch (error) {
+    if (signal?.aborted) throw error;
     if (error instanceof BackendError) throw error;
     throw new BackendError(0, controller.signal.aborted ? 'timeout' : 'unreachable');
   } finally {
     clearTimeout(timer);
+    signal?.removeEventListener('abort', cancel);
   }
 }
 
-function postJson<T>(path: string, body: unknown): Promise<T> {
-  return call(path, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }, LOOKUP_TIMEOUT_MS);
+export function postJson<T>(path: string, body: unknown, signal?: AbortSignal): Promise<T> {
+  return call(path, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }, LOOKUP_TIMEOUT_MS, signal);
+}
+
+export interface BackendVoiceCatalog { default: string; language_defaults: Record<string, string>; voices: { key: string; name: string; description: string; accent: string; gender: string }[] }
+export const voices = () => call<BackendVoiceCatalog>('/api/v1/voice/voices', { method: 'GET' });
+export const voiceSampleUrl = (key: string) => backendUrl(`/api/v1/voice/voices/${encodeURIComponent(key)}/sample`);
+export const backendHealth = (signal?: AbortSignal) => call<{ message: string; mock: boolean; model: string }>('/', { method: 'GET' }, LOOKUP_TIMEOUT_MS, signal);
+export const supportedLanguages = (signal?: AbortSignal) => call<Record<string, string>>('/api/v1/languages', { method: 'GET' }, LOOKUP_TIMEOUT_MS, signal);
+export async function loadAudit(id: string, signal?: AbortSignal): Promise<GeminiAnalyzeResponse> {
+  const saved = await call<{ analysis: GeminiAnalyzeResponse }>(`/api/v1/audits/${encodeURIComponent(id)}`, { method: 'GET' }, LOOKUP_TIMEOUT_MS, signal);
+  if (!saved?.analysis?.result) throw new BackendError(0, 'The saved analysis could not be read.');
+  return saved.analysis;
 }
 
 export interface ClaimIn {

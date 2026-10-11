@@ -51,6 +51,8 @@ export interface LineItem {
   date: string;
   units: number;
   billedCents: Money;
+  /** The required numeric storage slot is a placeholder until the missing amount is confirmed in Verify. */
+  amountMissing?: boolean;
   evidence: Evidence;
 }
 export interface Financials {
@@ -71,6 +73,9 @@ export interface Financials {
 }
 /** What the ClaimPulse backend read from the imported pages (POST /api/v1/analyze), kept for verification and review. */
 export interface ExtractedAnalysis {
+  language?: string;
+  /** Canonical document values: changed confirmed inputs must not play the original monetary explanation. */
+  inputFingerprint?: string;
   model: string;
   /** True when the backend ran in MOCK mode: the result is a fixed sample, not this document. */
   mock: boolean;
@@ -124,9 +129,11 @@ export interface BillCase {
   verifiedAt?: string;
   followUpDate?: string;
   noticeDeadline?: string;
-  /** True when confirmed values differ from the original synthetic documents. */
+  /** True when confirmed values differ from their original extraction or synthetic documents. */
   entriesEdited?: boolean;
-  reviewMode?: 'synthetic' | 'manual';
+  reviewMode?: 'synthetic' | 'manual' | 'connected';
+  /** Prevents repeating the optional image-only date recovery, including failed attempts. */
+  dateRecoveryAttempted?: boolean;
   /** The case's claim in Tiger Data (POST /api/v1/claims), recorded when the case is first confirmed. */
   claimId?: string;
   /** The claim's deadlines from Tiger Data: estimates from the bill's dates until the user confirms a date. */
@@ -153,7 +160,7 @@ export interface CaseEvent {
   date?: string;
 }
 export interface ReviewResult {
-  mode: 'synthetic' | 'manual';
+  mode: 'synthetic' | 'manual' | 'connected';
   findings: Finding[];
   summary: LocalizedText;
 }

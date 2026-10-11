@@ -6,6 +6,7 @@ import type { Language, NarrationService } from '@/domain';
 import { nativeErrorMessage } from './errors';
 import { NarrationController } from './narration-controller';
 import { useUnfoldStore } from '@/store';
+import { claimAudio } from '../services/audio-focus';
 
 const controller = new NarrationController({
   getVoices: Speech.getAvailableVoicesAsync,
@@ -14,9 +15,18 @@ const controller = new NarrationController({
   start: (text, options) => Speech.speak(text, { ...options, rate: useUnfoldStore.getState().preferences.speechRate, useApplicationAudioSession: false }),
 });
 
+let releaseAudio: (() => void) | undefined;
+controller.subscribe(() => {
+  if (!['loading', 'speaking'].includes(controller.getSnapshot().status)) { releaseAudio?.(); releaseAudio = undefined; }
+});
 export const narrationService: NarrationService = {
-  speak: (text, language) => controller.speak(text, language),
-  stop: () => controller.stop(),
+  async speak(text, language) {
+    releaseAudio?.();
+    releaseAudio = claimAudio({ stop: () => { void narrationService.stop().catch(() => {}); } });
+    try { await controller.speak(text, language); }
+    catch (error) { releaseAudio?.(); releaseAudio = undefined; throw error; }
+  },
+  async stop() { releaseAudio?.(); releaseAudio = undefined; await controller.stop(); },
 };
 
 /** Mount once in the root layout so tab navigation, backgrounding and language changes stop speech. */

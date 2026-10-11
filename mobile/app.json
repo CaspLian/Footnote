@@ -17,6 +17,7 @@
       "package": "org.hackknights.unfold",
       "permissions": [
         "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
         "android.permission.READ_EXTERNAL_STORAGE",
         "android.permission.WRITE_EXTERNAL_STORAGE",
         "android.permission.DOWNLOAD_WITHOUT_NOTIFICATION",
@@ -30,9 +31,7 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow Unfold to use the camera.",
-          "microphonePermission": false,
-          "recordAudioAndroid": false
+          "cameraPermission": "Allow Unfold to use the camera."
         }
       ],
       [
@@ -49,8 +48,7 @@
         "expo-image-picker",
         {
           "photosPermission": "Allow Unfold to select a bill or EOB from your photos.",
-          "cameraPermission": "Allow Unfold to photograph your bill or EOB.",
-          "microphonePermission": false
+          "cameraPermission": "Allow Unfold to photograph your bill or EOB."
         }
       ],
       "expo-image",
@@ -64,7 +62,15 @@
       [
         "expo-audio",
         {
-          "microphonePermission": false
+          "microphonePermission": "Allow Unfold to use the microphone so you can talk through your bill with the voice helper."
+        }
+      ],
+      "@livekit/react-native-expo-plugin",
+      [
+        "@config-plugins/react-native-webrtc",
+        {
+          "microphonePermission": "Allow Unfold to use the microphone so you can talk through your bill with the voice helper.",
+          "cameraPermission": "Allow Unfold to photograph your bill or EOB."
         }
       ]
     ],

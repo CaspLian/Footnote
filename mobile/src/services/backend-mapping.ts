@@ -38,6 +38,7 @@ function rateContext(setting: string | null, units: number): LocalizedText {
 
 /** Medicare's rate for a line, or null when the code has no rate (unknown is never zero). */
 export function comparisonFor(line: LineItem, benchmark: BackendBenchmark | null | undefined, retrievedAt: string): Comparison | null {
+  if (line.amountMissing) return null;
   const rateCents = dollarsToCents(benchmark?.medicare_rate);
   if (!benchmark || !rateCents) return null;
   return { source: MEDICARE_SOURCE, url: MEDICARE_URL, amountCents: rateCents * line.units, retrievedAt, context: rateContext(benchmark.setting, line.units) };
@@ -50,7 +51,7 @@ function times(ratio: number, language: Language): string {
 
 /** A question worth asking when a line is billed well above Medicare's rate; null otherwise. */
 export function priceFinding(line: LineItem, comparison: Comparison): Finding | null {
-  if (!line.code || line.billedCents <= 0 || comparison.amountCents <= 0) return null;
+  if (line.amountMissing || !line.code || line.billedCents <= 0 || comparison.amountCents <= 0) return null;
   const ratio = line.billedCents / comparison.amountCents;
   if (ratio <= WORTH_ASKING_RATIO) return null;
   return {

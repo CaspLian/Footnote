@@ -1,0 +1,1 @@
+export async function recordingBlob(uri: string): Promise<Blob> { const response = await fetch(uri); if (!response.ok) throw new Error('The recording could not be opened. Record another question.'); return response.blob(); }
