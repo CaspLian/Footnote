@@ -90,6 +90,8 @@ class Transcript(BaseModel):
     confidence: Optional[float] = None
     needs_confirmation: bool = False  # True when the transcript may be misheard: show it to the user
     audio_seconds: Optional[float] = None
+    # Identifiers Scribe removed before the text went to Gemini or the database, e.g. ["ssn", "phone_number"]
+    redacted: list[str] = []
 
 
 class Speech(BaseModel):
@@ -184,6 +186,7 @@ async def voice_analyze(
             confidence=handoff.confidence,
             needs_confirmation=handoff.needs_confirmation,
             audio_seconds=heard.audio_seconds,
+            redacted=list(heard.redacted),
         ),
         analysis=analysis,
         speech=speech,

@@ -125,11 +125,15 @@ class FakeScribe:
         self.module = provider_module
         self.calls = []
         self.error = None
+        self.redacted_reply = None  # (text, entity types): what Scribe returns after removing identifiers
 
     def transcribe(self, audio, filename, mime_type, language):
         self.calls.append({"language": language, "mime_type": mime_type})
         if self.error:
             raise self.error
+        if self.redacted_reply:
+            text, kinds = self.redacted_reply
+            return self.module.ProviderTranscript(text=text, language="eng", audio_seconds=3.0, redacted=kinds)
         if audio.count(b"\x00") > len(audio) // 2:
             return self.module.ProviderTranscript(text="", audio_seconds=2.0)
         words = [{"text": "Why", "type": "word", "logprob": -0.05}, {"text": "MRI", "type": "word", "logprob": -0.1}]
@@ -222,6 +226,13 @@ def ask(app, recording=PHONE_RECORDING, bill=None, **form):
 
 
 # --- The whole path ------------------------------------------------------------------------
+
+
+def test_spoken_identifiers_never_reach_gemini_and_the_app_is_told(voice):
+    voice.scribe.redacted_reply = ("My member ID is {ACCOUNT_NUMBER}. Why was my MRI so expensive?", ("account_number",))
+    body = ask(voice).json()
+    assert body["transcript"]["redacted"] == ["account_number"]
+    assert "{ACCOUNT_NUMBER}" in voice.gemini.calls[0]["text"] and "MRI" in voice.gemini.calls[0]["text"]
 
 
 def test_spoken_question_reaches_gemini_and_the_reply_is_spoken(voice):

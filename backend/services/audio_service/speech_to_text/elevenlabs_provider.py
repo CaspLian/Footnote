@@ -42,6 +42,7 @@ class ProviderTranscript:
     words: list[dict] = field(default_factory=list)
     audio_seconds: float | None = None
     request_id: str | None = None  # ElevenLabs transcription_id, or the request-id header
+    redacted: tuple[str, ...] = ()  # the kinds of identifier Scribe removed, e.g. ("ssn",)
 
 
 class ElevenLabsSTTProvider:
@@ -51,9 +52,15 @@ class ElevenLabsSTTProvider:
 
     def transcribe(self, audio: bytes, filename: str, mime_type: str, language: str) -> ProviderTranscript:
         config = self._config
-        form = {"model_id": config.model_id, "tag_audio_events": "false"}
+        # Repeated form fields: Scribe refuses lists sent as JSON strings (checked 2026-10-11).
+        form = [("model_id", config.model_id), ("tag_audio_events", "false")]
         if language:
-            form["language_code"] = language
+            form.append(("language_code", language))
+        if config.redact_entities:
+            form += [("entity_detection", entity) for entity in config.redact_entities]
+            form += [("entity_redaction", entity) for entity in config.redact_entities]
+            form.append(("entity_redaction_mode", "entity_type"))
+        form += [("keyterms", term) for term in config.keyterms_for(language)]
         try:
             response = self._session.post(
                 f"{config.base_url}/v1/speech-to-text",
@@ -95,12 +102,15 @@ class ElevenLabsSTTProvider:
             )
         words = payload.get("words") if isinstance(payload.get("words"), list) else []
         duration = payload.get("audio_duration_secs")
+        entities = payload.get("entities") if isinstance(payload.get("entities"), list) else []
+        redacted = tuple(sorted({str(item.get("entity_type")) for item in entities if isinstance(item, dict) and item.get("entity_type")}))
         return ProviderTranscript(
             text=payload["text"],
             language=payload.get("language_code") if isinstance(payload.get("language_code"), str) else None,
             words=[word for word in words if isinstance(word, dict)],
             audio_seconds=float(duration) if isinstance(duration, (int, float)) else None,
             request_id=payload.get("transcription_id") or _request_id(response),
+            redacted=redacted,
         )
 
 

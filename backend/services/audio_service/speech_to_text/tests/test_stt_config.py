@@ -35,6 +35,15 @@ def test_values_come_from_the_environment(clean_env):
     config = STTConfig.from_env()
     assert config.is_configured and config.model_id == "scribe_v2_medical"
     assert config.max_audio_bytes == int(2.5 * 1024 * 1024)
+    assert "ssn" in config.redact_entities and "deductible" in config.keyterms  # on by default
+
+
+def test_redaction_and_keyterms_come_from_the_environment(clean_env):
+    clean_env.setenv("STT_REDACT_ENTITIES", "none")
+    clean_env.setenv("STT_KEYTERMS", "Footnote, coinsurance ,")
+    config = STTConfig.from_env()
+    assert config.redact_entities == () and config.keyterms == ("Footnote", "coinsurance")
+    assert config.keyterms_for("en") == ("Footnote", "coinsurance") and config.keyterms_for("ja") == ("Footnote",)
 
 
 def test_placeholder_key_counts_as_missing(clean_env):

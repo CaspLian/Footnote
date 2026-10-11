@@ -26,6 +26,21 @@ DEFAULT_MODEL_ID = "scribe_v2"
 DEFAULT_BASE_URL = "https://api.elevenlabs.io"
 DEFAULT_MAX_AUDIO_MB = 10.0  # Expo's HIGH_QUALITY preset records 128 kbps: about 10 minutes
 DEFAULT_TIMEOUT_SECONDS = 60.0
+# Identifiers a spoken question never needs. Scribe v2 replaces them with their type ("{SSN}") before the
+# transcript reaches Gemini or the database (entity redaction, checked live 2026-10-11). Names, places,
+# conditions and procedures stay: the question needs them.
+DEFAULT_REDACTED_ENTITIES = (
+    "ssn", "healthcare_number", "account_number", "bank_account", "routing_number", "credit_card",
+    "credit_card_expiration", "cvv", "passport_number", "driver_license", "dob", "email_address", "phone_number",
+    "password", "username", "ip_address",
+)
+# Billing words Scribe could mishear in an English question; keyterms bias it toward them (they cost extra).
+DEFAULT_KEYTERMS = (
+    "Footnote", "Medicare", "Medicaid", "deductible", "coinsurance", "copay", "copayment", "explanation of benefits",
+    "EOB", "itemized bill", "out-of-pocket maximum", "in-network", "out-of-network", "prior authorization",
+    "allowed amount", "balance billing", "CPT code", "statement balance", "claim number",
+)
+BRAND_KEYTERMS = ("Footnote", "Medicare", "Medicaid")  # names, the same in every language
 PLACEHOLDER_API_KEY = "your-elevenlabs-api-key-here"  # the value in .env.example
 
 
@@ -37,6 +52,8 @@ class STTConfig:
     timeout_seconds: float = DEFAULT_TIMEOUT_SECONDS
     max_retries: int = 1
     base_url: str = DEFAULT_BASE_URL
+    redact_entities: tuple[str, ...] = DEFAULT_REDACTED_ENTITIES  # STT_REDACT_ENTITIES: comma list, or "none"
+    keyterms: tuple[str, ...] = DEFAULT_KEYTERMS  # STT_KEYTERMS: comma list, or "none"
 
     @classmethod
     def from_env(cls, *, load_env_file: bool = True) -> STTConfig:
@@ -56,7 +73,16 @@ class STTConfig:
             timeout_seconds=_env_float("STT_TIMEOUT_SECONDS", DEFAULT_TIMEOUT_SECONDS, minimum=1.0),
             max_retries=_env_int("STT_MAX_RETRIES", 1, minimum=0, maximum=3),
             base_url=_env_str("ELEVENLABS_BASE_URL", DEFAULT_BASE_URL).rstrip("/"),
+            redact_entities=_env_list("STT_REDACT_ENTITIES", DEFAULT_REDACTED_ENTITIES),
+            keyterms=_env_list("STT_KEYTERMS", DEFAULT_KEYTERMS),
         )
+
+    def keyterms_for(self, language: str) -> tuple[str, ...]:
+        """The billing words for an English (or undetected) question; only names in other languages, where
+        English words could pull the transcript toward English."""
+        if language in ("", "en", "eng"):
+            return self.keyterms
+        return tuple(term for term in self.keyterms if term in BRAND_KEYTERMS)
 
     @property
     def is_configured(self) -> bool:
@@ -100,6 +126,15 @@ def find_env_file() -> str | None:
 
 def _env_str(name: str, default: str) -> str:
     return os.environ.get(name, default).strip()
+
+
+def _env_list(name: str, default: tuple[str, ...]) -> tuple[str, ...]:
+    raw = os.environ.get(name)
+    if raw is None or not raw.strip():
+        return default
+    if raw.strip().lower() == "none":
+        return ()
+    return tuple(item.strip() for item in raw.split(",") if item.strip())
 
 
 def _env_int(name: str, default: int, *, minimum: int | None = None, maximum: int | None = None) -> int:

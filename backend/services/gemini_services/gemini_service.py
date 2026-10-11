@@ -62,6 +62,27 @@ def model_name() -> str:
     return os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
 
 
+_THINKING_LEVELS = {"minimal": types.ThinkingLevel.MINIMAL, "low": types.ThinkingLevel.LOW,
+                    "medium": types.ThinkingLevel.MEDIUM, "high": types.ThinkingLevel.HIGH}
+_MEDIA_RESOLUTIONS = {"low": types.MediaResolution.MEDIA_RESOLUTION_LOW, "medium": types.MediaResolution.MEDIA_RESOLUTION_MEDIUM,
+                      "high": types.MediaResolution.MEDIA_RESOLUTION_HIGH}
+
+
+def _thinking_config(model: str) -> Optional[types.ThinkingConfig]:
+    """How long a Gemini 3 model thinks before answering (GEMINI_THINKING_LEVEL: minimal, low, medium, high;
+    "default" keeps the model's own). Low by default, measured 2026-10-11 on gemini-3.5-flash with this prompt:
+    a bill + EOB took 5.3 s instead of 16.7 s, photos 4.4 s instead of 13.9 s, with the same lines, amounts and
+    financial fields as the model's default thinking. Minimal misread a charge tenfold ($380 as $3,800); medium
+    was as slow as the default. Any other model family keeps its own default."""
+    level = _THINKING_LEVELS.get(os.getenv("GEMINI_THINKING_LEVEL", "low").strip().lower())
+    return types.ThinkingConfig(thinking_level=level) if level and model.startswith("gemini-3") else None
+
+
+def _media_resolution() -> Optional[types.MediaResolution]:
+    """How finely Gemini sees each photo or PDF page (GEMINI_MEDIA_RESOLUTION: low, medium, high). Unset = default."""
+    return _MEDIA_RESOLUTIONS.get(os.getenv("GEMINI_MEDIA_RESOLUTION", "").strip().lower())
+
+
 def is_mock() -> bool:
     return os.getenv("MOCK", "false").lower() in ("1", "true", "yes")
 
@@ -108,12 +129,15 @@ async def analyze(
         instruction += f"\n\nUser's text or question:\n{text.strip()}"
     parts.append(instruction)
 
-    config = types.GenerateContentConfig(
-        system_instruction=SYSTEM_PROMPT.format(language=language),
-        response_mime_type="application/json",
-        response_schema=GeminiResult,
-        temperature=0.2,
-    )
+    def config_for(model: str) -> types.GenerateContentConfig:
+        return types.GenerateContentConfig(
+            system_instruction=SYSTEM_PROMPT.format(language=language),
+            response_mime_type="application/json",
+            response_schema=GeminiResult,
+            temperature=0.2,
+            thinking_config=_thinking_config(model),
+            media_resolution=_media_resolution(),
+        )
 
     client = _get_client()
     models = [model_name()]
@@ -130,7 +154,7 @@ async def analyze(
                 await asyncio.sleep(wait)
             try:
                 response = await asyncio.wait_for(
-                    client.aio.models.generate_content(model=model, contents=parts, config=config),
+                    client.aio.models.generate_content(model=model, contents=parts, config=config_for(model)),
                     timeout=ATTEMPT_TIMEOUT_S,
                 )
             except asyncio.TimeoutError:
@@ -206,10 +230,13 @@ def _translation_models() -> list[str]:
 
 async def _translate(text: str, locale: str) -> Optional[str]:
     """One translation, with the same retries as analyze(). Never raises: None when no model gave a usable answer."""
-    config = types.GenerateContentConfig(
-        system_instruction=TRANSLATE_PROMPT.format(language=language_name(locale)),
-        temperature=0.2,
-    )
+    def config_for(model: str) -> types.GenerateContentConfig:
+        # The same thinking level as analyze(); the number check below still guards every translation.
+        return types.GenerateContentConfig(
+            system_instruction=TRANSLATE_PROMPT.format(language=language_name(locale)),
+            temperature=0.2,
+            thinking_config=_thinking_config(model),
+        )
     try:
         client = _get_client()
         for model in _translation_models():
@@ -218,7 +245,7 @@ async def _translate(text: str, locale: str) -> Optional[str]:
                     await asyncio.sleep(wait)
                 try:
                     response = await asyncio.wait_for(
-                        client.aio.models.generate_content(model=model, contents=text, config=config),
+                        client.aio.models.generate_content(model=model, contents=text, config=config_for(model)),
                         timeout=TRANSLATE_ATTEMPT_TIMEOUT_S,
                     )
                 except asyncio.TimeoutError:

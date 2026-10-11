@@ -50,6 +50,7 @@ class _Transcript:
     confidence: float | None
     audio_seconds: float | None
     provider_request_id: str | None
+    redacted: tuple[str, ...] = ()
 
 
 class STTService:
@@ -102,6 +103,7 @@ class STTService:
                 confidence=transcript.confidence,
                 audio_seconds=transcript.audio_seconds,
                 audio_format=audio_format,
+                redacted=transcript.redacted,
                 cached=source == "cache",
                 attempts=attempts,
                 elapsed_ms=_elapsed_ms(started),
@@ -163,6 +165,8 @@ class STTService:
     def _cache_key(self, audio: bytes, language: str) -> str:
         digest = hashlib.sha256(audio)
         digest.update(f"|{self.config.model_id}|{language}".encode())
+        # What Scribe is asked to redact and listen for changes the transcript.
+        digest.update(f"|{','.join(self.config.redact_entities)}|{','.join(self.config.keyterms_for(language))}".encode())
         return digest.hexdigest()
 
     def _cached(self, key: str) -> _Transcript | None:
@@ -202,6 +206,7 @@ class STTService:
                 confidence=average_word_confidence(raw.words),
                 audio_seconds=raw.audio_seconds if raw.audio_seconds is not None else audio_seconds_from_words(raw.words),
                 provider_request_id=raw.request_id,
+                redacted=getattr(raw, "redacted", ()),
             )
             # Billed even when nobody spoke, so count it before the NO_SPEECH check.
             self._stats.add_audio_seconds(transcript.audio_seconds)

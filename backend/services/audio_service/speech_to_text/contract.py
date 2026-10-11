@@ -66,6 +66,7 @@ class STTResult:
     confidence: float | None = None  # 0 to 1, average word probability; low means it may be misheard
     audio_seconds: float | None = None  # length of the recording; speech-to-text is billed per hour of audio
     audio_format: str | None = None  # detected from the file, e.g. "m4a"
+    redacted: tuple[str, ...] = ()  # identifiers removed before the text left this module, e.g. ("ssn", "phone_number")
 
     # Cost and performance evidence.
     cached: bool = False  # True means no new ElevenLabs transcription was needed

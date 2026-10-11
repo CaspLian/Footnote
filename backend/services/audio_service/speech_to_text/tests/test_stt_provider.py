@@ -6,7 +6,7 @@ import pytest
 import requests
 from requests.structures import CaseInsensitiveDict
 
-from speech_to_text.config import STTConfig
+from speech_to_text.config import DEFAULT_KEYTERMS, DEFAULT_REDACTED_ENTITIES, STTConfig
 from speech_to_text.contract import ErrorCode
 from speech_to_text.elevenlabs_provider import ElevenLabsSTTProvider
 from speech_to_text.errors import STTError
@@ -72,7 +72,7 @@ def test_request_matches_the_documented_api():
     _, session = transcribe(make_response(json_body=TRANSCRIPT_JSON))
     call = session.calls[0]
     assert call["url"] == "https://api.elevenlabs.io/v1/speech-to-text"
-    assert call["data"] == {"model_id": "scribe_v2", "tag_audio_events": "false", "language_code": "en"}
+    assert call["data"][:3] == [("model_id", "scribe_v2"), ("tag_audio_events", "false"), ("language_code", "en")]
     assert call["files"] == {"file": ("recording.m4a", AUDIO, "audio/mp4")}
     assert call["headers"]["xi-api-key"] == SECRET_KEY
     assert call["timeout"] == (5.0, 60.0)
@@ -80,7 +80,7 @@ def test_request_matches_the_documented_api():
 
 def test_empty_language_lets_elevenlabs_detect_it():
     _, session = transcribe(make_response(json_body=TRANSCRIPT_JSON), language="")
-    assert "language_code" not in session.calls[0]["data"]
+    assert "language_code" not in [name for name, _ in session.calls[0]["data"]]
 
 
 def test_success_returns_text_words_duration_and_id():
@@ -160,3 +160,33 @@ def test_api_key_never_appears_in_errors_or_config_repr():
     for error in errors:
         assert SECRET_KEY not in error.message and SECRET_KEY not in str(error)
     assert SECRET_KEY not in repr(CONFIG)
+
+
+def test_identifiers_are_redacted_and_billing_words_are_listened_for():
+    _, session = transcribe(make_response(json_body=TRANSCRIPT_JSON))
+    data = session.calls[0]["data"]
+    # Repeated form fields: Scribe refuses lists sent as JSON strings.
+    assert [value for name, value in data if name == "entity_detection"] == list(DEFAULT_REDACTED_ENTITIES)
+    assert [value for name, value in data if name == "entity_redaction"] == list(DEFAULT_REDACTED_ENTITIES)
+    assert ("entity_redaction_mode", "entity_type") in data and "ssn" in DEFAULT_REDACTED_ENTITIES
+    assert "name" not in DEFAULT_REDACTED_ENTITIES and "condition" not in DEFAULT_REDACTED_ENTITIES  # the question needs them
+    assert [value for name, value in data if name == "keyterms"] == list(DEFAULT_KEYTERMS)
+
+
+def test_other_languages_get_only_names_as_keyterms():
+    _, session = transcribe(make_response(json_body=TRANSCRIPT_JSON), language="es")
+    assert [value for name, value in session.calls[0]["data"] if name == "keyterms"] == ["Footnote", "Medicare", "Medicaid"]
+
+
+def test_redaction_and_keyterms_can_be_turned_off():
+    config = STTConfig(api_key=SECRET_KEY, model_id="scribe_v2", redact_entities=(), keyterms=())
+    _, session = transcribe(make_response(json_body=TRANSCRIPT_JSON), config=config)
+    assert {name for name, _ in session.calls[0]["data"]} == {"model_id", "tag_audio_events", "language_code"}
+
+
+def test_the_kinds_of_identifier_removed_are_reported():
+    body = {**TRANSCRIPT_JSON, "text": "My member ID is {ACCOUNT_NUMBER}.",
+            "entities": [{"text": "{ACCOUNT_NUMBER}", "entity_type": "account_number", "start_char": 16, "end_char": 32},
+                         {"text": "{SSN}", "entity_type": "ssn", "start_char": 40, "end_char": 45}]}
+    result, _ = transcribe(make_response(json_body=body))
+    assert result.redacted == ("account_number", "ssn") and "{ACCOUNT_NUMBER}" in result.text
