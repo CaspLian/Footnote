@@ -31,3 +31,11 @@ test('a voice that could not be made is reported, not played', async () => {
   const { prepareSpeech } = await import('./backend-speech');
   await assert.rejects(prepareSpeech('audit-2'), /QUOTA_EXCEEDED/);
 });
+
+test('each chosen voice is sent and keys its own cached reading', async () => {
+  const calls: string[] = [];
+  globalThis.fetch = (async (_url, init) => { calls.push(String((init?.body as FormData).get('voice'))); return Response.json(spoken); }) as typeof fetch;
+  const { prepareSpeech } = await import('./backend-speech');
+  await Promise.all([prepareSpeech('voice-pairs','alice'), prepareSpeech('voice-pairs','alice'), prepareSpeech('voice-pairs','george')]);
+  assert.deepEqual(calls.sort(), ['alice','george']);
+});

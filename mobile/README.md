@@ -31,7 +31,7 @@ Use a development build, not Expo Go: PDF preview uses `react-native-pdf` and `r
 - English-first onboarding collects a nickname, optional ZIP, coverage context, explanation preference, and starting goal.
 - Local self, child, partner, and dependent profiles; bills are associated with the selected profile.
 - Camera/photo/PDF selection, document classification, original preview, and editable verification.
-- A synthetic paired bill/EOB supports the complete review demonstration; arbitrary imports require manual entry and receive no invented extraction or findings.
+- A synthetic paired bill/EOB supports the local demonstration. With the backend configured, imported pages are read by Gemini and verified before Medicare comparisons; offline imports use manual entry.
 - Simple/detailed explanations, source-linked questions, contextual live-agent controls with captions, editable billing-correction and insurer-review drafts, clipboard copy, PDF export, and explicit submission records.
 - Follow-up reminders, separately confirmed notice dates, recorded actions, glossary, and resettable sample.
 - Native biometric app-lock options with device-passcode fallback and setup/cancellation recovery.
@@ -73,7 +73,7 @@ Camera capture requires a physical device. The in-app camera saves each page as 
    npm start
    ```
 
-6. In Unfold, finish setup, start a bill, choose **Take a photo**, allow camera access, capture a page, and tap **Keep page**. Capture another page if needed, then tap **Use photos**. Confirm that the app reaches the analysis screen, then the editable verification form, with the captured source available to preview.
+6. In Unfold, finish setup, start a bill, choose **Take a photo**, allow camera access, capture a page, and tap **Keep page**. Capture another page if needed, then tap **Use photos**. The app opens **Your documents**. Confirm the pages, choose **Use these documents**, wait for **Understanding**, then **Check the details** to verify the extraction.
 
 7. Test retake, removing a captured page, denying camera permission, losing the backend connection, and retrying analysis. Confirm that a failed upload leaves the locally saved photos available.
 
@@ -83,12 +83,14 @@ If the phone cannot reach the API, check the LAN IP, firewall, Wi-Fi network, an
 
 Document processing, benchmark lookup, draft preparation, and narration have asynchronous interfaces in `src/domain/types.ts`. With `EXPO_PUBLIC_API_URL` set (copy `.env.example` to `.env`), the app uses the ClaimPulse backend. The routes are in `docs/API_CONTRACTS.md`.
 
-- **Reading documents:** camera pages (`expo-camera`), photos and PDFs are sent together to `POST /api/v1/analyze` (`src/services/gemini-api.ts`). Gemini's provider, dates, amounts and line items fill the verify screen, each with the page it came from (`src/domain/extraction.ts`), and the user checks every value. The analysis is saved in Tiger Data.
+- **Reading documents:** after document confirmation, ordered camera pages, photos and PDFs go together to `POST /api/v1/analyze` through the Understanding adapter. Provider, dates, amounts and line items fill Verify, with source evidence, for the user to check. Saved readings reopen through `GET /api/v1/audits/{id}`. Adding or removing a file clears the old reading. If service or due dates are missing, one eligible image may use `/api/v1/analyze-image` once per case; this optional route's claim is reused rather than recorded twice.
 - **Prices:** the review compares each confirmed code with Medicare's national rate (`GET /api/v1/benchmarks/{code}`, from Snowflake) and adds Gemini's notes. Findings are questions, never proof of an error.
-- **Claims:** each confirmed case is recorded as a claim in Tiger Data, and its later steps (review complete, request submitted, notice date, resolved) are added to the claim's timeline (`src/services/claim-tracker.ts`, `/api/v1/claims`). It is a side record: if Tiger Data is down, the app carries on.
-- **Voice:** the review can play the saved analysis in an ElevenLabs voice (`POST /api/v1/voice/speak`, played with `expo-audio`). The reading is prepared as soon as the document is read, so Listen plays at once. That costs one clip per analyzed document (`docs/decisions/2026-10-10-voice-prepared-early.md`).
+- **Claims:** each confirmed case records one claim in Tiger Data; requests, submission, follow-up, notice dates and resolution mirror the local trail. Track refreshes missed recordings and deadlines. Unknown balances are logged as a resolution action instead of a fabricated zero-dollar outcome. Local progress stays usable when Tiger Data is down.
+- **Voices:** Calm follows the selected language's backend default; Clear uses Alice and Warm uses George. Catalog and English previews use `/voice/voices` and `/voice/voices/{key}/sample`. Listen uses `/voice/speak` and `/voice/audio/{id}`; each audit and voice pair has its own prepared clip. Changing voice can therefore generate another paid clip.
+- **Conversation:** the orb's session adapter requests a short-lived WebRTC credential from `/voice/agent/session` for a saved bill. The SDK and microphone remain on the app; API keys stay on the server. Guide/manual/sample cases show an explicit unavailable message. When live conversation is unavailable, a separate 30-second recorded question calls `/voice/analyze`; its caption explains that the bill is not included.
+- **Connection:** Settings checks `GET /`; Languages checks `/api/v1/languages`. All 31 picker choices map to one of the backend's 42 locales.
 
-Without the variable, everything stays local, as before: the synthetic sample, manual entry, and device narration. The sample and the drafts stay local either way. `expo-camera` and `expo-audio` are native modules, so rebuild the development build once (`npm run ios` or `npm run android`).
+Without the variable, the sample, manual entry, drafts and curated Guide remain local, and no backend requests are sent. Live conversations and backend samples show the original unavailable state. Rebuild the development client after native dependency/config changes; this integration includes LiveKit/WebRTC microphone modules, keyboard control, and Expo UI/glass modules.
 
 Money is stored in integer cents. Billed charges, allowed amounts, insurer payments, prior patient payments, and remaining responsibility stay separate. Findings are clarification questions, not guaranteed savings or a determination of what is owed.
 
@@ -110,7 +112,7 @@ npm run bundle:android
 npm run bundle:web
 ```
 
-TypeScript, lint, 66 focused tests, Expo Doctor (21/21), and iOS/Android/web exports pass for the restored version. The native development client was rebuilt, installed and launched on an iPhone 18 Pro / iOS 27 simulator. The available simulator tooling captures UI but does not expose tap/swipe automation, so a fresh native keyboard/gesture, camera-permission, biometric and screen-reader walkthrough remains a runtime validation gap. Android runtime and a real ElevenLabs conversation are also pending.
+The connected integration passes TypeScript, lint and 153 focused tests, including the original 82. Expo web and Android Hermes exports pass; the separate web app passes 19 tests (3 live tests skipped) and its production build. Final runtime evidence and remaining device gaps are recorded in [the integration handoff](../docs/handoffs/frontend-ui-v3.md). Existing iPhone simulator results from Aarush's earlier build do not validate the new live voice modules.
 
 The recovered code lives on `frontend-aarush`. Start Metro with `npm start`, then open the installed Unfold development client. Use `npm run ios` when native dependencies need rebuilding.
 

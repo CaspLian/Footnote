@@ -14,7 +14,7 @@ it, `backend.configured` is false and no request is sent.
 | Voice picker | `backend.voices()`, `backend.voiceSampleUrl(key)` | Pass the key as `readings.prepare(auditId, key)`. Without one, each language gets a suitable voice. |
 | Medicare rate of a code | `backend.benchmark(code)` | Free, no Gemini call. |
 | Track a confirmed bill | `backend.recordClaim(claimFromCase(caseData, isoServiceDate))`, then `backend.claim(id)` | Tiger Data: estimated deadlines and a timeline. Then `setClaimStatus`, `logClaimAction`. |
-| Languages | `backend.languages()` | 39 locales; `LOCALE_FOR` maps the app's `en`/`es` to `en-US`/`es-MX`. |
+| Languages | `backend.languages()` | 42 locales; `LOCALE_FOR` maps the app's `en`/`es` to `en-US`/`es-MX`. |
 
 **Upload, in `IntakeModal`:**
 

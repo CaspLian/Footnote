@@ -22,8 +22,9 @@ from the code. The models are defined in `backend/models.py` and `backend/servic
 
   There is no authentication, so never allow it on a public network.
 - **Requests:** form fields. Uploads use `multipart/form-data`; in JavaScript, send a `FormData` and do not set
-  `Content-Type` yourself. In React Native, append files as `{uri, name, type}`: a part without a file name is
-  ignored, and `type` must be the exact type, such as the picker's `mimeType` (`image/jpg` is refused).
+  `Content-Type` yourself. Expo SDK 57 fetch accepts Blob parts or `{name, type, bytes: () => file.bytes()}`;
+  native uploads use this bytes form. Legacy React Native `{uri, name, type}` objects are rejected by Expo fetch.
+  A part without a file name is ignored; `type` must match the picker's MIME type (`image/jpg` is refused).
 - **Responses:** JSON, except the audio routes.
 - **No authentication.** CORS allows every origin (`backend/main.py`).
 - **Error bodies come in three shapes:**
@@ -50,6 +51,28 @@ from the code. The models are defined in `backend/models.py` and `backend/servic
 | `GET /api/v1/voice/audio/{audio_id}` | The reply audio (MP3) | `voice_routes.py`, `audio_http.py` |
 | `GET /api/v1/voice/voices` | Voices for a picker: `{"default": "matilda", "language_defaults": {"es": "elio", ...}, "voices": [{key, name, description, accent, gender}]}` (20) | `voice_routes.py`, `text_to_speech/voices.json` |
 | `GET /api/v1/voice/voices/{voice_key}/sample` | A short MP3 sample of one voice | `voice_routes.py` |
+
+### Connected Unfold app usage
+
+| App action | Backend route |
+|---|---|
+| Settings connection check | `GET /` |
+| Working language validation | `GET /api/v1/languages`; picker codes map to canonical locales (`zh-Hant` → `zh-TW`) |
+| Confirm pages, then Understanding | `POST /api/v1/analyze`, ordered repeated `files` plus `target_language` |
+| Reopen unchanged saved pages | `GET /api/v1/audits/{id}`; unwrap `analysis`, preserving confirmed local edits on Review |
+| Missing service/due dates on an eligible image | `POST /api/v1/analyze-image`, `file` only; at most once per case, including failed attempts, persisted before sending; reuse the returned claim |
+| Confirmed code review | `GET /api/v1/benchmarks/{code}`, one parallel lookup per unique code |
+| Voice choices and English samples | `GET /api/v1/voice/voices`, `GET /api/v1/voice/voices/{key}/sample` |
+| Saved reading | `POST /api/v1/voice/speak`, `audit_id` and chosen `voice`; `GET /api/v1/voice/audio/{id}` |
+| Recorded question when live is unavailable | `POST /api/v1/voice/analyze`, `audio`, `target_language`, optional `voice`, `speak_reply=true`; no bill is attached in this fallback |
+| First confirmation and Track refresh | `POST /api/v1/claims` once, `GET /api/v1/claims/{id}`; retry missed recording after outages |
+| Prepare / submit / reminder / notice / resolve | claim `/actions`, `/status`, `/deadlines`, `/resolve`; unknown resolution balance uses an action with a note instead of `final_amount=0` |
+
+Calm uses exact locale defaults, then language defaults, then the catalog's default; legacy `device` also means
+Calm for backend speech. Clear is `alice`, Warm is `george`, with fallback to Calm if a catalog key disappears.
+Speech generation is memoized by audit ID and voice; previews use the English sample endpoint. No backend
+requests occur with `EXPO_PUBLIC_API_URL` unset. The live agent's separate contract is maintained with its backend
+branch; the app session adapter sends only `audit_id`, `target_language`, optional `voice`, and `connection_type=webrtc`.
 
 ### Languages
 
@@ -94,11 +117,11 @@ list is `backend/locales.py`, served by `GET /api/v1/languages` as `{locale: nam
   with spoken replies in `en-US`, `en-GB`, `es-MX`, `es-ES`, `pt-BR`, `ja-JP`, `zh-CN`, `ko-KR`, `hi-IN`, `he-IL`,
   `th-TH` and `zh-TW` (sent as `zh-Hant-TW`). Not checked by a native speaker in any language. In Arabic, the formal
   "two hundred" (ومائتا) was heard back as "one hundred" by speech-to-text; the everyday form was heard right.
-- **Known issue: a translated ratio can be wrong.** Gemini's main model was out of quota, so the fallback
+- **Historical issue, now guarded: a translated ratio could be wrong.** Gemini's main model was out of quota, so the fallback
   `gemini-3.5-flash-lite` translated the price findings. Into Traditional Chinese it turned "about 30 times" into
   31 times in the spoken reply and into 3 times in 4 of 4 retries (other names for the language did no better);
-  Simplified Chinese, Japanese and Hebrew kept 30. Until translations are checked against the price check's
-  numbers, a translated reply can misstate a ratio.
+  Simplified Chinese, Japanese and Hebrew kept 30. The locales merge now validates translated digits against
+  the original price text, retries once, and drops an invalid translated price sentence while keeping the summary.
 
 ### `POST /api/v1/analyze`
 

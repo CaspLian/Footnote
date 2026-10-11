@@ -1,11 +1,15 @@
-import { Pressable } from 'react-native';
+import { AccessibilityInfo, Pressable } from 'react-native';
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { expectedRemaining, formatDate, formatMoney, getCaseSummary } from '@/domain';
 import { useUnfoldStore } from '@/store';
 import { DocumentPreview } from '@/native';
 import { Badge, Button, ButtonRow, Card, Choice, Divider, Feedback, Group, Row, Screen, Section, Txt } from '@/components/ui';
 import { BackendVoiceButton } from '@/native/backend-voice';
+import { useAgentHighlight } from '@/native/agent-highlight';
+import { backendConfigured, backendLocale, loadAudit } from '@/services/backend';
+import { analysisChanged } from '@/domain/analysis-provenance';
+import { mapGeminiAnalysis } from '@/domain/extraction';
 import { MissingCase, caseRoute, useCase } from './shared';
 import { Icon } from '@/components/icon';
 import { AgentOrbControl } from '@/components/agent-orb-control';
@@ -14,6 +18,24 @@ import { useTheme, radius, space } from '@/theme';
 export function Review() {
   const { colors } = useTheme();
   const c = useCase();
+  const prefs = useUnfoldStore(s => s.preferences);
+  const highlight = useAgentHighlight(c?.id);
+  const auditId = c?.extraction?.auditId;
+  const caseId = c?.id;
+  const [auditError, setAuditError] = useState('');
+  useEffect(() => {
+    if (!auditId || !backendConfigured()) return;
+    const abort = new AbortController();
+    // The persisted confirmed amounts stay intact. This checks that the saved answer can be reopened without another Gemini call.
+    void loadAudit(auditId, abort.signal).then(response => {
+      if (abort.signal.aborted || !caseId) return;
+      const current = useUnfoldStore.getState().cases.find(item => item.id === caseId);
+      if (current) useUnfoldStore.getState().setAnalysisProvenance(caseId, auditId, mapGeminiAnalysis(response, current, 'en').extraction.inputFingerprint!);
+      setAuditError('');
+    }).catch(() => { if (!abort.signal.aborted) setAuditError('The saved analysis could not be reopened. Your confirmed details are still available on this device.'); });
+    return () => abort.abort();
+  }, [auditId, caseId]);
+  useEffect(() => { const finding = c?.findings.find(item => item.id === highlight); if (finding) AccessibilityInfo.announceForAccessibility(`Unfold is showing: ${finding.title.en}`); }, [highlight, c?.findings]);
   const depth = useUnfoldStore(s => s.personalContext.explanationDepth);
   const profiles = useUnfoldStore(s => s.profiles);
   const [orbCollapsed, setOrbCollapsed] = useState(false);
@@ -24,8 +46,9 @@ export function Review() {
   const detailed = getCaseSummary(c, 'en');
   const simple = `${c.financials.remainingCents === undefined ? 'No statement balance has been confirmed.' : `This statement asks for ${formatMoney(c.financials.remainingCents, 'en')}.`} ${c.findings.length ? `There are ${c.findings.length} questions to clarify with billing. A repeated charge or balance difference can have an explanation. Check the source documents, then ask for an itemized, reconciled statement.` : 'Use your original documents to check the service details and payments. No automated findings were generated for this review.'}`;
   const summary = depth === 'simple' ? simple : detailed;
-  const original = c.attachments.find(a => a.kind === 'bill');
-  return <Screen measureOverlay overlayReserve={orbCollapsed ? 68 : 136} overlayBottom={4} overlaySpace={24} testID="review" aside={original ? <Group gap={space.lg}><Txt variant="section">Original statement</Txt><DocumentPreview attachment={original} language="en" /></Group> : undefined} overlay={<AgentOrbControl billCase={c} collapsed={orbCollapsed} onCollapsedChange={setOrbCollapsed} />} footer={<Button title="Prepare request" onPress={() => caseRoute('/draft', c.id)} />}>
+  const original = c.attachments.find(a => a.kind === 'bill') ?? c.attachments.find(a => a.kind === 'auto');
+  const sourcePending = c.source === 'manual' && !!c.extraction && !c.extraction.inputFingerprint;
+  return <Screen measureOverlay overlayReserve={orbCollapsed ? 68 : 136} overlayBottom={4} overlaySpace={24} testID="review" aside={original ? <Group gap={space.lg}><Txt variant="section">Original statement</Txt><DocumentPreview attachment={original} language="en" /></Group> : undefined} overlay={<AgentOrbControl billCase={sourcePending ? { ...c, evidenceContextId: undefined } : c} collapsed={orbCollapsed} onCollapsedChange={setOrbCollapsed} />} footer={<Button title="Prepare request" onPress={() => caseRoute('/draft', c.id)} />}>
     <Group gap={space.lg}><Txt variant="display">Here’s the picture.</Txt><Txt muted>{c.provider} · {profile?.firstName ?? 'Unassigned profile'} · {formatDate(c.serviceDate, 'en')}</Txt></Group>
     {c.source === 'sample' ? <Badge text="Synthetic sample" /> : null}
     <Card>
@@ -46,14 +69,17 @@ export function Review() {
       </Card>
     </Group>
     <Group gap={space.sm}><Choice title="Keep it simple" selected={depth === 'simple'} onPress={() => useUnfoldStore.getState().setExplanationDepth('simple')} /><Choice title="Show more detail" selected={depth === 'detailed'} onPress={() => useUnfoldStore.getState().setExplanationDepth('detailed')} /></Group>
-    <Section title="What this means"><Txt>{summary}</Txt>{c.extraction?.auditId ? <BackendVoiceButton auditId={c.extraction.auditId} /> : null}</Section>
+    <Section title="What this means"><Txt>{summary}</Txt>{c.extraction?.auditId && !sourcePending && !analysisChanged(c) && backendConfigured() ? <BackendVoiceButton auditId={c.extraction.auditId} voice={prefs.voice} language={c.extraction.language ?? backendLocale(prefs.workingLanguage)} /> : null}</Section>
+    {sourcePending && backendConfigured() ? <Txt variant="caption" muted>Checking the saved source before enabling its audio and live bill conversation.</Txt> : null}
+    {c.extraction && analysisChanged(c) ? <Feedback text="Your confirmed details differ from the saved document reading. The original audio and live bill conversation are paused so they do not describe old amounts. Use the confirmed review and ask billing about the correction." /> : null}
+    {auditError ? <Feedback text={auditError} /> : null}
     {c.extraction ? <Section title="From your document">
       {c.extraction.mock ? <Badge text="MOCK mode: a fixed sample, not your document" /> : null}
       {c.extraction.questions.length ? <Group gap={space.sm}><Txt variant="label">Questions to ask billing</Txt>{c.extraction.questions.map((q, i) => <Txt key={i} selectable>• {q.en}</Txt>)}</Group> : <Txt muted>Gemini suggested no questions for this document.</Txt>}
     </Section> : null}
     <Section title={c.findings.length ? 'Questions worth asking' : 'Your next step'}>
       <Group gap={space.screen}>{c.findings.map((f, index) => <Group key={f.id} gap={space.lg}>
-        <Pressable accessibilityRole="button" accessibilityLabel={f.title.en} onPress={() => router.push({ pathname: '/finding', params: { caseId: c.id, findingId: f.id } })} style={({ pressed }) => ({ minHeight: 48, opacity: pressed ? .7 : 1 })}>
+        <Pressable accessibilityRole="button" accessibilityLabel={f.title.en} testID={f.id === highlight ? 'finding-highlighted' : undefined} onPress={() => router.push({ pathname: '/finding', params: { caseId: c.id, findingId: f.id } })} style={({ pressed }) => ({ minHeight: 48, opacity: pressed ? .7 : 1, backgroundColor: f.id === highlight ? colors.accentSoft : 'transparent', borderRadius: radius.small })}>
           <Group gap={space.md}><Group style={{ flexDirection: 'row', gap: space.lg, alignItems: 'center' }}><Txt variant="item" style={{ flex: 1 }}>{f.title.en}</Txt><Icon name="next" color={colors.accent} /></Group><Txt muted>{depth === 'detailed' ? f.explanation.en : f.question.en}</Txt></Group>
         </Pressable>
         {index < c.findings.length - 1 ? <Divider /> : null}

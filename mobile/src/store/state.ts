@@ -4,8 +4,10 @@ import { createStore } from 'zustand/vanilla';
 import { createManualCase, createSampleCase, SAMPLE_CASE_ID } from '../domain/fixtures';
 import { isISODate, isMoney } from '../domain/money';
 import { validateCase } from '../domain/review';
+import { analysisChanged, analysisFingerprint } from '../domain/analysis-provenance';
 import type { AppealDraft, BillCase, CaseEvent, ClaimChange, ClaimTracker, DocumentAttachment, DraftKind, FamilyProfile, PersonalContext, IconWeight, Language, ReviewResult } from '../domain/types';
 import { claimTracker } from '../services/claim-tracker';
+import { backendConfigured } from '../services/backend';
 import { documentService } from '../services/connected-services';
 import { draftService, sampleEntriesChanged } from '../services/local-services';
 import { parseSnapshot, STORAGE_KEY, type PersistedSnapshot } from './persistence';
@@ -57,9 +59,12 @@ export interface UnfoldState {
   addAttachment(caseId: string, attachment: DocumentAttachment): void;
   updateAttachment(caseId: string, attachmentId: string, kind: DocumentAttachment['kind']): void;
   removeAttachment(caseId: string, attachmentId: string): Promise<void>;
-  updateCase(caseId: string, patch: Partial<Pick<BillCase, 'provider' | 'serviceDate' | 'description' | 'financials' | 'lineItems' | 'extraction' | 'findings'>>): void;
+  updateCase(caseId: string, patch: Partial<Pick<BillCase, 'provider' | 'serviceDate' | 'description' | 'financials' | 'lineItems' | 'extraction' | 'findings' | 'claimId' | 'claimDeadlines' | 'dateRecoveryAttempted'>>): void;
   verifyCase(caseId: string): Promise<void>;
   applyUnderstandingResult(caseId: string, result: UnderstandingResult): void;
+  refreshClaim(caseId: string): Promise<void>;
+  markDateRecoveryAttempt(caseId: string): void;
+  setAnalysisProvenance(caseId: string, auditId: string, fingerprint: string): void;
   prepareDraft(caseId: string, kind: DraftKind): Promise<string>;
   saveDraft(caseId: string, kind: DraftKind, body: string, locale: Language): string;
   markSubmitted(draftId: string): void;
@@ -106,6 +111,7 @@ export function createUnfoldStore(storage: LocalStorage, options: StoreOptions =
   let pendingSave: Promise<void> = Promise.resolve();
   let hydration: Promise<void> | undefined;
   const inFlightReviews = new Map<string, Promise<void>>();
+  const inFlightClaims = new Map<string, Promise<string | undefined>>();
   let generation = 0;
 
   const store = createStore<UnfoldState>()((set, get) => {
@@ -129,10 +135,15 @@ export function createUnfoldStore(storage: LocalStorage, options: StoreOptions =
         if (!current || current.source === 'sample') return;
         let claimId = current.claimId;
         if (!claimId) {
-          if (step) return; // nothing recorded yet, so nothing to update
+          if (step && !inFlightClaims.has(caseId)) return;
           // Recording the claim also marks its audit complete. Confirming again later sends nothing, so a claim
           // already in dispute is never moved back.
-          claimId = await claims.record(current);
+          let pending = inFlightClaims.get(caseId);
+          if (!pending) {
+            pending = claims.record(current); inFlightClaims.set(caseId, pending);
+            void pending.finally(() => { if (inFlightClaims.get(caseId) === pending) inFlightClaims.delete(caseId); }).catch(() => {});
+          }
+          claimId = await pending;
           if (!claimId || !get().cases.some(item => item.id === caseId)) return;
           const recorded = claimId;
           change({ cases: get().cases.map(item => item.id === caseId ? { ...item, claimId: recorded } : item) });
@@ -201,6 +212,21 @@ export function createUnfoldStore(storage: LocalStorage, options: StoreOptions =
     };
     return {
       ...emptyData(), hydrated: false, hydrationError: null, storageError: null, processingCaseIds: [],
+      markDateRecoveryAttempt(caseId) { if (get().cases.some(item => item.id === caseId)) change({ cases: get().cases.map(item => item.id === caseId ? { ...item, dateRecoveryAttempted: true } : item) }); },
+      setAnalysisProvenance(caseId, auditId, fingerprint) {
+        const current = get().cases.find(item => item.id === caseId);
+        if (!current?.extraction || current.extraction.auditId !== auditId || current.source === 'sample') return;
+        const withSource = { ...current, extraction: { ...current.extraction, inputFingerprint: fingerprint } };
+        const edited = analysisChanged(withSource);
+        if (current.extraction.inputFingerprint === fingerprint && current.entriesEdited === edited) return;
+        change({ cases: get().cases.map(item => item.id === caseId ? { ...withSource, entriesEdited: edited, evidenceContextId: edited ? undefined : auditId } : item) });
+      },
+      async refreshClaim(caseId) {
+        const current = get().cases.find(item => item.id === caseId);
+        if (!current || current.source === 'sample' || !current.verifiedAt || !options.claims && !backendConfigured()) return;
+        if (!current.claimId) { await trackClaim(caseId); return; }
+        try { const deadlines = await claims.deadlines(current.claimId); if (deadlines && get().cases.some(item => item.id === caseId)) change({ cases: get().cases.map(item => item.id === caseId ? { ...item, claimDeadlines: deadlines } : item) }); } catch { /* The local case trail remains usable. */ }
+      },
       setPreferences(patch) { change({ preferences: normalizePreferences({ ...get().preferences, ...patch }) }); },
       toggleSavedTerm(id) { if (!id || id.length > 80) return; change({ savedTermIds: get().savedTermIds.includes(id) ? get().savedTermIds.filter(saved => saved !== id) : [...get().savedTermIds, id] }); },
       setLocale(locale) { if (locale !== 'en' && locale !== 'es') return; change({ locale }); },
@@ -265,7 +291,7 @@ export function createUnfoldStore(storage: LocalStorage, options: StoreOptions =
           const current = caseById(caseId);
           const added = imported.filter(a => !current.attachments.some(existing => existing.id === a.id));
           if (!added.length) return caseId;
-          change({ cases: get().cases.map(c => c.id === caseId ? { ...c, attachments: [...c.attachments, ...added], status: 'needs_details', findings: [], evidenceContextId: undefined, verifiedAt: undefined, updatedAt: now() } : c), events: [...get().events, event(caseId, 'imported')] });
+          change({ cases: get().cases.map(c => c.id === caseId ? { ...c, attachments: [...c.attachments, ...added], status: 'needs_details', findings: [], extraction: undefined, evidenceContextId: undefined, verifiedAt: undefined, updatedAt: now() } : c), events: [...get().events, event(caseId, 'imported')] });
           return caseId;
         }
         const billCase = { ...createManualCase(imported[0], makeId('case'), now()), attachments: imported, profileId: get().activeProfileId };
@@ -282,7 +308,7 @@ export function createUnfoldStore(storage: LocalStorage, options: StoreOptions =
         if (current.attachments.some(item => item.id === attachment.id)) return;
         // A newly imported document can never acquire sample provenance.
         const added = { ...attachment, origin: 'import' as const };
-        change({ cases: get().cases.map(item => item.id === caseId ? { ...item, attachments: [...item.attachments, added], status: 'needs_details', findings: [], evidenceContextId: undefined, verifiedAt: undefined, updatedAt: now() } : item), events: [...get().events, event(caseId, 'imported')] });
+        change({ cases: get().cases.map(item => item.id === caseId ? { ...item, attachments: [...item.attachments, added], status: 'needs_details', findings: [], extraction: undefined, evidenceContextId: undefined, verifiedAt: undefined, updatedAt: now() } : item), events: [...get().events, event(caseId, 'imported')] });
       },
       updateAttachment(caseId, attachmentId, kind) {
         caseById(caseId);
@@ -292,14 +318,17 @@ export function createUnfoldStore(storage: LocalStorage, options: StoreOptions =
         const current = caseById(caseId); const removed = current.attachments.find(item => item.id === attachmentId);
         if (!removed) return;
         if (options.deleteAttachments) await options.deleteAttachments([removed]);
-        change({ cases: get().cases.map(item => item.id === caseId ? { ...item, attachments: item.attachments.filter(a => a.id !== attachmentId), status: 'needs_details', findings: [], evidenceContextId: undefined, verifiedAt: undefined, updatedAt: now() } : item) });
+        change({ cases: get().cases.map(item => item.id === caseId ? { ...item, attachments: item.attachments.filter(a => a.id !== attachmentId), status: 'needs_details', findings: [], extraction: undefined, evidenceContextId: undefined, verifiedAt: undefined, updatedAt: now() } : item) });
       },
       updateCase(caseId, patch) {
         const original = caseById(caseId);
         if (patch.financials && Object.values(patch.financials).some(value => value !== undefined && !isMoney(value))) throw new Error('invalid_money');
         if (patch.lineItems && patch.lineItems.some(line => !isMoney(line.billedCents) || !Number.isSafeInteger(line.units) || line.units < 1)) throw new Error('invalid_line_item');
         const updated = { ...original, ...patch, status: 'needs_details' as const, findings: patch.findings ?? [], verifiedAt: undefined, updatedAt: now() };
-        updated.entriesEdited = updated.source === 'sample' && sampleEntriesChanged(updated);
+        updated.entriesEdited = updated.source === 'sample' ? sampleEntriesChanged(updated) : updated.extraction
+          ? updated.extraction.inputFingerprint ? analysisChanged(updated) : !!original.entriesEdited || !!original.extraction && analysisFingerprint(updated) !== analysisFingerprint(original)
+          : false;
+        if (updated.source === 'manual' && updated.extraction) updated.evidenceContextId = updated.entriesEdited ? undefined : updated.extraction.auditId;
         change({ cases: get().cases.map(item => item.id === caseId ? updated : item) });
       },
       applyUnderstandingResult(caseId, result) {
@@ -308,7 +337,7 @@ export function createUnfoldStore(storage: LocalStorage, options: StoreOptions =
         if (result.details?.lineItems?.some(line => !current.attachments.some(a => a.id === line.evidence.attachmentId))) throw new Error('invalid_source');
         // Merge amounts: adding a document to a case keeps the values that the new reading does not provide.
         if (result.details) get().updateCase(caseId, result.details.financials ? { ...result.details, financials: { ...current.financials, ...result.details.financials } } : result.details);
-        change({ cases: get().cases.map(item => item.id === caseId ? { ...item, evidenceContextId: result.contextId, updatedAt: now() } : item) });
+        change({ cases: get().cases.map(item => item.id === caseId ? { ...item, evidenceContextId: item.entriesEdited && item.source === 'manual' ? undefined : result.contextId, updatedAt: now() } : item) });
       },
       async verifyCase(caseId) {
         ensureWritable();

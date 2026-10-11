@@ -3,7 +3,7 @@ import type { ImportPreparation, ImportResult, ImportSource } from './documents'
 import { NativeActionError, nativeMessages } from './errors';
 import { safeDisplayFilename, validateImportedFile } from './import-validation';
 export type { ImportResult, ImportSource } from './documents';
-export async function appendAttachmentToForm(form:FormData,attachment:DocumentAttachment):Promise<void>{const blob=await readAttachmentBlob(attachment.uri);form.append('files',new File([blob],attachment.name,{type:attachment.mimeType}));}
+export async function appendAttachmentToForm(form:FormData,attachment:DocumentAttachment,field='files'):Promise<void>{const blob=await readAttachmentBlob(attachment.uri);form.append(field,new File([blob],attachment.name,{type:attachment.mimeType}));}
 const PREFIX='unfold-attachment://';
 export const createLocalId=(prefix='document')=>`${prefix}-${crypto.randomUUID()}`;
 function database():Promise<IDBDatabase>{return new Promise((resolve,reject)=>{const request=indexedDB.open('unfold-local-documents',1);request.onupgradeneeded=()=>request.result.createObjectStore('files');request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error);});}

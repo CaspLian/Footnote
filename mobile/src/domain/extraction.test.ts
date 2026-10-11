@@ -2,6 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createManualCase } from './fixtures';
 import { mapGeminiAnalysis, type GeminiAnalyzeResponse } from './extraction';
+import { validateCase } from './review';
+import { comparisonFor, priceFinding } from '../services/backend-mapping';
 
 const response: GeminiAnalyzeResponse = {
   model: 'test-model', mock: true, target_language: 'en',
@@ -28,3 +30,5 @@ test('missing extracted money stays unknown instead of becoming zero', () => {
   const mapped = mapGeminiAnalysis({ ...response, result: { ...response.result, total_billed: null, amount_patient_owes: null } }, billCase, 'en');
   assert.deepEqual(mapped.financials, {});
 });
+
+test('a missing line amount is explicitly unknown, blocks verification and cannot produce a zero-dollar comparison',()=>{const billCase=createManualCase();const mapped=mapGeminiAnalysis({...response,result:{...response.result,line_items:[{...response.result.line_items[0],billed_amount:null}]}},billCase,'en');const line=mapped.lineItems[0];assert.equal(line.amountMissing,true);assert.ok(validateCase({...billCase,...mapped}).some(issue=>issue.field===`${line.id}.billedCents`&&issue.key==='required'));const benchmark={cpt_code:'99284',medicare_rate:100,medicare_description:'Visit',setting:'facility',source:'csv',error:null};assert.equal(comparisonFor(line,benchmark,'now'),null);assert.equal(priceFinding(line,{source:'CMS',url:'https://cms.gov',amountCents:10000,retrievedAt:'now',context:{en:'Reference',es:'Reference'}}),null);const zero=mapGeminiAnalysis({...response,result:{...response.result,line_items:[{...response.result.line_items[0],billed_amount:0}]}},billCase,'en').lineItems[0];assert.equal(zero.amountMissing,false,'an explicitly stated zero is distinct from a missing value');});

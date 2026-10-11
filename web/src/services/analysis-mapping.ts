@@ -20,7 +20,7 @@ export interface ConnectedCase extends MedicalCase {
   price_checks: PriceCheck[];
 }
 
-/** The web app's two languages, as the locales the backend takes (it offers 39: GET /api/v1/languages). */
+/** The web app's two languages, as the locales the backend takes (it offers 42: GET /api/v1/languages). */
 export const LOCALE_FOR: Record<Language, string> = { en: 'en-US', es: 'es-MX' };
 
 const ABOVE: PriceCheck['flag'][] = ['above_typical', 'far_above_typical'];

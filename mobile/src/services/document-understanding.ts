@@ -8,12 +8,14 @@ export interface UnderstandingRequest {
   workingLanguage: WorkingLanguage;
   profile?: FamilyProfile;
   personalContext: PersonalContext;
+  savedAnalysisId?: string;
+  dateRecoveryAttempted?: boolean;
 }
 export interface UnderstandingResult {
   /** An opaque backend context reference for a later evidence review and live agent. */
   contextId?: string;
   /** extraction and findings come from the Gemini adapter (services/gemini-understanding.ts). */
-  details?: Partial<Pick<BillCase, 'provider' | 'serviceDate' | 'financials' | 'lineItems' | 'extraction' | 'findings'>>;
+  details?: Partial<Pick<BillCase, 'provider' | 'serviceDate' | 'financials' | 'lineItems' | 'extraction' | 'findings' | 'claimId' | 'claimDeadlines' | 'dateRecoveryAttempted'>>;
   mode: 'extracted' | 'manual' | 'synthetic';
 }
 export interface UnderstandingAdapter {
@@ -28,6 +30,7 @@ let adapter: UnderstandingAdapter = {
   },
 };
 export function configureUnderstandingAdapter(next: UnderstandingAdapter) { adapter = next; }
+export class UnderstandingFailure extends Error {}
 export const understandingService: UnderstandingAdapter = { understand: (request, options) => adapter.understand(request, options) };
 
 export type UnderstandingSnapshot = { status: 'idle' | 'working' | 'complete' | 'error'; phase: UnderstandingPhase; result?: UnderstandingResult; error?: string };
@@ -49,8 +52,8 @@ export class UnderstandingController {
     try {
       const result = await this.service.understand(request, { signal: abort.signal, onPhase: phase => { if (this.abort === abort && !abort.signal.aborted) this.update({ status: 'working', phase }); } });
       if (this.abort === abort && !abort.signal.aborted) this.update({ status: 'complete', phase: 'organizing', result });
-    } catch {
-      if (this.abort === abort && !abort.signal.aborted) this.update({ status: 'error', phase: this.snapshot.phase, error: 'We couldn’t finish understanding these documents. Your copies are saved. Try again, or enter the details yourself.' });
+    } catch (error) {
+      if (this.abort === abort && !abort.signal.aborted) this.update({ status: 'error', phase: this.snapshot.phase, error: error instanceof UnderstandingFailure ? `${error.message} Your copies are saved. Try again, or enter the details yourself.` : 'We couldn’t finish understanding these documents. Your copies are saved. Try again, or enter the details yourself.' });
     }
   }
 }

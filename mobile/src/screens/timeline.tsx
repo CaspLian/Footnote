@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { router } from 'expo-router';
 import { BillCase, formatDate, formatMoney, isISODate } from '@/domain';
@@ -20,6 +20,7 @@ export function Track() {
   return <TimelineBody key={c.id} billCase={c} tab />;
 }
 function TimelineBody({ billCase: c, tab = false }: { billCase: BillCase; tab?: boolean }) {
+  useEffect(() => { void useUnfoldStore.getState().refreshClaim(c.id); }, [c.id]);
   const { colors } = useTheme();
   const cases = useUnfoldStore(s => s.cases), events = useUnfoldStore(s => s.events), profiles = useUnfoldStore(s => s.profiles);
   const [choose, setChoose] = useState(false), [showDeadline, setShowDeadline] = useState(!!c.noticeDeadline), [error, setError] = useState(''), [saved, setSaved] = useState<'reminder'|'deadline'>();

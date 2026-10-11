@@ -2,6 +2,7 @@ import type { BenchmarkService, DocumentService } from '../domain/types';
 import { backendConfigured, lookupBenchmark, type BackendBenchmark } from './backend';
 import { comparisonFor, normalizeCode, reviewFindings } from './backend-mapping';
 import { benchmarkService as localBenchmarks, documentService as localDocuments } from './local-services';
+import { getCaseSummary } from '../domain/review';
 
 /**
  * With EXPO_PUBLIC_API_URL set, imported and manually entered cases are reviewed with the backend's Medicare rates
@@ -16,7 +17,8 @@ export const documentService: DocumentService = {
     // A backend that cannot be reached fails the review, so the processing screen offers to try again.
     await Promise.all(codes.map(async code => { benchmarks.set(code, await lookupBenchmark(code)); }));
     // local.summary already prefers Gemini's summary (domain/review.ts).
-    return { mode: local.mode, findings: reviewFindings(billCase, benchmarks, new Date().toISOString()), summary: local.summary };
+    const connected = { ...billCase, reviewMode: 'connected' as const };
+    return { mode: 'connected', findings: reviewFindings(billCase, benchmarks, new Date().toISOString()), summary: { en: getCaseSummary(connected, 'en'), es: getCaseSummary(connected, 'es') } };
   },
 };
 

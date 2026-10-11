@@ -1,39 +1,40 @@
 import { isISODate } from '../domain/money';
-import { analyzeBillCase } from './gemini-api';
-import { backendConfigured, backendLocale } from './backend';
+import { mapGeminiAnalysis } from '../domain/extraction';
+import type { VoiceChoice } from '../domain/preferences';
+import { analyzeBillCase, uploadProblem, type AppendDocumentPart } from './gemini-api';
+import { backendLocale, loadAudit } from './backend';
 import { prepareSpeech } from './backend-speech';
-import { configureUnderstandingAdapter, type UnderstandingAdapter } from './document-understanding';
+import { voiceKeyFor } from './voice-catalog';
+import { recoverBillDates } from './image-date-recovery';
+import { UnderstandingFailure, type UnderstandingAdapter } from './document-understanding';
 
-/**
- * The Gemini adapter for Unfold's "Understanding your documents" step (screens/understanding.tsx): every imported
- * page goes to POST /api/v1/analyze in the user's working language. The result fills the verify screen, and the
- * saved analysis id (Tiger Data) becomes the case's evidence context, which the ElevenLabs reading and the live agent
- * use. Without EXPO_PUBLIC_API_URL the default adapter stays: documents are saved and entered manually.
- */
-export const geminiUnderstanding: UnderstandingAdapter = {
-  async understand(request, { signal, onPhase }) {
+export function createGeminiUnderstanding(deps: { appendPart: AppendDocumentPart; currentVoice?: () => VoiceChoice; resolveVoice?: typeof voiceKeyFor; prepare?: typeof prepareSpeech; markDateRecovery?: (caseId: string) => void }): UnderstandingAdapter {
+  return { async understand(request, { signal, onPhase }) {
     signal.throwIfAborted();
-    if (!request.attachments.length) throw new Error('documents_required');
-    if (!request.attachments.some(item => item.origin === 'import')) return { mode: request.attachments.every(item => item.origin === 'sample') ? 'synthetic' : 'manual' };
+    const imports = request.attachments.filter(item => item.origin === 'import');
+    if (!request.attachments.length) throw new UnderstandingFailure('Add a document before continuing.');
+    if (!imports.length) return { mode: request.attachments.every(item => item.origin === 'sample') ? 'synthetic' : 'manual' };
+    const problem = uploadProblem(imports); if (problem) throw new UnderstandingFailure(problem);
     onPhase('reading');
-    const mapped = await analyzeBillCase(request, backendLocale(request.workingLanguage), signal);
-    onPhase('organizing');
+    let mapped;
+    try {
+      mapped = request.savedAnalysisId
+        ? mapGeminiAnalysis(await loadAudit(request.savedAnalysisId, signal), request, 'en')
+        : await analyzeBillCase(request, backendLocale(request.workingLanguage), deps.appendPart, signal);
+    } catch (error) {
+      if (signal.aborted) throw error;
+      throw new UnderstandingFailure(error instanceof Error ? error.message : 'The analysis could not be loaded.');
+    }
+    signal.throwIfAborted(); onPhase('organizing');
+    const recovered = await recoverBillDates(request, mapped, deps.appendPart, signal, deps.markDateRecovery);
+    signal.throwIfAborted();
     const auditId = mapped.extraction.auditId;
-    // Start the ElevenLabs reading now, so Listen on the review plays at once (only when Gemini found bill lines).
-    if (auditId && mapped.lineItems.length) void prepareSpeech(auditId).catch(() => {});
-    return {
-      mode: 'extracted',
-      contextId: auditId,
-      details: {
-        ...(mapped.provider ? { provider: mapped.provider } : {}),
-        ...(mapped.serviceDate && isISODate(mapped.serviceDate) ? { serviceDate: mapped.serviceDate } : {}),
-        financials: mapped.financials, lineItems: mapped.lineItems, extraction: mapped.extraction, findings: mapped.findings,
-      },
-    };
-  },
-};
-
-/** Called once from the root layout. */
-export function installGeminiUnderstanding(): void {
-  if (backendConfigured()) configureUnderstandingAdapter(geminiUnderstanding);
+    if (auditId && mapped.lineItems.length) void (deps.resolveVoice ?? voiceKeyFor)(deps.currentVoice?.() ?? 'calm', mapped.extraction.language ?? backendLocale(request.workingLanguage))
+      .then(voice => { if (!signal.aborted) return (deps.prepare ?? prepareSpeech)(auditId, voice); }).catch(() => {});
+    return { mode: 'extracted', contextId: auditId, details: {
+      ...(mapped.provider ? { provider: mapped.provider } : {}),
+      ...(mapped.serviceDate && isISODate(mapped.serviceDate) ? { serviceDate: mapped.serviceDate } : {}),
+      financials: mapped.financials, lineItems: mapped.lineItems, extraction: mapped.extraction, findings: mapped.findings, ...recovered,
+    } };
+  } };
 }

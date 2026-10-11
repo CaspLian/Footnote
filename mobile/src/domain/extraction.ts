@@ -1,4 +1,6 @@
 import type { BillCase, DocumentAttachment, Evidence, ExtractedAnalysis, Finding, Language, LineItem, LocalizedText } from './types';
+import { analysisFingerprint } from './analysis-provenance';
+import { isISODate } from './money';
 
 export interface GeminiLineItem {
   cpt_code?: string | null;
@@ -31,7 +33,11 @@ export interface GeminiAnalyzeResponse {
 }
 
 const localized = (value: string, _language: Language): LocalizedText => ({ en: value, es: value });
-const cents = (amount?: number | null) => amount == null || !Number.isFinite(amount) || amount < 0 ? undefined : Math.round(amount * 100);
+const cents = (amount?: number | null) => {
+  if (amount == null || !Number.isFinite(amount) || amount < 0) return undefined;
+  const value = Math.round(amount * 100);
+  return Number.isSafeInteger(value) ? value : undefined;
+};
 
 export function mapGeminiAnalysis(response: GeminiAnalyzeResponse, billCase: Pick<BillCase, 'attachments'>, language: Language): { extraction: ExtractedAnalysis; provider?: string; serviceDate?: string; financials: Partial<BillCase['financials']>; lineItems: LineItem[]; findings: Finding[] } {
   const result = response.result;
@@ -43,7 +49,8 @@ export function mapGeminiAnalysis(response: GeminiAnalyzeResponse, billCase: Pic
     const description = line.original_description || line.plain_description;
     const sourceText = [line.date_of_service, line.cpt_code, description, line.billed_amount == null ? '' : `$${line.billed_amount.toFixed(2)}`].filter(Boolean).join(' · ');
     const evidence: Evidence = { attachmentId: attachment?.id ?? '', page: pageNumber ?? 1, label: localized(`Line ${index + 1} · ${attachment ? (pageNumber ? `page ${pageNumber} · ${attachment.name}` : `${attachment.name} · source page not identified`) : 'imported document'}`, language), excerpt: localized(sourceText, language) };
-    return { id: `gemini-line-${index + 1}`, description: localized(description, language), code: line.cpt_code ?? undefined, date: line.date_of_service ?? '', units: 1, billedCents: cents(line.billed_amount) ?? 0, evidence };
+    const billed = cents(line.billed_amount);
+    return { id: `gemini-line-${index + 1}`, description: localized(description, language), code: line.cpt_code ?? undefined, date: line.date_of_service ?? '', units: 1, billedCents: billed ?? 0, amountMissing: billed === undefined, evidence };
   });
   const issues = result.line_items.flatMap((line, index) => (line.possible_issues ?? []).map(issue => ({ index, issue })));
   // The same notes by line id, so the review can attach each question to its line's evidence.
@@ -63,6 +70,7 @@ export function mapGeminiAnalysis(response: GeminiAnalyzeResponse, billCase: Pic
   const totalBilledCents = cents(result.total_billed);
   const patientOwesCents = cents(result.amount_patient_owes);
   const extraction: ExtractedAnalysis = {
+    language: response.target_language,
     model: response.model,
     mock: response.mock,
     documentType: result.document_type,
@@ -76,7 +84,7 @@ export function mapGeminiAnalysis(response: GeminiAnalyzeResponse, billCase: Pic
     notes,
     parsedAt: new Date().toISOString(),
   };
-  return {
+  const mapped = {
     extraction,
     provider: result.provider_name ?? undefined,
     serviceDate: lineItems.find(line => line.date)?.date,
@@ -87,4 +95,6 @@ export function mapGeminiAnalysis(response: GeminiAnalyzeResponse, billCase: Pic
     lineItems,
     findings,
   };
+  extraction.inputFingerprint = analysisFingerprint({ provider: mapped.provider ?? '', serviceDate: isISODate(mapped.serviceDate ?? '') ? mapped.serviceDate! : '', financials: mapped.financials, lineItems });
+  return mapped;
 }

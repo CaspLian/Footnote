@@ -28,6 +28,11 @@ hospital-bill pages on a phone, send the ordered JPEG pages to Gemini, and verif
 
 ## Remaining
 
+The current integrated flow on `frontend-ui-v3` is Camera → Your documents → Understanding → Verify → Processing
+→ Review. Native upload parts keep the Expo-compatible `bytes()` implementation and every file copy is awaited.
+The restored Aarush UI and new voice modules require a rebuilt development client. Latest integration checks and
+device gaps are tracked in [frontend-ui-v3.md](frontend-ui-v3.md).
+
 - Finish Android Studio's first-run SDK setup, enable USB debugging, and install/run the app on a physical Android.
 - Verify camera permission, retake/remove page flow, multi-page capture, upload, Gemini extraction, and retry with
   the phone and backend on the same Wi-Fi.

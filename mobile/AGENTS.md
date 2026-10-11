@@ -11,10 +11,13 @@ The guidance below is Expo's generated template.
   pages. Photos and PDFs go together to `POST /api/v1/analyze` (`src/services/gemini-api.ts`), and
   `src/domain/extraction.ts` turns the answer into entries the user verifies. Physical Android capture still needs
   device testing.
-- Everything else from the backend goes through `src/services/backend.ts` when `EXPO_PUBLIC_API_URL` is set
+- The root layout installs `src/native/backend-adapters.ts` when `EXPO_PUBLIC_API_URL` is set. Understanding runs
+  `createGeminiUnderstanding`, reopens saved audits, and can try image-only missing-date recovery once per case.
+  Settings reads health; Languages checks supported locales. Everything else goes through `src/services/backend.ts`
   (`.env.example`). That covers the review's Medicare comparisons and Gemini's notes (`src/services/connected-services.ts`
-  and `backend-mapping.ts`, with tests), and the ElevenLabs reading (`src/native/backend-voice.tsx`, `expo-audio`).
-  Unset, the app stays fully local. Device narration still uses `expo-speech`.
+  and `backend-mapping.ts`, with tests), the voice catalog/samples and chosen-voice ElevenLabs reading, and claim
+  lifecycle/deadline refresh. Live voice uses the server session adapter and LiveKit/WebRTC SDK; the orb offers a
+  separate bounded recorded-question fallback on unavailable/error. Unset, the app stays fully local.
 - Adding a native module means rebuilding the development build.
 - The backend contract the app calls, including multi-file uploads and how a phone reaches the backend, is in
   `docs/API_CONTRACTS.md`.

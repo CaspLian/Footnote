@@ -1,0 +1,10 @@
+import assert from 'node:assert/strict';
+import test, { before } from 'node:test';
+import { createManualCase } from '../domain/fixtures';
+delete process.env.EXPO_PUBLIC_API_URL;
+let backendConfigured: typeof import('./backend').backendConfigured;
+let claimTracker: typeof import('./claim-tracker').claimTracker;
+let voiceKeyFor: typeof import('./voice-catalog').voiceKeyFor;
+let documentService: typeof import('./connected-services').documentService;
+before(async()=>{ ({backendConfigured}=await import('./backend')); ({claimTracker}=await import('./claim-tracker')); ({voiceKeyFor}=await import('./voice-catalog')); ({documentService}=await import('./connected-services')); });
+test('without a backend every connected flow remains local and sends no requests',async()=>{let sent=0;globalThis.fetch=(async()=>{sent++;throw new Error('unexpected request');}) as typeof fetch;const c=createManualCase(undefined,'offline','2026-10-10');c.provider='Test Clinic';c.serviceDate='2026-10-01';assert.equal(backendConfigured(),false);assert.equal(await claimTracker.record(c),undefined);assert.equal(await voiceKeyFor('calm','en-US'),undefined);assert.equal((await documentService.processBill(c)).mode,'manual');const {createVoiceAgentSessionAdapter}=await import('./voice-agent-session');const {AgentUnavailable}=await import('./voice-agent');const fallback={connect:async()=>{throw new AgentUnavailable('Local voice unavailable');}};await assert.rejects(createVoiceAgentSessionAdapter({fallback}).connect({language:'en',agentLanguage:'en',voice:'calm',evidence:[],preferences:{explanationDepth:'simple',goal:'understand'}},{signal:new AbortController().signal,onStatus:()=>{},onMessage:()=>{}}),/Local voice unavailable/);assert.equal(sent,0);});

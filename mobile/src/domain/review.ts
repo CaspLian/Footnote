@@ -11,6 +11,7 @@ export function validateCase(billCase: BillCase): ValidationIssue[] {
     if (value !== undefined && !isMoney(value)) issues.push({ field, key: 'invalidMoney' });
   }
   for (const line of billCase.lineItems) {
+    if (line.amountMissing) issues.push({ field: `${line.id}.billedCents`, key: 'required' });
     if (!isMoney(line.billedCents)) issues.push({ field: `${line.id}.billedCents`, key: 'invalidMoney' });
     if (!Number.isSafeInteger(line.units) || line.units < 1) issues.push({ field: `${line.id}.units`, key: 'invalidUnits' });
   }
@@ -21,13 +22,18 @@ export function getCaseSummary(billCase: BillCase, language: Language): string {
   const f = billCase.financials;
   const balance = formatMoney(f.remainingCents, language);
   const derived = expectedRemaining(f);
-  if (billCase.extraction) {
+  if (billCase.extraction && !(billCase.entriesEdited && billCase.source === 'manual')) {
     const extractedSummary = billCase.extraction.summary[language];
     return billCase.entriesEdited
       ? language === 'en'
         ? `Based on your confirmed entries: ${extractedSummary}`
         : `Según los datos que confirmaste: ${extractedSummary}`
       : extractedSummary;
+  }
+  if (billCase.reviewMode === 'connected') {
+    return language === 'en'
+      ? `${f.remainingCents === undefined ? 'No statement balance has been confirmed.' : `Your confirmed statement balance is ${balance}.`} Each billing code you confirmed was compared with Medicare's national rate (CMS 2026). A difference is a reason to ask, not proof of an error. Review the original documents and contact the billing office with any questions.`
+      : `${f.remainingCents === undefined ? 'No se ha confirmado un saldo.' : `El saldo que confirmaste es de ${balance}.`} Cada código confirmado se comparó con la tarifa nacional de Medicare (CMS 2026). Una diferencia es un motivo para preguntar, no una prueba de un error. Revisa los documentos originales y consulta tus dudas con facturación.`;
   }
   if (billCase.source === 'manual' || billCase.reviewMode === 'manual') {
     return language === 'en'

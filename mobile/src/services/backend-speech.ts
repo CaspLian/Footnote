@@ -7,16 +7,17 @@ import { backendUrl, speakAnalysis } from './backend';
 const prepared = new Map<string, Promise<string>>();
 
 /** Starts (or reuses) the reading of a saved analysis; resolves to the absolute URL of its MP3. */
-export function prepareSpeech(auditId: string): Promise<string> {
-  let ready = prepared.get(auditId);
+export function prepareSpeech(auditId: string, voice?: string): Promise<string> {
+  const key = `${auditId}|${voice ?? ''}`;
+  let ready = prepared.get(key);
   if (!ready) {
-    ready = speakAnalysis(auditId).then(speech => {
+    ready = speakAnalysis(auditId, voice).then(speech => {
       if (!speech.ok || !speech.audio_url) throw new Error(speech.error_code ?? 'no_audio');
       return backendUrl(speech.audio_url);
     });
     // A failure (offline, quota) is not remembered: the next request tries again.
-    ready.catch(() => { if (prepared.get(auditId) === ready) prepared.delete(auditId); });
-    prepared.set(auditId, ready);
+    ready.catch(() => { if (prepared.get(key) === ready) prepared.delete(key); });
+    prepared.set(key, ready);
   }
   return ready;
 }

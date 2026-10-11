@@ -15,7 +15,7 @@ export const claimTracker: ClaimTracker = {
     const items = billCase.lineItems.flatMap(line => {
       const code = normalizeCode(line.code);
       const description = (line.description.en || line.evidence.excerpt.en).trim();
-      return code && description && line.billedCents > 0 ? [{ code, description, amount: line.billedCents / 100 }] : [];
+      return !line.amountMissing && code && description && line.billedCents > 0 ? [{ code, description, amount: line.billedCents / 100 }] : [];
     });
     if (!items.length) return undefined;
     const claim = await recordClaim({

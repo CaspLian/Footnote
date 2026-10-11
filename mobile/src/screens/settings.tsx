@@ -1,7 +1,7 @@
 import { OrbMark } from '@/components/orb-mark';
 import { LanguageFlag } from '@/components/language-picker';
 import { languageOption } from '@/domain/languages';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 import { router } from 'expo-router';
 import { useUnfoldStore } from '@/store';
@@ -13,10 +13,23 @@ import { confirmAction } from '@/components/confirm';
 import { SettingsDivider, SettingsGroup, SettingsLink, SettingsPicker, SettingsToggle } from '@/components/settings-controls';
 import { openProfiles } from '@/components/navigation';
 import { space } from '@/theme';
+import { backendConfigured, backendHealth, backendLocale } from '@/services/backend';
+import { resolveVoiceKey } from '@/services/voice-catalog';
+import { useVoiceCatalog } from '@/components/use-voice-catalog';
 
 export function Settings() {
   const privacy = usePrivacy();
   const prefs = useUnfoldStore(s => s.preferences);
+  const catalog = useVoiceCatalog();
+  const resolved = catalog?.voices.find(v => v.key === resolveVoiceKey(prefs.voice, backendLocale(prefs.workingLanguage), catalog));
+  const [connection, setConnection] = useState('Checking connection…');
+  const [healthRevision, setHealthRevision] = useState(0);
+  useEffect(() => {
+    if (!backendConfigured()) return;
+    const abort = new AbortController();
+    void backendHealth(abort.signal).then(result => { if (!abort.signal.aborted) setConnection(result.mock ? 'Connected · MOCK sample mode' : 'Connected to ClaimPulse'); }).catch(() => { if (!abort.signal.aborted) setConnection('Could not reach ClaimPulse. Check the connection and try again.'); });
+    return () => abort.abort();
+  }, [healthRevision]);
   const context = useUnfoldStore(s => s.personalContext);
   const cases = useUnfoldStore(s => s.cases);
   const profiles = useUnfoldStore(s => s.profiles);
@@ -48,7 +61,7 @@ export function Settings() {
       <SettingsPicker title="App theme" value={prefs.theme} options={[{ label: 'System', value: 'system' }, { label: 'Light', value: 'light' }, { label: 'Dark', value: 'dark' }]} onChange={theme => set({ theme })} />
     </SettingsGroup>
     <SettingsGroup title="Voice & explanations" note="Choose a language and voice for two-way conversations. Live ElevenLabs agents will connect through the backend.">
-      <SettingsLink title="Agent voice" detail={`${voice.name} · ElevenLabs placeholder`} leading={<OrbMark/>} onPress={() => router.navigate('/voices')} />
+      <SettingsLink title="Agent voice" detail={`${voice.name} · ${backendConfigured() ? resolved?.name ?? 'ElevenLabs' : 'ElevenLabs placeholder'}`} leading={<OrbMark/>} onPress={() => router.navigate('/voices')} />
       <SettingsDivider /><SettingsPicker title="Explanation detail" value={context.explanationDepth} options={[{ label: 'Simple', value: 'simple' }, { label: 'Detailed', value: 'detailed' }]} onChange={useUnfoldStore.getState().setExplanationDepth} />
     </SettingsGroup>
     <SettingsGroup title="Interaction" note="System accessibility preferences are always respected.">
@@ -71,6 +84,7 @@ export function Settings() {
       <SettingsDivider /><SettingsLink title="Delete imported cases" detail={`${cases.filter(c => c.source === 'manual').length} imported ${cases.filter(c => c.source === 'manual').length === 1 ? 'case' : 'cases'}`} icon="files" danger onPress={clearImports} disabled={busy || !cases.some(c => c.source === 'manual')} />
     </SettingsGroup>
     {error ? <Feedback danger onDismiss={() => setError('')} text={error} /> : null}
-    <Group gap={space.sm}><Txt variant="label">Unfold · Prototype 0.1</Txt><Txt variant="caption" muted>No account. No family cloud. Sponsor services are not connected.</Txt></Group>
+    {backendConfigured() ? <SettingsGroup title="Backend connection"><SettingsLink title={connection} detail="Tap to check again" icon="document" onPress={() => { setConnection('Checking connection…'); setHealthRevision(v => v + 1); }} /></SettingsGroup> : null}
+    <Group gap={space.sm}><Txt variant="label">Unfold · Prototype 0.1</Txt><Txt variant="caption" muted>{backendConfigured() ? 'Bills you analyze are sent to your ClaimPulse backend (Gemini, Medicare rates, Tiger Data, ElevenLabs).' : 'No account. No family cloud. Sponsor services are not connected.'}</Txt></Group>
   </Screen>;
 }

@@ -51,7 +51,7 @@ The sample contains no insurer denial. Insurer-review text requires the user to 
 | --- | --- |
 | `mobile/src/app`, `mobile/src/screens` | Native routes and screens |
 | `mobile/src/domain` | Cents, validation, case/evidence types and synthetic fixtures |
-| `mobile/src/services` | Local document, benchmark and draft adapters; sample assets |
+| `mobile/src/services` | Connected Gemini understanding, Medicare review, Tiger Data claim tracking, voice catalog/speech/session adapters; local drafts and Guide |
 | `mobile/src/store` | Persistence, revisions and recorded actions |
 | `mobile/src/native` | Imports, preview, exports and narration |
 | `mobile/src/theme`, `mobile/src/components` | Geist, palette, Phosphor configuration and shared UI |

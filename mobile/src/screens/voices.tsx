@@ -8,11 +8,15 @@ import { LanguagePicker } from '@/components/language-picker';
 import { useUnfoldStore } from '@/store';
 import { voiceChoices } from '@/domain/preferences';
 import { voicePreviewService } from '@/services/voice-preview';
+import { backendConfigured, backendLocale } from '@/services/backend';
+import { resolveVoiceKey } from '@/services/voice-catalog';
+import { useVoiceCatalog } from '@/components/use-voice-catalog';
 import { space, useTheme } from '@/theme';
 
 const choices = voiceChoices.filter(v => v.id !== 'device');
 export function Voices() {
   const prefs = useUnfoldStore(s => s.preferences);
+  const catalog = useVoiceCatalog();
   const { colors, reducedMotion } = useTheme();
   const [initialIndex] = useState(() => Math.max(0, choices.findIndex(v => v.id === prefs.voice)));
   const [index, setIndex] = useState(initialIndex);
@@ -42,6 +46,7 @@ export function Voices() {
     if (width) change(Math.round(event.nativeEvent.contentOffset.x / width));
   }
   useEffect(() => () => { request.current++; void player.current?.stop(); }, []);
+  useEffect(() => () => { stop(); }, [prefs.workingLanguage, stop]);
 
   async function preview(voiceId: typeof choices[number]['id']) {
     if (status !== 'idle') { stop(); return; }
@@ -51,6 +56,7 @@ export function Voices() {
       const handle = await voicePreviewService.play(voiceId, prefs.workingLanguage);
       if (token !== request.current) { await handle.stop(); return; }
       player.current = handle; setStatus('speaking');
+      void handle.finished?.then(() => { if (token === request.current) { player.current = undefined; setStatus('idle'); } });
     } catch (e) {
       if (token === request.current) { setStatus('idle'); setError(e instanceof Error ? e.message : 'The sample couldn’t play. Try again.'); }
     }
@@ -62,12 +68,12 @@ export function Voices() {
         <Screen contentWidth={720} showStorageError={page === index} testID={page === index ? 'voices' : undefined} footer={<Button title={selected && page === index ? `${voice.name} saved` : `Choose ${voice.name}`} onPress={() => { stop(); useUnfoldStore.getState().setPreferences({ voice: voice.id }); setSelected(true); if (router.canGoBack()) router.back(); }} />}>
           <Group gap={space.lg}><Txt variant="title">Find your voice.</Txt><Txt muted>A voice for asking questions and talking through your next step.</Txt></Group>
           <View pointerEvents="none" style={{ alignItems: 'center', paddingVertical: space.lg }}><ParticleOrb size={220} enter={false} interactive={false} active={page === index} status={page === index ? status : 'idle'} label={`${voice.name} voice illustration`} /></View>
-          <Group gap={space.sm} style={{ paddingHorizontal: space.md, alignItems: 'center' }}><Txt variant="title" style={{ textAlign: 'center' }}>{voice.name}</Txt><Txt muted style={{ textAlign: 'center' }}>{voice.id === 'calm' ? 'Steady and reassuring. Space to take it in.' : voice.id === 'clear' ? 'Crisp and conversational. Straight to the point.' : 'Gentle and friendly. One step at a time.'}</Txt><Txt variant="caption" muted>ElevenLabs agent voice · placeholder</Txt></Group>
+          <Group gap={space.sm} style={{ paddingHorizontal: space.md, alignItems: 'center' }}><Txt variant="title" style={{ textAlign: 'center' }}>{voice.name}</Txt><Txt muted style={{ textAlign: 'center' }}>{voice.id === 'calm' ? 'Steady and reassuring. Space to take it in.' : voice.id === 'clear' ? 'Crisp and conversational. Straight to the point.' : 'Gentle and friendly. One step at a time.'}</Txt><Txt variant="caption" muted>{catalog ? (() => { const resolved = catalog.voices.find(v => v.key === resolveVoiceKey(voice.id, backendLocale(prefs.workingLanguage), catalog)); return `ElevenLabs voice · ${resolved?.name ?? 'Language default'}${resolved?.accent ? ` (${resolved.accent})` : ''}`; })() : backendConfigured() ? 'ElevenLabs voice · loading catalog' : 'ElevenLabs agent voice · placeholder'}</Txt></Group>
           <ButtonRow><IconButton label="Previous voice" name="back" disabled={page === 0} onPress={() => move(page - 1)} /><Button title={status === 'idle' || page !== index ? 'Preview voice' : 'Stop preview'} icon={status === 'idle' || page !== index ? 'play' : 'stop'} variant="secondary" onPress={() => void preview(voice.id)} /><IconButton label="Next voice" name="next" disabled={page === choices.length - 1} onPress={() => move(page + 1)} /></ButtonRow>
           <Txt variant="caption" muted style={{ textAlign: 'center' }}>{page + 1} / {choices.length} · Swipe to explore</Txt>
           {error && page === index ? <Feedback text={error} /> : null}
           <Group gap={space.md}><Txt variant="section">Working language</Txt><LanguagePicker value={prefs.workingLanguage} /></Group>
-          <Txt variant="caption" muted>Voice samples and live conversations will use the connected agent’s voice catalog. These names are preferences, not provider voice IDs.</Txt>
+          <Txt variant="caption" muted>{backendConfigured() ? 'Samples come from your ClaimPulse backend and are in English; readings use your working language.' : 'Voice samples and live conversations will use the connected agent’s voice catalog. These names are preferences, not provider voice IDs.'}</Txt>
         </Screen>
       </View>)}
     </ScrollView> : null}

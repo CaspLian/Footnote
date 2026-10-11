@@ -1,6 +1,14 @@
 # Service contracts
 
-The current adapters are local TypeScript implementations. There is no FastAPI server, network adapter, endpoint URL, API key or sponsor SDK in the app. Review/draft interfaces live in `mobile/src/domain/types.ts`; Guide's content interface lives in `mobile/src/services/guide-explanations.ts`. Implementations live in `mobile/src/services` and `mobile/src/native`.
+With `EXPO_PUBLIC_API_URL` unset, the adapters use local TypeScript implementations. Review/draft interfaces live in `mobile/src/domain/types.ts`; Guide's content interface lives in `mobile/src/services/guide-explanations.ts`. Implementations live in `mobile/src/services` and `mobile/src/native`.
+
+## Connected build (`EXPO_PUBLIC_API_URL` set)
+
+The root layout installs `native/backend-adapters.ts`. Confirmed imports use Gemini through `/api/v1/analyze`, saved answers reopen through `/audits/{id}`, and verified codes use `/benchmarks/{code}` with `ReviewResult.mode: 'connected'`. Claim actions mirror into `/claims` while the local trail remains available. Optional missing-date recovery uses `/analyze-image` once per case and reuses its claim.
+
+The voice catalog maps Calm/Clear/Warm to real backend keys; previews, saved readings and audio use `/voice/voices`, `/voice/voices/{key}/sample`, `/voice/speak` and `/voice/audio/{id}`. The live adapter uses `/voice/agent/session` with form fields only, loading evidence on the server. A separate recorded-question fallback uses `/voice/analyze`. Settings and Languages read health and supported locales. Profiles, ZIP, insurer and preferences are not uploaded with bill/session requests. Provider keys stay on the server.
+
+Drafts and Guide content remain local. The proposed map below describes future replacements for these original local boundaries; the implemented HTTP contract is [API_CONTRACTS.md](API_CONTRACTS.md).
 
 ## Current adapters and future endpoint map
 
@@ -20,9 +28,9 @@ The endpoint names below are a proposed handoff contract, not deployed routes.
 
 Local `file://` URIs must not be treated as remotely readable documents. A future upload flow needs explicit user-facing upload behavior, a remote document identifier, content validation and deletion semantics before enabling extraction. Preserve manual verification even when extraction is added.
 
-`ReviewResult.mode` currently supports only `synthetic` and `manual`. Introduce an explicit remote provenance mode and validate its evidence before enabling a connected review adapter; never relabel an imported document as a synthetic sample to fit the existing type.
+`ReviewResult.mode` supports `synthetic`, `manual` and `connected`. Connected findings use the confirmed line's evidence and Medicare reference context; imported documents are never relabeled as synthetic samples.
 
-## Sponsor status
+## Sponsor status in the local build
 
 | Service | Status and intended adapter role |
 | --- | --- |

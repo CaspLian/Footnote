@@ -162,7 +162,7 @@ export interface Backend {
   readonly configured: boolean;
   /** The backend's address for a path it returned, such as `speech.audio_url`. */
   url(path: string): string;
-  /** The 39 locales answers can be written and spoken in: {"en-US": "English (United States)", ...}. */
+  /** The 42 locales answers can be written and spoken in: {"en-US": "English (United States)", ...}. */
   languages(): Promise<Record<string, string>>;
   /** Bill pages (photos or PDFs, in order) and/or a typed question -> Gemini -> Medicare price check -> saved. */
   analyze(documents: Blob[], options?: { language?: string; text?: string }): Promise<AnalyzeResponse>;

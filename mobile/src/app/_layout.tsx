@@ -12,7 +12,7 @@ import { Geist_700Bold } from '@expo-google-fonts/geist/700Bold';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { useUnfoldStore } from '@/store';
-import { installGeminiUnderstanding } from '@/services/gemini-understanding';
+import { installBackendAdapters } from '@/native/backend-adapters';
 import { PrivacyProvider } from '@/components/privacy';
 import { WebShell } from '@/components/web-shell';
 import { UnfoldLoader } from '@/components/loader';
@@ -23,7 +23,7 @@ import { AppearanceProvider, useTheme, fonts, type } from '@/theme';
 import { ThemeProvider, DarkTheme, DefaultTheme } from 'expo-router/react-navigation';
 
 void SplashScreen.preventAutoHideAsync().catch(() => {});
-installGeminiUnderstanding(); // with EXPO_PUBLIC_API_URL set, "Understanding your documents" asks the backend's Gemini
+installBackendAdapters();
 export default function RootLayout() { return <GestureHandlerRootView style={{ flex: 1 }}><KeyboardProvider><AppearanceProvider><RootContent /></AppearanceProvider></KeyboardProvider></GestureHandlerRootView>; }
 function RootContent() {
   const { colors, scheme, reducedMotion } = useTheme();

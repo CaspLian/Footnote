@@ -1,23 +1,28 @@
-import type { BillCase } from '@/domain';
-import { mapGeminiAnalysis, type GeminiAnalyzeResponse } from '@/domain/extraction';
-import { appendAttachmentToForm } from '@/native';
+import type { BillCase, DocumentAttachment } from '../domain/types';
+import { mapGeminiAnalysis, type GeminiAnalyzeResponse } from '../domain/extraction';
 import { backendConfigured, backendUrl } from './backend';
 
 const MAX_PAGES = 10; // the backend's limits for POST /api/v1/analyze (docs/API_CONTRACTS.md)
 const MAX_BYTES = 15 * 1024 * 1024;
+export type AppendDocumentPart = (form: FormData, attachment: DocumentAttachment, field?: string) => void | Promise<void>;
+export function uploadProblem(documents: DocumentAttachment[]): string | undefined {
+  if (documents.length > MAX_PAGES) return `Choose up to ${MAX_PAGES} pages for one analysis.`;
+  if (documents.reduce((sum, item) => sum + (item.size ?? 0), 0) > MAX_BYTES) return 'These pages exceed the 15 MB upload limit. Remove a page or use smaller photos.';
+}
 
 /**
  * Sends every imported page of a case to POST /api/v1/analyze in one request. targetLanguage is a backend locale
  * (backendLocale() in ./backend). The caller's signal cancels the upload; a 180 s timeout also applies.
  */
-export async function analyzeBillCase(billCase: Pick<BillCase, 'attachments'>, targetLanguage: string, signal?: AbortSignal) {
+export async function analyzeBillCase(billCase: Pick<BillCase, 'attachments'>, targetLanguage: string, appendPart: AppendDocumentPart, signal?: AbortSignal) {
+  signal?.throwIfAborted();
   const documents = billCase.attachments.filter(item => item.origin === 'import');
   if (!backendConfigured()) throw new Error('No ClaimPulse backend is set (EXPO_PUBLIC_API_URL). Enter the details from the original instead.');
   if (!documents.length) throw new Error('Add a bill photo or PDF before analyzing.');
-  if (documents.length > MAX_PAGES) throw new Error(`Choose up to ${MAX_PAGES} pages for one analysis.`);
-  if (documents.reduce((total, item) => total + (item.size ?? 0), 0) > MAX_BYTES) throw new Error('These pages exceed the 15 MB upload limit. Remove a page or use smaller photos.');
+  const problem = uploadProblem(documents); if (problem) throw new Error(problem);
   const form = new FormData();
-  for (const attachment of documents) await appendAttachmentToForm(form, attachment);
+  for (const attachment of documents) { signal?.throwIfAborted(); await appendPart(form, attachment); }
+  signal?.throwIfAborted();
   form.append('target_language', targetLanguage);
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 180_000);
