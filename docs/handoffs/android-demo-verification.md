@@ -18,8 +18,8 @@ remaining limitations and demo readiness; no deployment or push is requested.
 ## Boundaries
 
 Use synthetic documents and isolated test storage. Nimesh subsequently requested a full emulator data wipe and
-removed the earlier-name compatibility requirement: app identifiers now use `org.hackknights.footnote` and
-earlier-brand storage fallbacks are removed. Preserve private backend settings and team data. Keep provider calls
+removed the earlier-name compatibility requirement: app identifiers now use `footnote.compare` (from `merged-v1`;
+briefly `org.hackknights.footnote`) and earlier-brand storage fallbacks are removed. Preserve private backend settings and team data. Keep provider calls
 bounded and credentials out of logs and Git. Earlier evidence is in
 `footnote-rebrand.md` and `claude-resume-integration.md`; this task requires fresh checks.
 
