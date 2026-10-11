@@ -5,7 +5,7 @@
 | Checked on | 2026-10-10, America/New_York |
 | Branch | `Backend-Frontend-Connection-V1` |
 | Integrated code | `bb76fbb`: published Footnote checkpoint carried back by fast-forward; local source-data cleanup follows |
-| Last updated by | Nimesh with Codex, completing identity and Android preview verification |
+| Last updated by | Nimesh with Codex, completing identity and Android preview/saved-reading verification |
 
 ## Integrated behavior
 
@@ -40,6 +40,7 @@
   the emulator, so native upload/live voice checks remained unverified and control stayed with him.
 
 - Android Settings → Preview voice: **audible playback confirmed by Nimesh after the fix**. The app had called an AbortSignal method absent from React Native's runtime. Cancellation is now compatible, and previews download before playback, wait for native confirmation and expose playback errors.
+- Android saved bill → Listen → Stop: **Nimesh confirmed “Plays and stops correctly.”** This verifies saved-bill narration playback and stopping in his current emulator installation; native live conversation and fresh imports remain separate checks.
 - Continuation Android x86_64 debug APK build passed (637 tasks). The package is generated locally with Footnote resources; no reinstall interrupted the user's current emulator activity.
 - The earlier web app builds successfully: **26 tests passed, 3 live tests skipped** after the local continuation. It starts without preset cases, uses uploaded document details throughout review/call-script views, preserves unknown money values, and treats physician-only references as questions. Its upload/review/script journey passed a browser check with a stand-in analysis response at desktop and phone widths, with no provider calls, console errors or page overflow. It still uses device narration and session-only case storage. Use the shared `mobile/` app for iOS testing.
 - Footnote Welcome, Intake and Settings passed browser review with no console errors or old branding/data-demo controls. Existing document assets were regenerated with Footnote branding and checked page by page.

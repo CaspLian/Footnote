@@ -28,7 +28,9 @@ Nimesh reported silence in Settings → Preview voice, followed by `undefined is
 
 Connected services now check cancellation through a compatible helper. The preview downloads before playing, explicitly enables speaker playback, waits for native loading/start confirmation, supports cancelling a pending request, and exposes native playback errors. The helper is tested against React Native's actual abort-controller package.
 
-**Nimesh retried Preview voice after the fix and confirmed: “I can hear the voice.”** This establishes audible Android preview playback. It does not establish Android saved-bill narration, live orb conversations, fresh document uploads or physical-camera behavior.
+**Nimesh retried Preview voice after the fix and confirmed: “I can hear the voice.”** This establishes audible Android preview playback.
+
+**Nimesh subsequently tested Listen → Stop on a saved bill and confirmed: “Plays and stops correctly.”** This separately verifies Android saved-bill narration playback and stopping in his current emulator installation. No new install, provider call or emulator automation was performed to record this result. Live orb conversations, fresh document uploads and physical-camera behavior remain separate checks.
 
 ## Verification executed
 
@@ -46,7 +48,7 @@ Connected services now check cancellation through a compatible helper. The previ
 - Welcome, Intake and Settings passed an isolated browser review with no console errors; current screenshots replace older branded exports.
 - Older web upload, verification, review, evidence modal, billing request, dashboard and phone script passed an isolated browser check using a stand-in analysis response: $729.11 billed, $141.09 statement balance, absent EOB/payments. Desktop and 390-pixel phone views had no console errors or page overflow; generated Spanish script copy also loaded. Edited request text persisted through navigation within the session. This check made no provider requests and does not establish a live backend/device result. Screenshots/logs are in the external `footnote-rebrand-checks/web-continuation/` folder.
 - Local directory names remain compatible with the running development servers and IDE. The installed app identifiers and database names remain unchanged by explicit identity/persistence decisions. The shared `mobile/` app is the iOS testing target; the earlier standalone web app still lacks durable case storage and uses device narration.
-- Android live conversation, saved-bill reading and fresh imported-document flow remain unverified; iOS and physical-camera checks remain separate.
+- Android saved-bill reading and Stop are confirmed by Nimesh. Android live conversation and fresh imported-document flow remain unverified; iOS and physical-camera checks remain separate.
 - No application authentication or system follow-up notifications have been added. Existing physician-only benchmark flag limitations remain documented.
 - Nimesh explicitly requested publishing the current work on a new `merged-v1` branch. No deployment, outbound call or message was performed. Physical iPhone setup is documented in `docs/IOS_TESTING.md`.
 - The continuation has not been pushed. No changes were made to backend routes, response models or database tables in this continuation.

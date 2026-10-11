@@ -65,7 +65,7 @@ References: [Expo local iOS builds and signing](https://docs.expo.dev/more/expo-
 ## Verified and still open
 
 - Automated checks: 166 mobile tests, 165 backend tests and 649 audio tests passed. Typecheck/lint and the shared web export passed. Backend database tests used separate verification data.
-- Android voice previews are audibly confirmed by Nimesh. Live web conversations, imported-document extraction, saved reviews and audio were verified in the earlier integration checkpoint.
+- Android voice previews are audibly confirmed by Nimesh; he also confirmed saved-bill narration plays and stops correctly in his current emulator installation. Live web conversations, imported-document extraction, saved reviews and audio were verified in the earlier integration checkpoint. These Android results do not establish iPhone playback.
 - Native iOS compilation, signing, permissions, playback, microphone and physical-camera behavior require the tester's device. An iOS JavaScript export is not proof of native device behavior.
 - Use `mobile/` for the complete shared app. The published `merged-v1` snapshot retains the earlier standalone `web/` views; source-data cleanup for those views continued locally on `Backend-Frontend-Connection-V1`. That older app still has session-only case storage and device narration.
 
