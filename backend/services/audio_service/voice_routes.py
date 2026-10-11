@@ -8,6 +8,7 @@ backend/main.py mounts this router (app.include_router(voice_router)):
     GET  /api/v1/voice/voices               the voices users can choose for replies (from voices.json)
     GET  /api/v1/voice/voices/{key}/sample  a short sample of one voice (MP3) in the listener's language (?language=)
     POST /api/v1/voice/agent/session         a private live conversation about a saved bill, or about one Guide term
+    POST /api/v1/voice/example-call          a short example phone call about a saved bill, performed by two voices
 
 The Gemini step is the team's services.gemini_services.gemini_service.analyze(), followed by the team's
 Snowflake price check (services.snowflake_services.snowflake_service.check_prices) and saving to Tiger Data
@@ -39,6 +40,7 @@ from locales import language_name, language_of, resolve_locale
 from models import AnalyzeResponse, PriceCheck
 from services.analytical_services.analysis_store import StoreUnavailable, load_analysis, save_analysis
 from services.audio_service.audio_http import audio_response
+from services.audio_service.example_call import ExampleCallError, example_call, perform as perform_call
 from services.audio_service.voice_agent.client import AgentError
 from services.audio_service.voice_agent.bill_context import doctor_only
 from services.audio_service.voice_agent.session import get_service as get_agent_service, start_session_async
@@ -54,7 +56,8 @@ from services.audio_service.text_to_speech import (
     synthesize_streaming_async,
 )
 from services.audio_service.text_to_speech.voices import load_catalog, sample_text
-from services.gemini_services.gemini_service import SUPPORTED_MIME, analyze, is_mock, model_name, translate_for_speech
+from services.gemini_services.gemini_service import (SUPPORTED_MIME, analyze, is_mock, model_name, translate_for_speech,
+                                                    write_example_call)
 from services.snowflake_services.snowflake_service import check_prices
 
 MAX_BILL_MB = 15  # same limits as /api/v1/analyze in main.py
@@ -278,6 +281,57 @@ async def _guide_session(request: Request, target_language: Optional[str], voice
         voice=voice, connection_type=connection_type, client_address=request.client.host if request.client else "unknown",
     )
     return JSONResponse(session, headers={"Cache-Control": "no-store"})
+
+
+@router.post("/example-call")
+async def voice_example_call(
+    audit_id: Optional[str] = Form(None, description="UUID of a saved analysis"),
+    target_language: Optional[str] = Form(None, description="App locale; the saved analysis's language when omitted"),
+    voice: Optional[str] = Form(None, description="The patient's voice: a key from GET /api/v1/voice/voices"),
+    counterpart: str = Form("billing", description="billing (the provider's billing office) or insurer"),
+):
+    """A short example phone call about a saved bill in the user's language: Gemini writes it from the bill's facts
+    (no promises, no invented numbers) and ElevenLabs Text to Dialogue performs it with two voices verified for the
+    language. Made once per bill, language, voices and counterpart; ask for it early and play it when it is ready."""
+    if counterpart not in ("billing", "insurer"):
+        raise HTTPException(400, detail={"stage": "example_call", "message": "counterpart must be billing or insurer."})
+    if not audit_id:
+        raise HTTPException(400, detail={"stage": "audit", "message": "audit_id is required for an example call."})
+    try:
+        uuid.UUID(audit_id)
+    except ValueError:
+        raise HTTPException(400, detail={"stage": "audit", "message": "audit_id must be a valid UUID."}) from None
+    locale = None
+    if target_language is not None:
+        try:
+            locale = resolve_locale(target_language)
+        except ValueError as exc:
+            raise HTTPException(400, detail={"stage": "language", "message": str(exc)}) from None
+    if voice and load_catalog().get(voice) is None:
+        raise HTTPException(400, detail={"stage": "voices", "message": f"Unknown voice {voice!r}."})
+    try:
+        saved = await load_analysis(audit_id)
+    except ValueError as exc:
+        raise HTTPException(400, detail={"stage": "audit", "message": str(exc)}) from None
+    except StoreUnavailable as exc:
+        raise HTTPException(503, detail={"stage": "audit", "message": str(exc)}) from None
+    if saved is None:
+        raise HTTPException(404, detail={"stage": "audit", "message": "No saved analysis with this ID."})
+    try:
+        analysis = AnalyzeResponse.model_validate(saved["analysis"])
+    except (ValidationError, KeyError, TypeError):
+        raise HTTPException(409, detail={"stage": "audit", "message": "This saved analysis is in an older format."}) from None
+    if locale is None:
+        try:
+            locale = resolve_locale(analysis.target_language)
+        except ValueError:
+            raise HTTPException(400, detail={"stage": "language", "message": "Send a supported target_language."}) from None
+    try:
+        return await example_call(analysis.model_dump(mode="json"), audit_id=audit_id, locale=locale,
+                                  language_name=language_name(locale), voice=voice, counterpart=counterpart,
+                                  writer=write_example_call, performer=perform_call)
+    except ExampleCallError as exc:
+        raise HTTPException(exc.status, detail={"stage": "example_call", "error_code": exc.code, "message": str(exc)}) from None
 
 
 @router.post("/speak", response_model=Speech)

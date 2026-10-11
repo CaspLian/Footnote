@@ -168,6 +168,11 @@ def voice(monkeypatch, no_real_settings_files):
     fake_module = types.ModuleType("services.gemini_services.gemini_service")
     fake_module.analyze = gemini.analyze
     fake_module.translate_for_speech = gemini.translate_for_speech
+
+    async def no_example_call(facts, target_language, counterpart="billing"):
+        return None  # tests that need a script replace voice.routes.write_example_call
+
+    fake_module.write_example_call = no_example_call
     fake_module.is_mock = lambda: True
     fake_module.model_name = lambda: "fake-gemini"
     fake_module.SUPPORTED_MIME = {"image/jpeg", "image/png", "image/webp", "image/heic", "image/heif", "application/pdf"}
@@ -974,3 +979,46 @@ def test_agent_old_format_and_unavailable_store_never_mint(agent_voice):
     voice.store.configured = False
     assert voice.client.post("/api/v1/voice/agent/session", data=form).status_code == 503
     assert not voice.agent_provider.mints
+
+
+# --- The example call ------------------------------------------------------------------------------
+
+
+def test_an_example_call_is_written_from_the_saved_bill_and_played_like_a_reply(agent_voice, monkeypatch):
+    voice = agent_voice
+    module = importlib.import_module("services.audio_service.example_call")
+    module._done.clear()
+    written, performed = [], []
+
+    async def writer(facts, locale, counterpart):
+        written.append((facts, locale, counterpart))
+        return [{"speaker": "representative", "text": "[friendly] Billing office, how can I help?"},
+                {"speaker": "patient", "text": "I have a question about my MRI charge."},
+                {"speaker": "representative", "text": "I can look at that and send an itemized bill."},
+                {"speaker": "patient", "text": "Thank you. May I have a reference number?"}]
+
+    def performer(turns, patient, representative, locale, config):
+        performed.append((patient.key, representative.key, locale))
+        return b"ID3-example-call"
+
+    monkeypatch.setattr(voice.routes, "write_example_call", writer)
+    monkeypatch.setattr(voice.routes, "perform_call", performer)
+    response = voice.client.post("/api/v1/voice/example-call", data={"audit_id": voice.agent_audit_id, "target_language": "en-US"})
+    assert response.status_code == 200
+    body = response.json()
+    assert body["turns"][0] == {"speaker": "representative", "text": "Billing office, how can I help?"}
+    assert body["voices"]["patient"] == "matilda" and performed[0][0] == "matilda" and performed[0][1] != "matilda"
+    assert "Brain MRI" in written[0][0] and written[0][1:] == ("en-US", "billing")
+    audio = voice.client.get(body["audio_url"])
+    assert audio.status_code == 200 and audio.content == b"ID3-example-call"
+    again = voice.client.post("/api/v1/voice/example-call", data={"audit_id": voice.agent_audit_id, "target_language": "en-US"})
+    assert again.json()["audio_url"] == body["audio_url"] and len(written) == 1  # made once
+
+
+@pytest.mark.parametrize("form,status,stage", [({}, 400, "audit"), ({"audit_id": "bad"}, 400, "audit"),
+    ({"audit_id": str(uuid.uuid4()), "counterpart": "lawyer"}, 400, "example_call"),
+    ({"audit_id": str(uuid.uuid4()), "voice": "nobody"}, 400, "voices"),
+    ({"audit_id": str(uuid.uuid4())}, 404, "audit")])
+def test_an_example_call_refuses_bad_requests(voice, form, status, stage):
+    response = voice.client.post("/api/v1/voice/example-call", data=form)
+    assert response.status_code == status and response.json()["detail"]["stage"] == stage

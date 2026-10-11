@@ -5,6 +5,9 @@
 Lookups go to the CPT_BENCHMARKS table in Snowflake (loaded by load_benchmarks.py).
 If Snowflake can't be reached, it falls back to data/cpt_benchmarks.csv so a demo
 never breaks; price_summary.source says which one was used.
+
+warm_up() loads the whole table (about 7,700 rows) once when the backend starts: the first lookup used to take
+10.8 s connecting and resuming the warehouse (measured 2026-10-11), which made the first bill twice as slow.
 """
 import asyncio
 import csv
@@ -25,6 +28,8 @@ ABOVE_MAX = 6.0     # 3x to 6x: worth asking about; above 6x: far above typical
 _conn = None
 _csv_cache: Optional[dict] = None
 _lookup_cache: dict[str, tuple[Optional[dict], str, Optional[str]]] = {}
+_table: Optional[dict[str, dict]] = None  # the whole Snowflake table, once warm_up() has read it
+WARM_UP_TIMEOUT_S = 60
 
 
 def _normalize(code: Optional[str]) -> Optional[str]:
@@ -73,6 +78,31 @@ def _query_snowflake(codes: list[str]) -> dict[str, dict]:
     return {}
 
 
+def _query_table() -> dict[str, dict]:
+    """Blocking read of the whole benchmark table (small: one row per billing code)."""
+    global _conn
+    if _conn is None or _conn.is_closed():
+        _conn = _connect()
+    cur = _conn.cursor()
+    cur.execute("SELECT CPT_CODE, DESCRIPTION, MEDICARE_RATE, SETTING FROM CPT_BENCHMARKS")
+    return {row[0]: {"description": row[1], "rate": float(row[2]), "setting": row[3]} for row in cur.fetchall()}
+
+
+async def warm_up() -> bool:
+    """Read the Snowflake table into memory in the background, so no bill waits for Snowflake to wake up.
+    Never raises: on failure lookups query Snowflake (or the CSV) as before. True when the table was loaded."""
+    global _table
+    if os.getenv("PRICE_SOURCE", "snowflake").lower() == "csv" or _table is not None:
+        return _table is not None
+    try:
+        table = await asyncio.wait_for(asyncio.to_thread(_query_table), WARM_UP_TIMEOUT_S)
+    except Exception:  # unreachable, bad credentials, timeout: lookups try again per bill
+        return False
+    if table:
+        _table = table
+    return bool(table)
+
+
 def _query_csv(codes: list[str]) -> dict[str, dict]:
     global _csv_cache
     if _csv_cache is None:
@@ -92,6 +122,10 @@ async def lookup(codes: list[str]) -> tuple[dict[str, dict], str, Optional[str]]
     missing = [c for c in wanted if c not in _lookup_cache]
     source, error = "snowflake", None
 
+    if missing and _table is not None:  # the whole table is in memory: a code it lacks has no rate
+        for c in missing:
+            _lookup_cache[c] = (_table.get(c), "snowflake", None)
+        missing = []
     if missing:
         if os.getenv("PRICE_SOURCE", "snowflake").lower() == "csv":
             found, source = _query_csv(missing), "local_csv"

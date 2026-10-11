@@ -1,4 +1,6 @@
 import asyncio
+import os
+import sys
 from typing import Optional
 
 from dotenv import load_dotenv
@@ -13,7 +15,7 @@ from models import AnalyzeResponse  # noqa: E402
 from services.analytical_services.analysis_store import StoreUnavailable, load_analysis, save_analysis  # noqa: E402
 from services.gemini_services.gemini_service import LANGUAGES, analyze, is_mock, model_name  # noqa: E402
 from services.snowflake_services.snowflake_service import _normalize as normalize_code  # noqa: E402
-from services.snowflake_services.snowflake_service import check_prices, lookup  # noqa: E402
+from services.snowflake_services.snowflake_service import check_prices, lookup, warm_up  # noqa: E402
 
 MAX_UPLOAD_MB = 15
 GEMINI_TIMEOUT_S = 150  # covers 2 attempts x 2 models
@@ -27,6 +29,14 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.on_event("startup")
+async def warm_price_source():
+    # In the background: the server answers at once, and the first bill no longer waits for Snowflake to wake up.
+    # PRICE_WARM_UP=false turns it off; tests never reach Snowflake.
+    if os.getenv("PRICE_WARM_UP", "true").lower() not in ("0", "false", "no") and "pytest" not in sys.modules:
+        app.state.price_warm_up = asyncio.create_task(warm_up())
 
 
 @app.get("/")

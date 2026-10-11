@@ -298,6 +298,12 @@ class TTSService:
         audio = self._cache.get(audio_id)
         return (audio, self.config.mime_type) if audio is not None else None
 
+    def store_audio(self, audio: bytes) -> str:
+        """Keep finished audio made elsewhere (an example call) like a reply; its audio_id plays it."""
+        audio_id = hashlib.sha256(audio).hexdigest()[:32]
+        self._cache.put(audio_id, audio)
+        return audio_id
+
     def open_audio(self, audio_id: str) -> AudioStream | None:
         """Audio by its audio_id for an audio endpoint: finished audio in one piece, or audio that
         is still being made, piece by piece as it arrives. None if unknown."""
@@ -578,6 +584,11 @@ def get_audio(audio_id: str) -> tuple[bytes, str] | None:
         return get_service().get_audio(audio_id)
     except ValueError:  # malformed .env: synthesize() reports it; here there is simply no audio
         return None
+
+
+def store_audio(audio: bytes) -> str:
+    """Keep audio made outside text-to-speech (an example call) so open_audio()/get_audio() can serve it."""
+    return get_service().store_audio(audio)
 
 
 def open_audio(audio_id: str) -> AudioStream | None:
