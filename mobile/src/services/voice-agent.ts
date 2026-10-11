@@ -61,7 +61,7 @@ export class AgentController {
             messages[index] = message;
           } else if (message.corrected) return;
           else messages.push(message);
-          this.update({ messages: messages.slice(-20), ...(message.role === 'agent' && !message.corrected ? { caption: message } : {}) });
+          this.update({ messages: messages.slice(-20), ...(message.role === 'agent' && (!message.corrected || this.snapshot.caption?.id === message.id) ? { caption: message } : {}) });
         },
         onEnd: ending => {
           if (this.abort !== abort || abort.signal.aborted) return;

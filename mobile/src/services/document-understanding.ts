@@ -56,7 +56,7 @@ export class UnderstandingController {
       const result = await this.service.understand(request, { signal: abort.signal, onPhase: phase => { if (this.abort === abort && !abort.signal.aborted) this.update({ status: 'working', phase }); } });
       if (this.abort === abort && !abort.signal.aborted) this.update({ status: 'complete', phase: 'organizing', result });
     } catch (error) {
-      if (this.abort === abort && !abort.signal.aborted) this.update({ status: 'error', phase: this.snapshot.phase, errorCode: error instanceof UnderstandingFailure ? error.code : undefined, error: error instanceof UnderstandingFailure ? `${error.message} Your copies are saved. Try again, or enter the details yourself.` : 'We couldn’t finish understanding these documents. Your copies are saved. Try again, or enter the details yourself.' });
+      if (this.abort === abort && !abort.signal.aborted) this.update({ status: 'error', phase: this.snapshot.phase, errorCode: error instanceof UnderstandingFailure ? error.code : undefined, error: error instanceof UnderstandingFailure ? `${error.message} Your copies are saved. Try again or add a clearer copy.` : 'We couldn’t finish understanding these documents. Your copies are saved. Try again or add a clearer copy.' });
     }
   }
 }

@@ -6,6 +6,7 @@ import { Badge, Button, Feedback, Group, Screen, Txt, useLanguage } from '@/comp
 import { CaseReminder } from '@/components/case-reminder';
 import { Icon } from '@/components/icon';
 import { useTheme, space, radius, shadows } from '@/theme';
+import { needsDocumentProcessing } from '@/domain/document-readiness';
 
 export function useCase() {
   const params = useLocalSearchParams<{ caseId?: string }>();
@@ -13,7 +14,8 @@ export function useCase() {
   const cases = useFootnoteStore(s => s.cases);
   return cases.find(c => c.source === 'manual' && c.id === (params.caseId ?? active));
 }
-export function caseRoute(pathname: '/review'|'/verify'|'/timeline'|'/draft'|'/intake', id: string) { useFootnoteStore.getState().setActiveCase(id); if (pathname === '/timeline') router.navigate('/(tabs)/track'); else router.push({ pathname, params: { caseId: id } }); }
+export function caseRoute(pathname: '/review'|'/verify'|'/timeline'|'/draft'|'/intake'|'/confirm-documents', id: string) { const c=useFootnoteStore.getState().cases.find(item=>item.id===id); useFootnoteStore.getState().setActiveCase(id); if ((pathname==='/verify'||pathname==='/review'||pathname==='/draft')&&c&&needsDocumentProcessing(c)) pathname='/confirm-documents'; if (pathname === '/timeline') router.navigate('/(tabs)/track'); else router.push({ pathname, params: { caseId: id } }); }
+export function DocumentsNeedProcessing({billCase}:{billCase:BillCase}) { return <Screen testID="documents-awaiting-processing" footer={<Button title="Confirm documents" icon="document" onPress={()=>caseRoute('/confirm-documents',billCase.id)}/>}><Txt variant="title">Confirm your documents</Txt><Txt muted>We’ll organize the details first. The review can then use all available evidence, including sourced comparisons when they’re connected.</Txt></Screen>; }
 export function MissingCase() { const { copy } = useLanguage(); return <Screen><Feedback title={copy('This case is unavailable.','Este caso no está disponible.')} text={copy('It may have been removed. Open Bills to choose a case.','Puede haberse eliminado. Abre Facturas para elegir un caso.')} action={{ title: copy('Open Bills','Abrir Facturas'), onPress: () => router.replace('/(tabs)/bills') }} /></Screen>; }
 export function statusText(status: CaseStatus, copy: (en: string, es: string) => string) {
   return ({ needs_details: copy('Needs details','Faltan datos'), ready: copy('Ready to review','Listo para revisar'), action_prepared: copy('Draft prepared','Borrador preparado'), submitted: copy('Marked submitted','Marcado como enviado'), resolved: copy('Resolved','Resuelto') })[status];

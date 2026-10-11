@@ -1,4 +1,4 @@
-import type { BillCase, DocumentAttachment, Evidence, ExtractedAnalysis, Finding, Language, LineItem, LocalizedText } from './types';
+import type { BillCase, DocumentAttachment, DocumentKind, Evidence, ExtractedAnalysis, Finding, Financials, Language, LineItem, LocalizedText } from './types';
 import { analysisFingerprint } from './analysis-provenance';
 import { isISODate } from './money';
 
@@ -9,6 +9,7 @@ export interface GeminiLineItem {
   billed_amount?: number | null;
   date_of_service?: string | null;
   source_page?: number | null;
+  document_index?: number | null;
   possible_issues?: string[];
 }
 
@@ -22,6 +23,10 @@ export interface GeminiAnalyzeResponse {
     total_billed?: number | null;
     amount_patient_owes?: number | null;
     due_date?: string | null;
+    documents?: { document_index: number; document_type: string }[];
+    financials?: Partial<Record<'statement_billed'|'bill_adjustments'|'after_bill_adjustments'|'statement_insurer_paid'|'prior_patient_payment'|'statement_balance'|'eob_billed'|'eob_allowed'|'eob_insurer_paid'|'eob_patient_responsibility'|'deductible'|'coinsurance'|'copayment'|'copay_coinsurance', number | null>>;
+    documents_match?: boolean | null;
+    document_mismatch_reason?: string | null;
     line_items: GeminiLineItem[];
     plain_summary: string;
     spoken_summary: string;
@@ -39,6 +44,12 @@ const cents = (amount?: number | null) => {
   return Number.isSafeInteger(value) ? value : undefined;
 };
 
+export function suggestedDocumentKind(type: string): Exclude<DocumentKind, 'auto'> | undefined {
+  if (/^(?:eob|explanation.of.benefits)$/i.test(type)) return 'eob';
+  if (/^(?:hospital_bill|medical_bill|itemized_bill|bill|pharmacy_receipt)$/i.test(type)) return 'bill';
+  if (/^(?:insurance_policy|policy)$/i.test(type)) return 'policy';
+}
+
 /** Explanatory prose or a guessed provider alone must not unlock a bill review. */
 export function hasSubstantialExtraction(result: Pick<ReturnType<typeof mapGeminiAnalysis>, 'financials' | 'lineItems' | 'extraction'>): boolean {
   if (/^(other|unrelated|not.a.medical.document)$/i.test(result.extraction.documentType.trim())) return false;
@@ -55,9 +66,20 @@ export function mapGeminiAnalysis(response: GeminiAnalyzeResponse, billCase: Pic
   const result = response.result;
   const attachments = billCase.attachments.filter(item => item.origin === 'import');
   const firstAttachment: DocumentAttachment | undefined = attachments[0];
+  const documentKinds: Record<string, Exclude<DocumentKind, 'auto'>> = {};
+  for (const document of result.documents ?? []) {
+    const attachment = attachments[document.document_index - 1];
+    const kind = suggestedDocumentKind(document.document_type);
+    if (Number.isSafeInteger(document.document_index) && document.document_index > 0 && attachment && kind) documentKinds[attachment.id] = kind;
+  }
+  if (attachments.length === 1 && !documentKinds[firstAttachment!.id]) {
+    const kind = suggestedDocumentKind(result.document_type);
+    if (kind) documentKinds[firstAttachment!.id] = kind;
+  }
   const lineItems = result.line_items.map((line, index): LineItem => {
-    const pageNumber = Number.isSafeInteger(line.source_page) && line.source_page! > 0 && line.source_page! <= attachments.length ? line.source_page! : undefined;
-    const attachment = pageNumber ? attachments[pageNumber - 1] ?? firstAttachment : firstAttachment;
+    const hasDocumentIndex = Number.isSafeInteger(line.document_index) && line.document_index! > 0 && line.document_index! <= attachments.length;
+    const pageNumber = Number.isSafeInteger(line.source_page) && line.source_page! > 0 && (hasDocumentIndex || line.source_page! <= attachments.length) ? line.source_page! : undefined;
+    const attachment = hasDocumentIndex ? attachments[line.document_index! - 1] : pageNumber ? attachments[pageNumber - 1] ?? firstAttachment : firstAttachment;
     const description = line.original_description || line.plain_description;
     const sourceText = [line.date_of_service, line.cpt_code, description, line.billed_amount == null ? '' : `$${line.billed_amount.toFixed(2)}`].filter(Boolean).join(' · ');
     const evidence: Evidence = { attachmentId: attachment?.id ?? '', page: pageNumber ?? 1, label: localized(`Line ${index + 1} · ${attachment ? (pageNumber ? `page ${pageNumber} · ${attachment.name}` : `${attachment.name} · source page not identified`) : 'imported document'}`, language), excerpt: localized(sourceText, language) };
@@ -81,11 +103,26 @@ export function mapGeminiAnalysis(response: GeminiAnalyzeResponse, billCase: Pic
   ];
   const totalBilledCents = cents(result.total_billed);
   const patientOwesCents = cents(result.amount_patient_owes);
+  const financials: Financials = {};
+  const fields = { statement_billed:'billedCents', bill_adjustments:'adjustmentCents', after_bill_adjustments:'postAdjustmentCents', statement_insurer_paid:'insurerPaidCents', prior_patient_payment:'patientPaidCents', statement_balance:'remainingCents', eob_billed:'eobBilledCents', eob_allowed:'allowedCents', eob_insurer_paid:'eobInsurerPaidCents', eob_patient_responsibility:'eobResponsibilityCents', deductible:'deductibleCents', coinsurance:'coinsuranceCents', copayment:'copaymentCents', copay_coinsurance:'copayCoinsuranceCents' } as const;
+  for (const [source, target] of Object.entries(fields)) {
+    const value = cents(result.financials?.[source as keyof typeof fields]);
+    if (value !== undefined) financials[target] = value;
+  }
+  const eobOnly = suggestedDocumentKind(result.document_type) === 'eob' && !Object.values(documentKinds).includes('bill');
+  if (financials.billedCents === undefined && totalBilledCents !== undefined) financials.billedCents = totalBilledCents;
+  const owedField = eobOnly ? 'eobResponsibilityCents' : 'remainingCents';
+  if (financials[owedField] === undefined && patientOwesCents !== undefined) financials[owedField] = patientOwesCents;
   const extraction: ExtractedAnalysis = {
     language: response.target_language,
     model: response.model,
     mock: response.mock,
     documentType: result.document_type,
+    documentKinds,
+    processedAttachmentIds: attachments.map(a=>a.id),
+    financialsVersion: result.financials ? 1 : undefined,
+    documentsMatch: result.documents_match ?? undefined,
+    documentMismatchReason: result.document_mismatch_reason ? localized(result.document_mismatch_reason, language) : undefined,
     summary: localized(result.plain_summary, language),
     questions: result.questions_to_ask.map(question => localized(question, language)),
     issues: [...issues.map(item => localized(item.issue, language)), ...flaggedChecks.map(item => localized(item.note, language))],
@@ -100,10 +137,7 @@ export function mapGeminiAnalysis(response: GeminiAnalyzeResponse, billCase: Pic
     extraction,
     provider: result.provider_name ?? undefined,
     serviceDate: lineItems.find(line => line.date)?.date,
-    financials: {
-      ...(totalBilledCents === undefined ? {} : { billedCents: totalBilledCents }),
-      ...(patientOwesCents === undefined ? {} : { remainingCents: patientOwesCents }),
-    },
+    financials,
     lineItems,
     findings,
   };

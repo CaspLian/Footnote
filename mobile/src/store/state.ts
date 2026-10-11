@@ -1,3 +1,4 @@
+import { needsDocumentProcessing } from '../domain/document-readiness';
 import type { UnderstandingResult } from '../services/document-understanding';
 import { isRelationshipLabel } from '../domain/profiles';
 import { createStore } from 'zustand/vanilla';
@@ -324,7 +325,7 @@ export function createFootnoteStore(storage: LocalStorage, options: StoreOptions
         const current = caseById(caseId); const removed = current.attachments.find(item => item.id === attachmentId);
         if (!removed) return;
         if (options.deleteAttachments) await options.deleteAttachments([removed]);
-        change({ cases: get().cases.map(item => item.id === caseId ? { ...item, attachments: item.attachments.filter(a => a.id !== attachmentId), status: 'needs_details', findings: [], extraction: undefined, evidenceContextId: undefined, verifiedAt: undefined, updatedAt: now() } : item) });
+        change({ cases: get().cases.map(item => item.id === caseId ? { ...item, attachments: item.attachments.filter(a => a.id !== attachmentId), lineItems: item.lineItems.filter(line => line.evidence.attachmentId !== attachmentId), financials: item.extraction && !item.entriesEdited ? {} : item.financials, status: 'needs_details', findings: [], extraction: undefined, evidenceContextId: undefined, verifiedAt: undefined, updatedAt: now() } : item) });
       },
       updateCase(caseId, patch) {
         const original = caseById(caseId);
@@ -341,14 +342,16 @@ export function createFootnoteStore(storage: LocalStorage, options: StoreOptions
         const current = caseById(caseId);
         if (result.details?.serviceDate && !isISODate(result.details.serviceDate)) throw new Error('invalid_date');
         if (result.details?.lineItems?.some(line => !current.attachments.some(a => a.id === line.evidence.attachmentId))) throw new Error('invalid_source');
-        // Merge amounts: adding a document to a case keeps the values that the new reading does not provide.
-        if (result.details) get().updateCase(caseId, result.details.financials ? { ...result.details, financials: { ...current.financials, ...result.details.financials } } : result.details);
-        change({ cases: get().cases.map(item => item.id === caseId ? { ...item, evidenceContextId: item.entriesEdited && item.source === 'manual' ? undefined : result.contextId, updatedAt: now() } : item) });
+        // A fresh extraction replaces prior extracted amounts, so removed evidence cannot leave stale money behind.
+        if (result.details) get().updateCase(caseId, result.details.financials ? { ...result.details, financials: result.details.extraction ? result.details.financials : { ...current.financials, ...result.details.financials } } : result.details);
+        const kinds = result.details?.extraction?.documentKinds;
+        change({ cases: get().cases.map(item => item.id === caseId ? { ...item, attachments: item.attachments.map(a => kinds?.[a.id] ? { ...a, suggestedKind: kinds[a.id], kind: a.kind === 'auto' ? kinds[a.id] : a.kind } : a), evidenceContextId: item.entriesEdited && item.source === 'manual' ? undefined : result.contextId, updatedAt: now() } : item) });
       },
       async verifyCase(caseId) {
         ensureWritable();
         if (inFlightReviews.has(caseId)) return inFlightReviews.get(caseId);
         const original = caseById(caseId);
+        if (needsDocumentProcessing(original)) throw new Error('document_processing_required');
         if (validateCase(original).length) throw new Error('verification_required');
         const token = generation;
         const inputSnapshot = JSON.stringify(original);
@@ -370,6 +373,7 @@ export function createFootnoteStore(storage: LocalStorage, options: StoreOptions
       },
       saveDraft,
       async prepareDraft(caseId, kind) {
+        if (needsDocumentProcessing(caseById(caseId))) throw new Error('document_processing_required');
         ensureWritable(); const locale = get().locale; const billCase = caseById(caseId);
         const existing = get().drafts.find(draft => draft.caseId === caseId && draft.kind === kind && draft.locale === locale);
         if (existing) return existing.id;

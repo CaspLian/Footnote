@@ -44,7 +44,7 @@ function harness(hold = false, timeout = 30_000) {
 
 test('voice startup uses a WebRTC ticket, both validated tools, SDK controls and one audio owner', async () => {
   const h = harness(); await h.controller.start(context);
-  assert.deepEqual(h.calls, ['load', 'microphone', 'claim', 'duplex', 'start', 'mute:false']);
+  assert.deepEqual(h.calls, ['load', 'microphone', 'claim', 'duplex', 'start', 'duplex', 'mute:false']);
   const options = h.options();
   assert.equal(options.conversationToken, grant.conversationToken);
   assert.equal(options.connectionType, 'webrtc');
@@ -52,6 +52,7 @@ test('voice startup uses a WebRTC ticket, both validated tools, SDK controls and
   assert.deepEqual(Object.keys(options.clientTools ?? {}).sort(), ['show_line_item', 'show_price_check']);
   assert.equal(privacyNoticeStore.get(), grant.privacyNotice);
   await h.controller.toggleMuted(); assert.ok(h.calls.includes('mute:true'));
+  await h.controller.toggleMuted(); assert.deepEqual(h.calls.slice(-2),['duplex','mute:false']);
   assert.deepEqual(h.controller.levels(), { input: .1, output: .8 });
   await h.controller.end(); await h.controller.end();
   assert.equal(h.ends(), 1); assert.equal(h.releases(), 1);
@@ -112,4 +113,10 @@ test('another player claiming audio ends an established conversation once', asyn
 test('a synchronous SDK failure also releases audio', async () => {
   const h = harness(); h.sdk.Conversation.startSession = () => { throw new Error('startup failed'); };
   await h.controller.start(context); assert.equal(h.controller.getSnapshot().status, 'error'); assert.equal(h.releases(), 1);
+});
+
+test('microphone unmute failures are surfaced and close the call instead of showing Listening',async()=>{
+  const h=harness();await h.controller.start(context);
+  h.options().onError?.('Failed to set input muted state',new Error('synthetic recording failure'));
+  await tick();assert.equal(h.controller.getSnapshot().status,'error');assert.match(h.controller.getSnapshot().error??'',/Microphone control failed/);assert.equal(h.ends(),1);
 });

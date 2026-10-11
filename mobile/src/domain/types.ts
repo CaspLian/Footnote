@@ -34,6 +34,7 @@ export interface DocumentAttachment {
   mimeType: string;
   size?: number;
   kind: DocumentKind;
+  suggestedKind?: Exclude<DocumentKind, 'auto'>;
   origin: 'sample' | 'import';
   importedAt: string;
   pageCount?: number;
@@ -62,6 +63,7 @@ export interface Financials {
   /** Allowed amount is sourced from the EOB, never inferred from a statement. */
   allowedCents?: Money;
   insurerPaidCents?: Money;
+  eobInsurerPaidCents?: Money;
   patientResponsibilityCents?: Money;
   patientPaidCents?: Money;
   remainingCents?: Money;
@@ -70,6 +72,7 @@ export interface Financials {
   deductibleCents?: Money;
   coinsuranceCents?: Money;
   copaymentCents?: Money;
+  copayCoinsuranceCents?: Money;
 }
 /** What the Footnote backend read from the imported pages (POST /api/v1/analyze), kept for verification and review. */
 export interface ExtractedAnalysis {
@@ -84,6 +87,12 @@ export interface ExtractedAnalysis {
   /** Gemini's notes on lines that look off, by line id; the review turns them into questions with their evidence. */
   notes?: Record<string, string[]>;
   documentType: string;
+  documentKinds?: Record<string, Exclude<DocumentKind, 'auto'>>;
+  /** Exact file set read by this analysis, including a file whose type was inconclusive. */
+  processedAttachmentIds?: string[];
+  financialsVersion?: 1;
+  documentsMatch?: boolean;
+  documentMismatchReason?: LocalizedText;
   summary: LocalizedText;
   questions: LocalizedText[];
   issues: LocalizedText[];

@@ -36,6 +36,7 @@ async function confirmedCase(claims: ClaimTracker, waitForReview = true) {
     lineItems: [{ id: 'l1', description: { en: 'ER visit', es: 'ER visit' }, code: '99285', date: '2026-09-14', units: 1, billedCents: 245000,
       evidence: { attachmentId: 'import', page: 1, label: { en: 'Line 1', es: 'Línea 1' }, excerpt: { en: 'ER VISIT', es: 'ER VISIT' } } }],
   });
+  store.getState().applyUnderstandingResult(caseId,{mode:'extracted',details:{extraction:{model:'test-only',mock:false,documentType:'bill',processedAttachmentIds:['import'],summary:{en:'Summary.',es:'Resumen.'},questions:[],issues:[],parsedAt:clock()}}});
   const review = store.getState().verifyCase(caseId);
   if (waitForReview) await review;
   await settle();

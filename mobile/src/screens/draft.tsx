@@ -8,7 +8,8 @@ import { useFootnoteStore } from '@/store';
 import { copyDraft, exportDraftPdf, nativeErrorMessage, shareDocument } from '@/native';
 import { Button, ButtonRow, Choice, Feedback, Group, Screen, Txt, useUIStyles, useDesktop, useLanguage } from '@/components/ui';
 import { useTheme, type, space } from '@/theme';
-import { MissingCase, caseRoute, useCase } from './shared';
+import { DocumentsNeedProcessing, MissingCase, caseRoute, useCase } from './shared';
+import { needsDocumentProcessing } from '@/domain/document-readiness';
 
 export function DraftWorkspace() { const { colors } = useTheme(); const styles = useUIStyles();
   const c = useCase();
@@ -26,7 +27,7 @@ export function DraftWorkspace() { const { colors } = useTheme(); const styles =
   const [error, setError] = useState('');
   const loading = !draft && !error;
   const recovered = !!draft && !preparedHere;
-  const caseId = c?.id;
+  const caseId = c&&!needsDocumentProcessing(c)?c.id:undefined;
 
   useEffect(() => {
     let active = true;
@@ -38,6 +39,7 @@ export function DraftWorkspace() { const { colors } = useTheme(); const styles =
     return () => { active = false; };
   }, [caseId, kind, locale, copy]);
   if (!c) return <MissingCase />;
+  if (needsDocumentProcessing(c)) return <DocumentsNeedProcessing billCase={c}/>;
 
   function edit(text: string) {
     if (c) useFootnoteStore.getState().saveDraft(c.id, kind, text, locale);

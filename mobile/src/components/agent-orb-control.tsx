@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
-import { AppState, Platform, View } from 'react-native';
+import { AppState, Platform, ScrollView, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import Animated, { FadeIn, useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
@@ -32,6 +32,9 @@ export function AgentOrbControl({ billCase, term, collapsed, onCollapsedChange }
   const priorStatus = useRef(state.status), priorInterruptions = useRef(state.interruptions);
   const collapseProgress = useSharedValue(0);
   const voiceLevel = useSharedValue(0);
+  const captionScroll = useRef<ScrollView>(null);
+  const [captionHeight, setCaptionHeight] = useState(22);
+  const [captionWidth, setCaptionWidth] = useState(266);
   // Follow the orb during a manual pull. Its bottom-anchored container takes over on release.
   const captionMotion = useAnimatedStyle(() => ({ transform: [{ translateY: collapsed ? 0 : collapseProgress.get() }] }));
   const active = ['connecting', 'listening', 'thinking', 'speaking'].includes(state.status);
@@ -68,13 +71,21 @@ export function AgentOrbControl({ billCase, term, collapsed, onCollapsedChange }
     const profile = profiles.find(p => p.id === billCase?.profileId);
     void controller.start({ language: prefs.workingLanguage, agentLanguage: agentLanguage(prefs.workingLanguage), voice: voice.id, case: billCase ? { id: billCase.id, evidenceContextId: billCase.evidenceContextId, entriesEdited: billCase.entriesEdited, provider: billCase.provider, serviceDate: billCase.serviceDate, financials: billCase.financials, findings: billCase.findings, reviewMode: billCase.reviewMode } : undefined, evidence: billCase?.attachments.map(a => ({ id: a.id, kind: a.kind, name: a.name })) ?? [], profile: profile ? { firstName: profile.firstName, coverage: profile.coverage, insurer: profile.insurer, planName: profile.planName, zipCode: profile.zipCode } : undefined, preferences: personalContext, term });
   }
+  const lastAgentCaption = useRef<string>('');
+  if (state.caption?.text) {
+    lastAgentCaption.current = state.caption.text;
+  } else if (!active || state.status === 'idle' || state.status === 'thinking') {
+    lastAgentCaption.current = '';
+  }
+  const currentCaption = active ? (state.caption?.text || lastAgentCaption.current) : '';
   const label = state.status === 'speaking' ? 'Speaking' : state.status === 'listening' ? state.muted ? 'Microphone muted' : 'Listening' : state.status === 'thinking' ? 'Thinking' : state.status === 'connecting' ? 'Connecting…' : '';
   return <>
     <View pointerEvents="box-none" style={{ alignItems: 'center', maxWidth: 320, width: '100%', gap: 0 }}>
-      {prefs.voiceCaptions && (label || state.error) ? <Animated.View pointerEvents="none" entering={reducedMotion ? undefined : FadeIn.duration(180)}><Animated.View style={[{ alignSelf: 'center', maxWidth: 290, paddingHorizontal: 12, paddingBottom: 2 }, captionMotion]}>
-        {state.status === 'speaking' && state.caption ? <Txt translate={false} accessibilityLabel={`Footnote: ${state.caption.text}`} accessibilityLiveRegion={state.caption.final ? 'polite' : 'none'} numberOfLines={collapsed ? 1 : 2} style={{ fontSize: collapsed ? 13 : 15, lineHeight: collapsed ? 19 : 22, textAlign: 'center' }}>{state.caption.text}</Txt> : <Txt variant="caption" accent accessibilityLiveRegion="polite" style={{ textAlign: 'center' }}>{label || 'Voice unavailable. Hold for controls.'}</Txt>}
+      {active && currentCaption ? <Txt translate={false} accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" pointerEvents="none" onTextLayout={event => setCaptionWidth(Math.min(266, Math.ceil(Math.max(1, ...event.nativeEvent.lines.map(line => line.width))) + 1))} style={{ position: 'absolute', opacity: 0, width: 266, fontSize: collapsed ? 13 : 15, lineHeight: collapsed ? 19 : 22 }}>{currentCaption}</Txt> : null}
+      {prefs.voiceCaptions && (label || state.error || currentCaption) ? <Animated.View entering={reducedMotion ? undefined : FadeIn.duration(180)}><Animated.View style={[{ alignSelf: 'center', maxWidth: 290, paddingHorizontal: 12, paddingVertical: 8, marginBottom: 4, borderRadius: 14, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line, boxShadow: '0 3px 12px rgba(0,0,0,0.08)' }, captionMotion]}>
+        {active && currentCaption ? <ScrollView ref={captionScroll} nestedScrollEnabled style={{ width: captionWidth, height: Math.min(captionHeight, collapsed ? 120 : 180), flexGrow: 0 }} onContentSizeChange={(_width, height) => { setCaptionHeight(height); captionScroll.current?.scrollToEnd({ animated: !reducedMotion }); }}><Txt translate={false} accessibilityLabel={`Footnote: ${currentCaption}`} accessibilityLiveRegion={state.caption?.final ? 'polite' : 'none'} style={{ fontSize: collapsed ? 13 : 15, lineHeight: collapsed ? 19 : 22, textAlign: 'center' }}>{currentCaption}</Txt></ScrollView> : <Txt variant="caption" accent accessibilityLiveRegion="polite" style={{ textAlign: 'center' }}>{label || 'Voice unavailable. Hold for controls.'}</Txt>}
       </Animated.View></Animated.View> : null}
-      <ParticleOrb status={state.status === 'speaking' ? 'speaking' : state.status === 'listening' && !state.muted ? 'listening' : state.status === 'connecting' || state.status === 'thinking' ? 'loading' : state.status === 'error' || state.status === 'unavailable' ? 'unavailable' : 'idle'} label={active ? state.muted ? 'Unmute voice agent' : `Mute voice agent. ${label}` : 'Start voice conversation'} onPress={() => { if (!active) start(false); else if (state.status !== 'connecting') void controller.toggleMuted(); }} onLongPress={() => setOpen(true)} onCollapse={collapse} onExpand={expand} collapsed={collapsed} collapseProgress={collapseProgress} level={voiceLevel}/>
+      <ParticleOrb status={state.status === 'speaking' ? 'speaking' : state.status === 'listening' && !state.muted ? 'listening' : state.status === 'connecting' || state.status === 'thinking' ? 'loading' : state.status === 'error' || state.status === 'unavailable' ? 'unavailable' : 'idle'} onDoublePress={() => { if (Platform.OS !== 'web' && prefs.haptics) { void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {}); } setOpen(false); void controller.end(); }} label={active ? state.muted ? 'Unmute voice agent' : `Mute voice agent. ${label}` : 'Start voice conversation'} onPress={() => { if (!active) start(false); else if (state.status !== 'connecting') void controller.toggleMuted(); }} onLongPress={() => setOpen(true)} onCollapse={collapse} onExpand={expand} collapsed={collapsed} collapseProgress={collapseProgress} level={voiceLevel}/>
     </View>
     <AppSheet visible={open} title="Talk it through" onClose={() => setOpen(false)} footer={active ? <Button title="End conversation" icon="stop" onPress={() => { feedback(); void controller.end(); }} /> : <Button title={state.status === 'error' ? 'Try connecting again' : 'Start conversation'} icon="microphone" onPress={() => start()} />}>
       <Group gap={space.xs}><Txt translate={false} variant="heading">{voice.name}</Txt>{label ? <Txt accent accessibilityLiveRegion="polite">{label}</Txt> : null}</Group>

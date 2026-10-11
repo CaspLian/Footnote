@@ -2,26 +2,40 @@ import { DocumentImportError, DocumentImportProgress, useDocumentImport } from '
 import { useState } from 'react';
 import { router } from 'expo-router';
 import { useFootnoteStore } from '@/store';
-import { Badge, Button, ButtonRow, Card, Feedback, Group, Screen, Txt } from '@/components/ui';
+import { Button, Feedback, Group, IconButton, Screen, Txt } from '@/components/ui';
 import { Icon } from '@/components/icon';
 import { confirmAction } from '@/components/confirm';
-import { space } from '@/theme';
+import { space, useTheme } from '@/theme';
 import { MissingCase, useCase } from './shared';
+import { View } from 'react-native';
 
 export function ConfirmDocuments() {
   const c = useCase(); const importFlow = useDocumentImport();
+  const { colors } = useTheme();
   const [error, setError] = useState('');
   const [removing, setRemoving] = useState(false);
   if (!c) return <MissingCase />;
-  return <Screen blockingOverlay={<DocumentImportProgress flow={importFlow}/>} testID="confirm-documents" footer={<Button title={`Use ${c.attachments.length === 1 ? 'this document' : 'these documents'}`} disabled={!c.attachments.length || removing || importFlow.busy} onPress={() => router.push({ pathname: '/understanding', params: { caseId: c.id } })} />}>
-    <DocumentImportError flow={importFlow}/><Group gap={space.lg}><Txt variant="display">Confirm your documents</Txt><Txt muted>Confirm what you’ve added. A bill, an EOB, or both · start with whatever you have.</Txt></Group>
-    <Badge text={`${c.attachments.length} ${c.attachments.length === 1 ? 'document' : 'documents'} added`} tone="accent" />
-    {c.attachments.length ? c.attachments.map((a, index) => <Card key={a.id}>
-      <Group style={{ flexDirection: 'row', gap: space.lg, alignItems: 'center' }}><Icon name={a.mimeType === 'application/pdf' ? 'pdf' : 'images'} size={28} feature /><Group style={{ flex: 1 }}><Txt variant="item" numberOfLines={2} translate={false}>{a.name}</Txt><Txt variant="caption" muted>{a.kind === 'auto' ? 'Auto · identify from the document' : a.kind === 'bill' ? 'Medical bill' : a.kind === 'eob' ? 'Explanation of benefits' : 'Plan document'} · {index + 1} of {c.attachments.length}</Txt></Group></Group>
-      <ButtonRow><Button title="Preview" icon="document" variant="secondary" onPress={() => router.push({ pathname: '/document', params: { caseId: c.id, attachmentId: a.id } })} /><Button title="Remove" icon="trash" variant="quiet" disabled={removing} onPress={() => confirmAction('Remove this document?', 'The private copy will be removed from this case.', 'Remove document', () => { setRemoving(true); void useFootnoteStore.getState().removeAttachment(c.id, a.id).catch(() => setError('This document could not be removed. Try again.')).finally(() => setRemoving(false)); }, true)} /></ButtonRow>
-    </Card>) : <Feedback text="No documents are attached. Add a photo or PDF to continue." />}
-    <ButtonRow><Button title="Take another photo" icon="camera" variant="secondary" disabled={importFlow.busy} onPress={()=>{void importFlow.run('camera','auto',c.id);}}/><Button title="Add documents" icon="plus" variant="secondary" disabled={importFlow.busy} onPress={() => router.navigate({ pathname: '/intake', params: { caseId: c.id } })} /></ButtonRow>
-    <Txt variant="caption" muted>We’ll organize the details first. The review can then use all available evidence, including sourced comparisons when they’re connected.</Txt>
+  return <Screen searchMode={true} blockingOverlay={<DocumentImportProgress flow={importFlow}/>} testID="confirm-documents" footer={<Button title={c.attachments.length === 1 ? 'Use this document' : 'Use these documents'} disabled={!c.attachments.length || removing || importFlow.busy} onPress={() => router.push({ pathname: '/understanding', params: { caseId: c.id } })} />}>
+    <DocumentImportError flow={importFlow}/>
+    <Group gap={space.xs}>
+      <Txt variant="title">Confirm documents</Txt>
+      <Txt muted>{c.attachments.length ? `${c.attachments.length} ${c.attachments.length === 1 ? 'document' : 'documents'} ready to review` : 'Add a document to continue'}</Txt>
+    </Group>
+    {c.attachments.length ? <View style={{ gap: space.sm }}>
+      {c.attachments.map((a, index) => <View key={a.id} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface, borderRadius: 14, padding: space.md, gap: space.md, borderWidth: 1, borderColor: colors.line }}>
+        <Icon name={a.mimeType === 'application/pdf' ? 'pdf' : 'images'} size={24} feature />
+        <Group style={{ flex: 1 }} gap={2}>
+          <Txt variant="item" numberOfLines={1} translate={false}>{a.name}</Txt>
+          <Txt variant="caption" muted>{a.kind === 'auto' ? 'Auto-detect' : a.kind === 'bill' ? 'Medical bill' : a.kind === 'eob' ? 'EOB' : 'Plan document'} · #{index + 1}</Txt>
+        </Group>
+        <Button compact title="Preview" variant="quiet" onPress={() => router.push({ pathname: '/document', params: { caseId: c.id, attachmentId: a.id } })} />
+        <IconButton label="Remove document" name="trash" disabled={removing} onPress={() => confirmAction('Remove this document?', 'The private copy will be removed from this case.', 'Remove document', () => { setRemoving(true); void useFootnoteStore.getState().removeAttachment(c.id, a.id).catch(() => setError('This document could not be removed. Try again.')).finally(() => setRemoving(false)); }, true)} />
+      </View>)}
+    </View> : <Feedback text="No documents are attached. Add a photo or PDF to continue." />}
+    <View style={{ flexDirection: 'row', gap: space.sm }}>
+      <Button compact title="Take another photo" icon="camera" variant="secondary" disabled={importFlow.busy} onPress={() => { void importFlow.run('camera', 'auto', c.id); }} style={{ flex: 1 }} />
+      <Button compact title="Add documents" icon="plus" variant="secondary" disabled={importFlow.busy} onPress={() => router.navigate({ pathname: '/intake', params: { caseId: c.id } })} style={{ flex: 1 }} />
+    </View>
     {error ? <Feedback danger text={error} /> : null}
   </Screen>;
 }

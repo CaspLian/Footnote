@@ -114,6 +114,13 @@ export function createElevenLabsConversation(deps: ElevenLabsDeps) {
           clientTools,
           onUnhandledClientToolCall: call => deps.log?.('tool_unknown', { name: call.tool_name }),
           ...events.callbacks,
+          onError(message) {
+            events.callbacks.onError(message);
+            if (/input muted state|microphone/i.test(message)) {
+              events.reportEnd({error:'Microphone control failed. End the conversation and try again.'});
+              if (conversation) void closeSdk(conversation).catch(()=>{});
+            }
+          },
         });
         const cancelled = new Promise<never>((_resolve, reject) => {
           onAbort = () => reject(abortError());
@@ -125,6 +132,11 @@ export function createElevenLabsConversation(deps: ElevenLabsDeps) {
         throwIfAborted(signal);
         if (closed) throw abortError();
         if (conversation.type !== 'voice') throw new Error('not_a_voice_session');
+        // Native startup changes the shared audio session. Restore duplex after
+        // publication too, before reporting an active microphone to the UI.
+        await deps.activateMicrophone?.();
+        throwIfAborted(signal);
+        if (closed) throw abortError();
         conversation.setMicMuted(false);
       } catch (error) {
         closed = true; events.dispose(); cleanup();
@@ -140,7 +152,7 @@ export function createElevenLabsConversation(deps: ElevenLabsDeps) {
       deps.devHook?.({ send: text => { if (!closed) { events.userTyped(text); activeConversation.sendUserMessage(text); } }, id: () => activeConversation.getId() });
       return {
         async end() { if (closed) return; closed = true; events.closeQuietly(); cleanup(); await closeSdk(activeConversation); },
-        async setMuted(muted) { if (!closed) activeConversation.setMicMuted(muted); },
+        async setMuted(muted) { if (closed) return; if (!muted) await deps.activateMicrophone?.(); if (!closed) activeConversation.setMicMuted(muted); },
         sendText(text) {
           if (closed) throw new Error('conversation_closed');
           activeConversation.sendUserMessage(text);

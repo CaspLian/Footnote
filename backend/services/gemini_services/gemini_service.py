@@ -37,7 +37,12 @@ Explanation of Benefits (EOB) letters and insurance documents.
 
 Rules:
 - Only report what is actually in the document or the user's text. Never invent codes, amounts or dates. Use null when something is missing.
-- When several page images are supplied, treat them as one document in order. Include a line item's 1-based source_page only when you can identify the image containing it; otherwise use null.
+- Uploads can be different documents or pages of one document. Classify EACH uploaded file with its 1-based document_index. Never assume an EOB and a bill are pages of one statement.
+- Give each line its document_index and source_page within that file (1 for a single photo). Do not sum a bill's charges with the same services shown on an EOB.
+- Extract financials separately from the provider statement and EOB. Preserve different billed totals and insurer payments. Credits/payments/adjustments are positive magnitudes. Missing values remain null, not zero. Do not infer prior patient payment from an EOB's deductible or responsibility.
+- A combined Copay/Coins column belongs in copay_coinsurance. Leave separate copayment and coinsurance null unless each is separately printed; do not guess how the combined amount splits.
+- Prefer provider statement lines for line_items when a bill is present; use EOB lines when only an EOB is present. Explain differences in services, repeated bill lines or claim scope in document_mismatch_reason. Set documents_match true only with clear matching claim/services evidence; false for different scope; otherwise null.
+- total_billed uses the provider statement when present, otherwise the EOB. amount_patient_owes uses the printed statement balance when present, otherwise EOB responsibility. Populate financials with every explicitly shown amount, including adjustments, patient payment, allowed amount and responsibility; never fill missing fields by guessing.
 - Write every explanation for a 5th-grade reading level.
 - Write plain_description, possible_issues, plain_summary, spoken_summary and questions_to_ask in {language}.
   Keep original_description exactly as printed. Keep every amount in the currency the document uses (U.S. dollars
@@ -93,11 +98,12 @@ async def analyze(
 
     language = language_name(target_language)  # e.g. "Spanish (Mexico)": the language and its regional variant
     parts: list = []
-    for input_bytes, input_mime in inputs:
+    for index, (input_bytes, input_mime) in enumerate(inputs, start=1):
+        parts.append(f"Uploaded file {index} (document_index={index}):")
         parts.append(types.Part.from_bytes(data=input_bytes, mime_type=input_mime))
     instruction = "Analyze this document." if inputs else "Analyze the text below."
     if len(inputs) > 1:
-        instruction = "Analyze these bill pages together as one document, in the order provided."
+        instruction = "Review all available evidence. Identify each uploaded file and keep bill and EOB finances separate. Some files may be consecutive pages; others may be separate documents or different claim scopes."
     if text and text.strip():
         instruction += f"\n\nUser's text or question:\n{text.strip()}"
     parts.append(instruction)

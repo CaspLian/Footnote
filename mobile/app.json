@@ -7,7 +7,7 @@
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "bundleIdentifier": "org.hackknights.unfold",
+      "bundleIdentifier": "footnote.compare",
       "supportsTablet": false,
       "infoPlist": {
         "CADisableMinimumFrameDurationOnPhone": true,
@@ -51,7 +51,7 @@
       }
     },
     "android": {
-      "package": "org.hackknights.unfold",
+      "package": "footnote.compare",
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.RECORD_AUDIO",

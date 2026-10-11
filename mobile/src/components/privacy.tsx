@@ -4,7 +4,6 @@ import * as LocalAuthentication from 'expo-local-authentication';
 import * as SecureStore from 'expo-secure-store';
 import { narrationService } from '@/native';
 import { Button, Feedback, Group, Txt } from './ui';
-import { Icon } from './icon';
 import { FootnoteLoader } from './loader';
 import { useTheme, space } from '@/theme';
 import { LEGACY_PRIVACY_KEY } from '@/domain/legacy-identity';
@@ -25,7 +24,14 @@ export function PrivacyProvider({children}:{children:ReactNode}) { const { color
   const value={enabled,supported,label,message,busy,toggle,lock:()=>{setLocked(true);void narrationService.stop().catch(()=>{});}};
   if(!ready)return <View style={{flex:1,backgroundColor:colors.background,justifyContent:'center',padding:space.screen}}>{readError?<Feedback danger text="Privacy settings could not be read. Retry to open your workspace." action={{title:'Try again',onPress:()=>void initialize()}}/>:<FootnoteLoader title="Opening your workspace" detail="Checking your local privacy settings."/>}</View>;
   return <PrivacyContext.Provider value={value}>{locked?<View style={{flex:1,backgroundColor:colors.background,padding:space.xl,paddingTop:insets.top+space.xl,paddingBottom:insets.bottom+space.xl}}>
-    <Group gap={space.sm} style={{alignItems:'center'}}><FootnoteMark size={48}/><Txt variant="heading" style={{textAlign:'center'}}>Footnote</Txt></Group>
-    <View style={{flex:1,justifyContent:'center'}}><Group gap={space.xl} style={{maxWidth:420,width:'100%',alignSelf:'center',alignItems:'center'}}><Icon name="lock" size={40} color={colors.accent}/><Txt variant="display" style={{textAlign:'center'}}>Workspace locked</Txt><Txt muted style={{textAlign:'center'}}>Use {label} or your device passcode to open your bills and family profiles.</Txt><Button title={`Unlock with ${label}`} icon="lock" loading={busy} style={{alignSelf:'stretch',width:'100%'}} onPress={()=>{void authenticate().then(ok=>{if(ok)setLocked(false);});}}/>{message?<Feedback text={message}/>:null}</Group></View>
+    <View style={{flex:1,justifyContent:'center'}}><Group gap={space.xl} style={{maxWidth:420,width:'100%',alignSelf:'center',alignItems:'center'}}>
+      <Group gap={space.md} style={{alignItems:'center'}}>
+        <FootnoteMark size={76}/>
+        <Txt variant="display" style={{textAlign:'center'}}>Footnote</Txt>
+      </Group>
+      <Txt muted style={{textAlign:'center'}}>Use {label} or your device passcode to open your bills and family profiles.</Txt>
+      <Button title={`Unlock with ${label}`} loading={busy} style={{alignSelf:'stretch',width:'100%'}} onPress={()=>{void authenticate().then(ok=>{if(ok)setLocked(false);});}}/>
+      {message?<Feedback text={message}/>:null}
+    </Group></View>
   </View>:children}</PrivacyContext.Provider>;
 }

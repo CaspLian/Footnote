@@ -338,6 +338,9 @@ Errors carry `detail.stage = "audit"`:
 - `plain_summary`: a 3–6 sentence explanation
 - `spoken_summary`: under 90 words, written for reading aloud
 - `questions_to_ask`: 2–4 questions
+- `documents`: per-upload `{document_index, document_type}`. The index is 1-based in upload order, not a PDF page number. Auto attachments adopt these classifications; explicit user labels remain overridable.
+- `financials`: nullable USD amounts kept separately for the provider statement and EOB: `statement_billed`, `bill_adjustments`, `after_bill_adjustments`, `statement_insurer_paid`, `prior_patient_payment`, `statement_balance`, `eob_billed`, `eob_allowed`, `eob_insurer_paid`, `eob_patient_responsibility`, `deductible`, `coinsurance`, `copayment`, `copay_coinsurance`. A combined Copay/Coins column is preserved together, without guessing its split. Credits are positive magnitudes. Missing amounts are null, never invented zeros. These additive fields are saved in `bill_analyses.analysis` JSONB without a SQL migration.
+- `documents_match`: true only for clearly matching claim/services, false for conflicting scope, null if uncertain. `document_mismatch_reason` explains mismatched evidence in the target language. Statement calculations use statement adjustments and payments; an unrelated EOB cannot provide its expected balance.
 
 All text is in `target_language`.
 
@@ -347,7 +350,8 @@ All text is in `target_language`.
 - `plain_description`
 - `billed_amount`: number or null
 - `date_of_service`: `YYYY-MM-DD` or null
-- `source_page`: 1-based upload page when Gemini can identify it, otherwise null
+- `document_index`: 1-based uploaded file containing the line, or null for older responses
+- `source_page`: 1-based page within that file, or null when uncertain. Older responses without `document_index` use the prior upload-page mapping for compatibility.
 - `possible_issues`: a list of strings
 
 `PriceCheck`:

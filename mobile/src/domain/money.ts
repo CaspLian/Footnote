@@ -28,6 +28,14 @@ export function expectedRemaining(financials: Financials): number | undefined {
   return Math.max(0, financials.eobResponsibilityCents - financials.patientPaidCents);
 }
 
+/** Reconcile only provider-statement values; never subtract payments from an unrelated EOB. */
+export function statementRemaining(financials: Financials): number | undefined {
+  const { postAdjustmentCents, billedCents, adjustmentCents, insurerPaidCents, patientPaidCents } = financials;
+  const subtotal = postAdjustmentCents ?? (isMoney(billedCents) && isMoney(adjustmentCents) ? billedCents! - adjustmentCents! : undefined);
+  if (!isMoney(subtotal) || !isMoney(insurerPaidCents) || !isMoney(patientPaidCents)) return undefined;
+  return Math.max(0, subtotal - insurerPaidCents! - patientPaidCents!);
+}
+
 export function isISODate(value: string): boolean {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
   const parsed = new Date(`${value}T12:00:00Z`);
