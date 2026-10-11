@@ -15,7 +15,7 @@ describe.skipIf(!LIVE)('the live backend', () => {
   const readings = createReadings(api);
 
   it('lists the languages and the voices', async () => {
-    expect(Object.keys(await api.languages())).toHaveLength(39);
+    expect(Object.keys(await api.languages())).toHaveLength(42);
     const voices = await api.voices();
     expect(voices.default).toBe('matilda');
     expect(voices.language_defaults.es).toBe('elio');

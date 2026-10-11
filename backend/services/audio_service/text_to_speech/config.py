@@ -61,20 +61,26 @@ def default_text_normalization(model_id: str) -> str:
 
 
 # The languages each model speaks, as ISO 639-1 codes (Filipino has none: "fil"). From ElevenLabs' models page,
-# checked 2026-10-10: Flash v2.5 speaks Multilingual v2's 29 plus Hungarian, Norwegian and Vietnamese; the v4
-# models speak 90+, these 32 included. The product's own list of locales is backend/locales.py.
+# checked 2026-10-10: Flash v2.5 speaks Multilingual v2's 29 plus Hungarian, Norwegian and Vietnamese (Chinese is
+# Mandarin, in either script). "The Eleven v4 model family" (v4 and v4 Turbo) speaks 90+, these 32 and Hebrew and
+# Thai included; listed here are the ones the app offers. The product's own list of locales is backend/locales.py.
 MULTILINGUAL_V2_LANGUAGES = frozenset({
     "en", "ja", "zh", "de", "hi", "fr", "ko", "pt", "it", "es", "id", "nl", "tr", "fil", "pl", "sv",
     "bg", "ro", "ar", "cs", "el", "fi", "hr", "ms", "sk", "da", "ta", "uk", "ru",
 })
 FLASH_LANGUAGES = MULTILINGUAL_V2_LANGUAGES | {"hu", "nb", "vi"}
+V4_LANGUAGES = FLASH_LANGUAGES | {"he", "th"}
 MODEL_LANGUAGES = {
     "eleven_multilingual_v2": MULTILINGUAL_V2_LANGUAGES,
     "eleven_flash_v2_5": FLASH_LANGUAGES,
-    "eleven_v4_turbo": FLASH_LANGUAGES,
-    "eleven_v4": FLASH_LANGUAGES,
+    "eleven_v4_turbo": V4_LANGUAGES,
+    "eleven_v4": V4_LANGUAGES,
 }
-_LANGUAGE_ALIASES = {"tl": "fil", "no": "nb"}  # Tagalog (Filipino's base), Norwegian
+# A request that names no model is spoken by ELEVENLABS_MODEL_ID; when that model cannot speak the language (Flash
+# v2.5 and Hebrew or Thai), by the first of these that can. v4 Turbo first: it finished a 222-character text in
+# 5.7 s, v4 in 6.7 s (measured above). Both are slower than Flash, so those replies take longer.
+FALLBACK_MODELS = ("eleven_v4_turbo", "eleven_v4")
+_LANGUAGE_ALIASES = {"tl": "fil", "no": "nb", "iw": "he"}  # Tagalog (Filipino's base), Norwegian, Hebrew's old code
 # What ElevenLabs' language_code takes for a language, where it differs from the code above.
 _ELEVENLABS_LANGUAGE_CODE = {"nb": "no"}
 

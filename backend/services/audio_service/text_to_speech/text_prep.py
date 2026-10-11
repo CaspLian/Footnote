@@ -55,6 +55,14 @@ _NO_MARKS = "\N{CROSS MARK}\N{HEAVY MULTIPLICATION X}\N{BALLOT X}\N{HEAVY BALLOT
 _WARNING_MARK = "\N{WARNING SIGN}"
 _EMOJI_RANGES = "\U0001F000-\U0001FAFF\U00002600-\U000027BF\U00002B00-\U00002BFF"
 _CURRENCY = "$\N{EURO SIGN}\N{POUND SIGN}\N{YEN SIGN}"
+# Direction marks and controls, which Hebrew and Arabic text may carry. They only steer how mixed right-to-left and
+# left-to-right text is displayed, so they are kept (the captions show this text), but never hide a sentence's end.
+_DIRECTION_MARKS = (
+    "\N{LEFT-TO-RIGHT MARK}\N{RIGHT-TO-LEFT MARK}\N{ARABIC LETTER MARK}"
+    "\N{LEFT-TO-RIGHT EMBEDDING}\N{RIGHT-TO-LEFT EMBEDDING}\N{POP DIRECTIONAL FORMATTING}"
+    "\N{LEFT-TO-RIGHT OVERRIDE}\N{RIGHT-TO-LEFT OVERRIDE}"
+    "\N{LEFT-TO-RIGHT ISOLATE}\N{RIGHT-TO-LEFT ISOLATE}\N{FIRST STRONG ISOLATE}\N{POP DIRECTIONAL ISOLATE}"
+)
 _AT_MOST = "\N{LESS-THAN OR EQUAL TO}"
 _AT_LEAST = "\N{GREATER-THAN OR EQUAL TO}"
 _ALMOST_EQUAL = "\N{ALMOST EQUAL TO}"
@@ -196,12 +204,13 @@ MARK_WORDS = {
     "sk": ("Áno", "Nie", "Upozornenie"), "da": ("Ja", "Nej", "Advarsel"), "ta": ("ஆம்", "இல்லை", "எச்சரிக்கை"),
     "uk": ("Так", "Ні", "Увага"), "ru": ("Да", "Нет", "Внимание"), "hu": ("Igen", "Nem", "Figyelem"),
     "nb": ("Ja", "Nei", "Advarsel"), "vi": ("Có", "Không", "Cảnh báo"),
+    "he": ("כן", "לא", "אזהרה"), "th": ("ใช่", "ไม่ใช่", "คำเตือน"),
 }
 
 
 def _language_base(language: str) -> str:
     base = str(language or "en").strip().replace("_", "-").split("-")[0].lower()
-    return {"tl": "fil", "no": "nb"}.get(base, base)
+    return {"tl": "fil", "no": "nb", "iw": "he"}.get(base, base)
 
 
 def prepare_for_speech(text: str, pronunciations: dict[str, str] | None = None, language: str = "en") -> str:
@@ -240,7 +249,8 @@ def prepare_for_speech(text: str, pronunciations: dict[str, str] | None = None, 
     # A check mark next to a cross is a yes/no answer; on its own it is usually decoration.
     speak_check_marks = any(mark in text for mark in _NO_MARKS)
 
-    blocks = [_clean_block(block, speak_check_marks, base) for block in _split_blocks(text)]
+    words = MARK_WORDS.get(base, MARK_WORDS["en"])
+    blocks = [_clean_block(block, speak_check_marks, base) for block in _split_blocks(text, words)]
     full_stop = "\N{IDEOGRAPHIC FULL STOP}" if base in ("ja", "zh") else "."
     text = "\n".join(_end_sentence(block, full_stop) for block in blocks if block)
     text = _apply_pronunciations(text, pronunciations)
@@ -310,11 +320,12 @@ def _speak_url(match: re.Match) -> str:
     return (host or "a link") + trailing
 
 
-def _split_blocks(text: str) -> list[str]:
+def _split_blocks(text: str, words: tuple[str, str, str] = MARK_WORDS["en"]) -> list[str]:
     """Split into speakable blocks: headings, list items, table rows and paragraphs.
 
     Consecutive plain lines belong to the same paragraph, so a sentence that
     happens to be wrapped across lines is not broken in two.
+    `words` are the yes, no and warning words of the reply's language (MARK_WORDS), for table cells.
     """
     blocks: list[str] = []
     paragraph: list[str] = []
@@ -352,7 +363,7 @@ def _split_blocks(text: str) -> list[str]:
             blocks.append(line)
         elif "|" in line:  # a table row, with or without the outer pipes
             finish_paragraph()
-            cells = [_mark_as_word(cell.strip()) for cell in line.strip("|").split("|")]
+            cells = [_mark_as_word(cell.strip(), words) for cell in line.strip("|").split("|")]
             blocks.append(", ".join(cell for cell in cells if cell))
         else:
             paragraph.append(line)
@@ -360,13 +371,13 @@ def _split_blocks(text: str) -> list[str]:
     return blocks
 
 
-def _mark_as_word(cell: str) -> str:
-    """A table cell that holds only a check mark or a cross is a yes/no answer."""
+def _mark_as_word(cell: str, words: tuple[str, str, str] = MARK_WORDS["en"]) -> str:
+    """A table cell that holds only a check mark or a cross is a yes/no answer, said in the reply's language."""
     bare = cell.replace(_VS16, "").strip()
     if len(bare) == 1 and bare in _YES_MARKS:
-        return "yes"
+        return words[0].lower()
     if len(bare) == 1 and bare in _NO_MARKS:
-        return "no"
+        return words[1].lower()
     return cell
 
 
@@ -419,7 +430,8 @@ def _label(word: str):
     """Speak a leading mark as "Word: ", unless the line already starts with that word."""
 
     def replace(match: re.Match) -> str:
-        already_said = re.match(rf"{re.escape(word)}\b", match.string[match.end():], re.IGNORECASE)
+        # (?!\w), not \b: Thai, Hindi and Tamil words can end in a vowel sign or tone mark, which is no word character
+        already_said = re.match(rf"{re.escape(word)}(?!\w)", match.string[match.end():], re.IGNORECASE)
         return "" if already_said else f"{word}: "
 
     return replace
@@ -440,7 +452,7 @@ def _speak_iso_date(match: re.Match) -> str:
 
 def _end_sentence(block: str, full_stop: str = ".") -> str:
     """Make sure the block ends with punctuation so the voice pauses after it."""
-    core = block.rstrip(_CLOSING_CHARS)
+    core = block.rstrip(_CLOSING_CHARS + _DIRECTION_MARKS)
     if core and core[-1] in _TERMINAL_PUNCTUATION:
         return block
     return block + full_stop

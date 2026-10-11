@@ -13,6 +13,8 @@ import functools
 import json
 import logging
 import os
+import re
+import unicodedata
 from pathlib import Path
 from typing import Optional
 
@@ -145,7 +147,7 @@ async def analyze(
 TRANSLATE_PROMPT = """Translate the text the user sends into {language}. A voice will read it aloud to a patient.
 - Keep its meaning exactly. It compares charges on a medical bill with Medicare's national rates: a reason to ask
   questions, never proof that a charge is wrong.
-- Write every number as words, the way it is said aloud in {language}. Keep names such as Medicare as they are.
+- Keep every number exactly as written, in digits (30, 4.5, 1,234,567). Keep names such as Medicare as they are.
 - Text in “double quotes” names a charge and is already in {language}: write it as a natural name for the charge,
   without the quotes. Make each sentence read naturally.
 - Answer with the translation alone, as plain text: no quotes, notes or Markdown."""
@@ -220,13 +222,45 @@ async def _translate(text: str, locale: str) -> Optional[str]:
                         continue
                     raise
                 translated = _unquoted((response.text or "").strip())
-                if translated and len(translated) <= 4 * len(text) + 200:  # not a translation plus notes
-                    return translated
+                if not translated or len(translated) > 4 * len(text) + 200:  # nothing, or a translation plus notes
+                    continue
+                if not _same_numbers(text, translated):
+                    # Seen live (2026-10-10): the small model turned "about 30 times" into 31 or 3 times in
+                    # Traditional Chinese. A wrong number must never be spoken: ask again, else leave it out.
+                    logger.warning("Translation into %s by %s changed a number; asking again", locale, model)
+                    continue
+                return translated
     except Exception as e:  # no key, a refused request, the network: the reply is said without these sentences
         logger.warning("Translation into %s failed: %s", locale, type(e).__name__)
         return None
     logger.warning("Translation into %s failed: no model gave a usable answer", locale)
     return None
+
+
+_NUMBER = re.compile(r"\d+(?:[.,]\d+)*")
+
+
+def _numbers(text: str) -> list[str]:
+    """The numbers in a text, written one way: digits of any script as 0-9 ("٣٠" -> "30"), thousands separators
+    removed ("1,234,567" and "1.234.567" -> "1234567"), a decimal comma as a point ("4,5" -> "4.5"). A single
+    separator followed by exactly three digits is a thousands separator: the price findings' ratios have at most one
+    decimal (voice_routes._times)."""
+    digits = "".join(str(unicodedata.digit(ch)) if ch.isdigit() else ch for ch in text)
+    # Arabic's own separators, and the no-break spaces French and others put between thousands ("1 234 567").
+    digits = digits.replace("٫", ".").replace("٬", ",")
+    digits = re.sub(r"(?<=\d)[  ](?=\d{3})", ",", digits)
+    found = []
+    for raw in _NUMBER.findall(digits):
+        parts = re.split(r"[.,]", raw)
+        decimal = parts.pop() if len(parts) > 1 and len(parts[-1]) != 3 else ""
+        whole = "".join(parts).lstrip("0") or "0"
+        found.append(f"{whole}.{decimal}" if decimal else whole)
+    return sorted(found)
+
+
+def _same_numbers(source: str, translation: str) -> bool:
+    """Whether a translation has exactly the numbers of its source, however each language writes them."""
+    return _numbers(source) == _numbers(translation)
 
 
 def _unquoted(text: str) -> str:
