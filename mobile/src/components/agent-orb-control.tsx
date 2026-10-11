@@ -71,13 +71,11 @@ export function AgentOrbControl({ billCase, term, collapsed, onCollapsedChange }
     const profile = profiles.find(p => p.id === billCase?.profileId);
     void controller.start({ language: prefs.workingLanguage, agentLanguage: agentLanguage(prefs.workingLanguage), voice: voice.id, case: billCase ? { id: billCase.id, evidenceContextId: billCase.evidenceContextId, entriesEdited: billCase.entriesEdited, provider: billCase.provider, serviceDate: billCase.serviceDate, financials: billCase.financials, findings: billCase.findings, reviewMode: billCase.reviewMode } : undefined, evidence: billCase?.attachments.map(a => ({ id: a.id, kind: a.kind, name: a.name })) ?? [], profile: profile ? { firstName: profile.firstName, coverage: profile.coverage, insurer: profile.insurer, planName: profile.planName, zipCode: profile.zipCode } : undefined, preferences: personalContext, term });
   }
-  const lastAgentCaption = useRef<string>('');
-  if (state.caption?.text) {
-    lastAgentCaption.current = state.caption.text;
-  } else if (!active || state.status === 'idle' || state.status === 'thinking') {
-    lastAgentCaption.current = '';
-  }
-  const currentCaption = active ? (state.caption?.text || lastAgentCaption.current) : '';
+  // Keep the agent's last words on screen between caption updates; clear them once it stops or starts thinking.
+  const [lastAgentCaption, setLastAgentCaption] = useState('');
+  const keptCaption = state.caption?.text || (!active || state.status === 'idle' || state.status === 'thinking' ? '' : lastAgentCaption);
+  if (keptCaption !== lastAgentCaption) setLastAgentCaption(keptCaption);
+  const currentCaption = active ? keptCaption : '';
   const label = state.status === 'speaking' ? 'Speaking' : state.status === 'listening' ? state.muted ? 'Microphone muted' : 'Listening' : state.status === 'thinking' ? 'Thinking' : state.status === 'connecting' ? 'Connecting…' : '';
   return <>
     <View pointerEvents="box-none" style={{ alignItems: 'center', maxWidth: 320, width: '100%', gap: 0 }}>
