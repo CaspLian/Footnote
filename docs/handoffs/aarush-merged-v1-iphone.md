@@ -24,3 +24,9 @@ Provider settings are in ignored backend/.env with restrictive file permissions.
 The signed Release native build succeeded and devicectl confirmed installation on iPhone 00008130-000435A82178001C. The standalone JavaScript bundle includes the configured LAN API URL; Metro is not needed. Physical upload, microphone, audible playback and live conversation remain unverified until exercised on the phone. Installed identity remains org.hackknights.unfold, preserving existing app storage.
 
 devicectl also confirmed a successful app launch. This confirms installation and launch, not the physical end-to-end document or voice journey.
+
+## Camera permission recovery
+
+The first physical test reported an access warning despite granted camera access. CameraCapture previously treated the permission hook's initial null response as a denial and did not refresh when returning from Settings. It now waits for permission checks, refreshes on focus/foreground, requests initial access once, and presents actual denial or check failures in a compact recovery card. The camera preview stops when the app is inactive or the route is unfocused. No permission-denied native alert is raised while permission is loading.
+
+TypeScript, lint and 168 mobile tests passed, including permission-loading and stale-denial recovery checks. The replacement signed Release build succeeded and devicectl confirmed installation on the phone; actual capture must be retried on the phone.
