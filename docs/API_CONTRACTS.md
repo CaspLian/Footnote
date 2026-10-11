@@ -74,7 +74,9 @@ list is `backend/locales.py`, served by `GET /api/v1/languages` as `{locale: nam
   keeps amounts in the document's own currency (U.S. dollars on U.S. bills) in every language.
 - **The spoken reply.** Gemini's `spoken_summary` is already in the language. The price findings that follow it are
   written in English, so for other languages Gemini translates them (cached while the server runs; at most 15 s).
-  If it cannot, the reply is the summary alone, never English sentences in another language's reply.
+  Numbers stay digits and are checked: a translation whose numbers differ from the price check's is asked for
+  again and otherwise dropped (seen live: "30 times" became 31 or 3 times in Traditional Chinese). If no correct
+  translation comes back, the reply is the summary alone, never English sentences in another language's reply.
 - **The voice.** Without a `voice`, each language gets a default whose accent suits it (`language_defaults` in
   `GET /api/v1/voice/voices`): `en-GB` Alice, `en-AU` Charlie, Spanish Elio, Hindi and Tamil Saavi, Filipino
   Rachel, Chinese Andy (both scripts); Matilda for the rest, Hebrew and Thai included. Any voice speaks every
