@@ -7,10 +7,8 @@ export const workingLanguages = [
   { code: 'fr', agentCode: 'fr', name: 'French', native: 'Français', country: 'fr', locale: 'fr-FR' },
   { code: 'de', agentCode: 'de', name: 'German', native: 'Deutsch', country: 'de', locale: 'de-DE' },
   { code: 'it', agentCode: 'it', name: 'Italian', native: 'Italiano', country: 'it', locale: 'it-IT' },
-  { code: 'pt-BR', agentCode: 'pt', name: 'Portuguese · Brazil', native: 'Português · Brasil', country: 'br', locale: 'pt-BR' },
-  { code: 'pt-PT', agentCode: 'pt', name: 'Portuguese · Portugal', native: 'Português · Portugal', country: 'pt', locale: 'pt-PT' },
   { code: 'zh-Hans', agentCode: 'zh', name: 'Chinese · Simplified', native: '简体中文', country: 'cn', locale: 'zh-Hans' },
-  { code: 'zh-Hant', agentCode: 'zh', name: 'Chinese · Traditional', native: '繁體中文', country: 'tw', locale: 'zh-Hant' },
+  { code: 'zh-Hant', agentCode: 'zh', name: 'Chinese (Taiwan)', native: '中文（台灣）', country: 'tw', locale: 'zh-Hant-TW' },
   { code: 'ja', agentCode: 'ja', name: 'Japanese', native: '日本語', country: 'jp', locale: 'ja-JP' },
   { code: 'ko', agentCode: 'ko', name: 'Korean', native: '한국어', country: 'kr', locale: 'ko-KR' },
   { code: 'hi', agentCode: 'hi', name: 'Hindi', native: 'हिन्दी', country: 'in', locale: 'hi-IN' },
@@ -34,6 +32,7 @@ export const workingLanguages = [
   { code: 'ms', agentCode: 'ms', name: 'Malay', native: 'Bahasa Melayu', country: 'my', locale: 'ms-MY' },
   { code: 'th', agentCode: 'th', name: 'Thai', native: 'ไทย', country: 'th', locale: 'th-TH' },
   { code: 'vi', agentCode: 'vi', name: 'Vietnamese', native: 'Tiếng Việt', country: 'vn', locale: 'vi-VN' },
+  { code: 'pt-PT', agentCode: 'pt', name: 'Portuguese', native: 'Português', country: 'pt', locale: 'pt-PT' },
 ] as const;
 export type WorkingLanguage = typeof workingLanguages[number]['code'];
-export function languageOption(code: unknown) { return workingLanguages.find(option => option.code === code) ?? workingLanguages[0]; }
+export function languageOption(code: unknown) { return workingLanguages.find(option => option.code === (code === 'pt-BR' ? 'pt-PT' : code)) ?? workingLanguages[0]; }

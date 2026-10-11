@@ -1,3 +1,5 @@
+import type { UnderstandingResult } from '../services/document-understanding';
+import { isRelationshipLabel } from '../domain/profiles';
 import { createStore } from 'zustand/vanilla';
 import { createManualCase, createSampleCase, SAMPLE_CASE_ID } from '../domain/fixtures';
 import { isISODate, isMoney } from '../domain/money';
@@ -7,6 +9,7 @@ import { claimTracker } from '../services/claim-tracker';
 import { documentService } from '../services/connected-services';
 import { draftService, sampleEntriesChanged } from '../services/local-services';
 import { parseSnapshot, STORAGE_KEY, type PersistedSnapshot } from './persistence';
+import { defaultPreferences, normalizePreferences, type AppPreferences } from '../domain/preferences';
 
 export interface LocalStorage {
   getItem(key: string): string | null | Promise<string | null>;
@@ -14,6 +17,10 @@ export interface LocalStorage {
   removeItem(key: string): unknown | Promise<unknown>;
 }
 export interface UnfoldState {
+  preferences: AppPreferences;
+  savedTermIds: string[];
+  setPreferences(preferences: Partial<AppPreferences>): void;
+  toggleSavedTerm(id: string): void;
   locale: Language;
   welcomeCompleted: boolean;
   onboardingCompleted: boolean;
@@ -45,12 +52,14 @@ export interface UnfoldState {
   setActiveCase(caseId: string): void;
   loadSample(): Promise<string>;
   addManualCase(): string;
+  addImportedBatch(attachments: DocumentAttachment[], caseId?: string): string;
   addImportedCase(attachment: DocumentAttachment): string;
   addAttachment(caseId: string, attachment: DocumentAttachment): void;
   updateAttachment(caseId: string, attachmentId: string, kind: DocumentAttachment['kind']): void;
   removeAttachment(caseId: string, attachmentId: string): Promise<void>;
   updateCase(caseId: string, patch: Partial<Pick<BillCase, 'provider' | 'serviceDate' | 'description' | 'financials' | 'lineItems' | 'extraction' | 'findings'>>): void;
   verifyCase(caseId: string): Promise<void>;
+  applyUnderstandingResult(caseId: string, result: UnderstandingResult): void;
   prepareDraft(caseId: string, kind: DraftKind): Promise<string>;
   saveDraft(caseId: string, kind: DraftKind, body: string, locale: Language): string;
   markSubmitted(draftId: string): void;
@@ -76,12 +85,14 @@ export interface StoreOptions {
 }
 
 const emptyData = () => ({
+  preferences: { ...defaultPreferences }, savedTermIds: [] as string[],
   locale: 'en' as Language, welcomeCompleted: false, onboardingCompleted: false, profiles: [] as FamilyProfile[], activeProfileId: undefined as string | undefined, personalContext: { explanationDepth: 'simple', goal: 'understand' } as PersonalContext, iconWeight: 'regular' as IconWeight,
   iconSize: 24, duotoneOpacity: 0.2, cases: [] as BillCase[], drafts: [] as AppealDraft[], events: [] as CaseEvent[], activeCaseId: undefined as string | undefined,
 });
 
 export function snapshotOf(state: UnfoldState): PersistedSnapshot {
   return {
+    preferences: state.preferences, savedTermIds: state.savedTermIds,
     version: 1, onboardingCompleted: state.onboardingCompleted, profiles: state.profiles, activeProfileId: state.activeProfileId, personalContext: state.personalContext, locale: state.locale, welcomeCompleted: state.welcomeCompleted, iconWeight: state.iconWeight,
     iconSize: state.iconSize, duotoneOpacity: state.duotoneOpacity, cases: state.cases, drafts: state.drafts,
     events: state.events, activeCaseId: state.activeCaseId,
@@ -190,6 +201,8 @@ export function createUnfoldStore(storage: LocalStorage, options: StoreOptions =
     };
     return {
       ...emptyData(), hydrated: false, hydrationError: null, storageError: null, processingCaseIds: [],
+      setPreferences(patch) { change({ preferences: normalizePreferences({ ...get().preferences, ...patch }) }); },
+      toggleSavedTerm(id) { if (!id || id.length > 80) return; change({ savedTermIds: get().savedTermIds.includes(id) ? get().savedTermIds.filter(saved => saved !== id) : [...get().savedTermIds, id] }); },
       setLocale(locale) { if (locale !== 'en' && locale !== 'es') return; change({ locale }); },
       completeWelcome() { change({ welcomeCompleted: true }); },
       completeOnboarding(profile, context) {
@@ -199,11 +212,12 @@ export function createUnfoldStore(storage: LocalStorage, options: StoreOptions =
       },
       saveProfile(input) {
         if (!input.firstName.trim() || input.firstName.trim().length > 80 || (input.zipCode && !/^\d{5}$/.test(input.zipCode))) throw new Error('invalid_profile');
-        if (!['self','child','partner','dependent'].includes(input.relationship) || !['private','medicare','medicaid','uninsured','unsure'].includes(input.coverage)) throw new Error('invalid_profile');
+        if (!['self','child','partner','dependent','other'].includes(input.relationship) || !['private','medicare','medicaid','uninsured','unsure'].includes(input.coverage)) throw new Error('invalid_profile');
+        if (input.relationship === 'other' && !isRelationshipLabel(input.relationshipLabel)) throw new Error('invalid_relationship');
         const current = input.id ? get().profiles.find(p => p.id === input.id) : undefined;
         if (input.id && !current) throw new Error('profile_not_found');
         if (input.relationship === 'self' && get().profiles.some(p => p.relationship === 'self' && p.id !== input.id)) throw new Error('duplicate_self_profile');
-        const profile = { ...input, id: current?.id ?? makeId('profile'), firstName: input.firstName.trim(), insurer: input.insurer.trim(), planName: input.planName.trim() };
+        const profile = { ...input, id: current?.id ?? makeId('profile'), firstName: input.firstName.trim(), relationshipLabel: input.relationship === 'other' ? input.relationshipLabel!.trim().replace(/ +/g, ' ') : undefined, insurer: input.insurer.trim(), planName: input.planName.trim() };
         change({ profiles: current ? get().profiles.map(p => p.id === profile.id ? profile : p) : [...get().profiles, profile] });
         return profile.id;
       },
@@ -216,7 +230,8 @@ export function createUnfoldStore(storage: LocalStorage, options: StoreOptions =
       setActiveProfile(id) { if (!get().profiles.some(p => p.id === id)) throw new Error('profile_not_found'); change({ activeProfileId: id }); },
       assignCaseProfile(caseId, profileId) { caseById(caseId); if (!get().profiles.some(p => p.id === profileId)) throw new Error('profile_not_found'); change({ cases: get().cases.map(c => c.id === caseId ? { ...c, profileId, updatedAt: now() } : c) }); },
       setExplanationDepth(depth) { if (depth !== 'simple' && depth !== 'detailed') return; change({ personalContext: { ...get().personalContext, explanationDepth: depth } }); },
-      markResolved(caseId) { const c = caseById(caseId); if (c.status === 'resolved') return; change({ cases: get().cases.map(c => c.id === caseId ? { ...c, status: 'resolved', updatedAt: now() } : c), events: [...get().events, event(caseId, 'resolved')] }); void trackClaim(caseId, { finalCents: c.financials.remainingCents }); },
+      markResolved(caseId) { const c = caseById(caseId); if (c.status === 'resolved') return; change({ cases: get().cases.map(c => c.id === caseId ? { ...c, status: 'resolved', updatedAt: now() } : c), events: [...get().events, event(caseId, 'resolved')] }); // /resolve needs the confirmed statement balance; without one the step is only logged on the claim's timeline.
+        void trackClaim(caseId, c.financials.remainingCents === undefined ? { action: 'Case marked resolved', note: 'No statement balance was confirmed' } : { finalCents: c.financials.remainingCents }); },
       setNoticeDeadline(caseId, date) { const c = caseById(caseId); if (date !== null && !isISODate(date)) throw new Error('invalid_date'); if ((c.noticeDeadline ?? null) === date) return; change({ cases: get().cases.map(c => c.id === caseId ? { ...c, noticeDeadline: date ?? undefined, updatedAt: now() } : c), events: [...get().events, event(caseId, date ? 'deadline_set' : 'deadline_removed', date ? { date } : {})] }); void trackClaim(caseId, date !== null ? { collectionDeadline: date } : { action: 'Notice date removed' }); },
       setIconPreferences(preferences) {
         const patch: Partial<UnfoldState> = {};
@@ -243,6 +258,20 @@ export function createUnfoldStore(storage: LocalStorage, options: StoreOptions =
         const billCase = { ...createManualCase(undefined, makeId('case'), now()), profileId: get().activeProfileId };
         change({ cases: [billCase, ...get().cases], activeCaseId: billCase.id, welcomeCompleted: true }); return billCase.id;
       },
+      addImportedBatch(attachments, caseId) {
+        if (!attachments.length || new Set(attachments.map(a => a.id)).size !== attachments.length) throw new Error('invalid_documents');
+        const imported = attachments.map(a => ({ ...a, origin: 'import' as const }));
+        if (caseId) {
+          const current = caseById(caseId);
+          const added = imported.filter(a => !current.attachments.some(existing => existing.id === a.id));
+          if (!added.length) return caseId;
+          change({ cases: get().cases.map(c => c.id === caseId ? { ...c, attachments: [...c.attachments, ...added], status: 'needs_details', findings: [], evidenceContextId: undefined, verifiedAt: undefined, updatedAt: now() } : c), events: [...get().events, event(caseId, 'imported')] });
+          return caseId;
+        }
+        const billCase = { ...createManualCase(imported[0], makeId('case'), now()), attachments: imported, profileId: get().activeProfileId };
+        change({ cases: [billCase, ...get().cases], events: [...get().events, event(billCase.id, 'imported')], activeCaseId: billCase.id, welcomeCompleted: true });
+        return billCase.id;
+      },
       addImportedCase(attachment) {
         const imported = { ...attachment, origin: 'import' as const };
         const billCase = { ...createManualCase(imported, makeId('case'), now()), profileId: get().activeProfileId };
@@ -253,17 +282,17 @@ export function createUnfoldStore(storage: LocalStorage, options: StoreOptions =
         if (current.attachments.some(item => item.id === attachment.id)) return;
         // A newly imported document can never acquire sample provenance.
         const added = { ...attachment, origin: 'import' as const };
-        change({ cases: get().cases.map(item => item.id === caseId ? { ...item, attachments: [...item.attachments, added], status: 'needs_details', findings: [], verifiedAt: undefined, updatedAt: now() } : item), events: [...get().events, event(caseId, 'imported')] });
+        change({ cases: get().cases.map(item => item.id === caseId ? { ...item, attachments: [...item.attachments, added], status: 'needs_details', findings: [], evidenceContextId: undefined, verifiedAt: undefined, updatedAt: now() } : item), events: [...get().events, event(caseId, 'imported')] });
       },
       updateAttachment(caseId, attachmentId, kind) {
         caseById(caseId);
-        change({ cases: get().cases.map(item => item.id === caseId ? { ...item, attachments: item.attachments.map(a => a.id === attachmentId ? { ...a, kind } : a), status: 'needs_details', findings: [], verifiedAt: undefined, updatedAt: now() } : item) });
+        change({ cases: get().cases.map(item => item.id === caseId ? { ...item, attachments: item.attachments.map(a => a.id === attachmentId ? { ...a, kind } : a), status: 'needs_details', findings: [], evidenceContextId: undefined, verifiedAt: undefined, updatedAt: now() } : item) });
       },
       async removeAttachment(caseId, attachmentId) {
         const current = caseById(caseId); const removed = current.attachments.find(item => item.id === attachmentId);
         if (!removed) return;
         if (options.deleteAttachments) await options.deleteAttachments([removed]);
-        change({ cases: get().cases.map(item => item.id === caseId ? { ...item, attachments: item.attachments.filter(a => a.id !== attachmentId), status: 'needs_details', findings: [], verifiedAt: undefined, updatedAt: now() } : item) });
+        change({ cases: get().cases.map(item => item.id === caseId ? { ...item, attachments: item.attachments.filter(a => a.id !== attachmentId), status: 'needs_details', findings: [], evidenceContextId: undefined, verifiedAt: undefined, updatedAt: now() } : item) });
       },
       updateCase(caseId, patch) {
         const original = caseById(caseId);
@@ -272,6 +301,14 @@ export function createUnfoldStore(storage: LocalStorage, options: StoreOptions =
         const updated = { ...original, ...patch, status: 'needs_details' as const, findings: patch.findings ?? [], verifiedAt: undefined, updatedAt: now() };
         updated.entriesEdited = updated.source === 'sample' && sampleEntriesChanged(updated);
         change({ cases: get().cases.map(item => item.id === caseId ? updated : item) });
+      },
+      applyUnderstandingResult(caseId, result) {
+        const current = caseById(caseId);
+        if (result.details?.serviceDate && !isISODate(result.details.serviceDate)) throw new Error('invalid_date');
+        if (result.details?.lineItems?.some(line => !current.attachments.some(a => a.id === line.evidence.attachmentId))) throw new Error('invalid_source');
+        // Merge amounts: adding a document to a case keeps the values that the new reading does not provide.
+        if (result.details) get().updateCase(caseId, result.details.financials ? { ...result.details, financials: { ...current.financials, ...result.details.financials } } : result.details);
+        change({ cases: get().cases.map(item => item.id === caseId ? { ...item, evidenceContextId: result.contextId, updatedAt: now() } : item) });
       },
       async verifyCase(caseId) {
         ensureWritable();

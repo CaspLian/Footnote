@@ -1,3 +1,4 @@
+import { languageOption, type WorkingLanguage } from '../domain/languages';
 import type { ClaimChange, ClaimDeadlines } from '../domain/types';
 
 /**
@@ -9,6 +10,14 @@ const API_URL = (process.env.EXPO_PUBLIC_API_URL ?? '').trim().replace(/\/+$/, '
 
 export function backendConfigured(): boolean {
   return API_URL !== '';
+}
+
+// Unfold names the two Chinese scripts; the backend's locales (GET /api/v1/languages) name their regions.
+const LOCALE_OVERRIDES: Partial<Record<WorkingLanguage, string>> = { 'zh-Hans': 'zh-CN', 'zh-Hant': 'zh-TW' };
+
+/** The backend locale (target_language) for a working language: 'fr' -> 'fr-FR', 'zh-Hant' -> 'zh-TW'. */
+export function backendLocale(language: WorkingLanguage): string {
+  return LOCALE_OVERRIDES[language] ?? languageOption(language).locale;
 }
 
 /** Audio URLs from the backend are relative: this makes them absolute. */

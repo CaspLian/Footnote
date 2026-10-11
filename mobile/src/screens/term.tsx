@@ -32,7 +32,7 @@ function TermDetailContent({ termId }: { termId: string }) {
     return () => { active = false; };
   }, [termId, depth, prefs.voice, retry]);
   if (!term) return <Screen><Feedback title="This term is unavailable" text="Open Guide to browse the insurance glossary." action={{ title: 'Open Guide', onPress: () => router.replace('/(tabs)/guide') }} /></Screen>;
-  return <Screen overlayReserve={orbCollapsed?88:148} overlayBottom={orbCollapsed?24:8} overlaySpace={24} contentWidth={720} testID="term-detail" overlay={explanation ? <AgentOrbControl collapsed={orbCollapsed} onCollapsedChange={setOrbCollapsed} term={{id:term.id,title:term.title.en,definition:explanation.definition,example:explanation.example}} /> : undefined} footer={explanation ? <Button title={copied ? 'Copied' : 'Copy question'} icon="copy" onPress={() => { void copyDraft(explanation.question).then(() => setCopied(true)).catch(() => setError('The question could not be copied. Try again.')); }} /> : undefined}>
+  return <Screen measureOverlay overlayReserve={orbCollapsed?68:136} overlayBottom={4} overlaySpace={24} contentWidth={720} testID="term-detail" overlay={explanation ? <AgentOrbControl collapsed={orbCollapsed} onCollapsedChange={setOrbCollapsed} term={{id:term.id,title:term.title.en,definition:explanation.definition,example:explanation.example}} /> : undefined} footer={explanation ? <Button title={copied ? 'Copied' : 'Copy question'} icon="copy" onPress={() => { void copyDraft(explanation.question).then(() => setCopied(true)).catch(() => setError('The question could not be copied. Try again.')); }} /> : undefined}>
     <Group gap={space.lg}><Txt variant="display">{term.title.en}</Txt><Txt muted>{term.id === 'eob' ? 'Often called an EOB' : 'A useful term to know'}</Txt></Group>
     {!explanation ? error ? <Feedback danger text={error} action={{ title: 'Try again', onPress: () => { setError(''); setRetry(v => v + 1); } }} /> : <UnfoldLoader compact title="Opening the explanation" detail="A definition and a useful example." /> : <>
       <Txt>{explanation.definition}</Txt>
@@ -43,7 +43,7 @@ function TermDetailContent({ termId }: { termId: string }) {
       <ButtonRow><Button title={saved ? 'Saved term' : 'Save term'} icon={saved ? 'check' : 'bookmark'} variant="quiet" onPress={() => useUnfoldStore.getState().toggleSavedTerm(termId)} /><Button title="Read the source" icon="export" variant="secondary" onPress={() => { void Linking.openURL(explanation.source.url).catch(() => setError('The source could not be opened. Try again when online.')); }} /></ButtonRow>
       <Txt variant="caption" muted>{explanation.source.title}. These are curated explanations; no AI or ElevenLabs service is connected.</Txt>
     </>}
-    {explanation && error ? <Feedback danger text={error} /> : null}
+    {explanation && error ? <Feedback danger onDismiss={() => setError('')} text={error} /> : null}
     <Txt variant="caption" muted>Your own plan documents determine your coverage.</Txt>
   </Screen>;
 }

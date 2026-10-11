@@ -1,18 +1,19 @@
 export type Language = 'en' | 'es';
 export type Locale = Language;
 export type LocalizedText = Record<Language, string>;
-export type DocumentKind = 'bill' | 'eob' | 'policy';
+export type DocumentKind = 'auto' | 'bill' | 'eob' | 'policy';
 export type CaseStatus = 'needs_details' | 'ready' | 'action_prepared' | 'submitted' | 'resolved';
 export type DraftKind = 'billing_correction' | 'insurer_appeal';
 export type IconWeight = 'regular' | 'bold' | 'thin';
 
-export type Relationship = 'self' | 'child' | 'partner' | 'dependent';
+export type Relationship = 'self' | 'child' | 'partner' | 'dependent' | 'other';
 export type Coverage = 'private' | 'medicare' | 'medicaid' | 'uninsured' | 'unsure';
 export type ExplanationDepth = 'simple' | 'detailed';
 export interface FamilyProfile {
   id: string;
   firstName: string;
   relationship: Relationship;
+  relationshipLabel?: string;
   ageGroup?: 'under18' | 'adult' | 'over65';
   zipCode: string;
   coverage: Coverage;
@@ -53,15 +54,15 @@ export interface LineItem {
   evidence: Evidence;
 }
 export interface Financials {
-  billedCents: Money;
-  adjustmentCents: Money;
-  postAdjustmentCents: Money;
+  billedCents?: Money;
+  adjustmentCents?: Money;
+  postAdjustmentCents?: Money;
   /** Allowed amount is sourced from the EOB, never inferred from a statement. */
   allowedCents?: Money;
   insurerPaidCents?: Money;
   patientResponsibilityCents?: Money;
-  patientPaidCents: Money;
-  remainingCents: Money;
+  patientPaidCents?: Money;
+  remainingCents?: Money;
   eobBilledCents?: Money;
   eobResponsibilityCents?: Money;
   deductibleCents?: Money;
@@ -106,6 +107,8 @@ export interface Finding {
 export interface BillCase {
   id: string;
   profileId?: string;
+  /** Backend reference for the currently attached and confirmed evidence. */
+  evidenceContextId?: string;
   provider: string;
   serviceDate: string;
   description: LocalizedText;

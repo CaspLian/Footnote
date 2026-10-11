@@ -33,7 +33,7 @@ export interface GeminiAnalyzeResponse {
 const localized = (value: string, _language: Language): LocalizedText => ({ en: value, es: value });
 const cents = (amount?: number | null) => amount == null || !Number.isFinite(amount) || amount < 0 ? undefined : Math.round(amount * 100);
 
-export function mapGeminiAnalysis(response: GeminiAnalyzeResponse, billCase: BillCase, language: Language): { extraction: ExtractedAnalysis; provider?: string; serviceDate?: string; financials: Partial<BillCase['financials']>; lineItems: LineItem[]; findings: Finding[] } {
+export function mapGeminiAnalysis(response: GeminiAnalyzeResponse, billCase: Pick<BillCase, 'attachments'>, language: Language): { extraction: ExtractedAnalysis; provider?: string; serviceDate?: string; financials: Partial<BillCase['financials']>; lineItems: LineItem[]; findings: Finding[] } {
   const result = response.result;
   const attachments = billCase.attachments.filter(item => item.origin === 'import');
   const firstAttachment: DocumentAttachment | undefined = attachments[0];

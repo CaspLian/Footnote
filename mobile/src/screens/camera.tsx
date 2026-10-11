@@ -6,12 +6,13 @@ import type { DocumentKind } from '@/domain';
 import { deleteAttachment, persistImportedAttachment } from '@/native';
 import { Button, Feedback, Group, Screen, Txt, useLanguage } from '@/components/ui';
 import { useUnfoldStore } from '@/store';
-import { colors, space } from '@/theme';
+import { space, useTheme } from '@/theme';
 
 export function CameraCapture() {
   const { copy } = useLanguage();
+  const { colors } = useTheme();
   const params = useLocalSearchParams<{ caseId?: string; kind?: string }>();
-  const kind: DocumentKind = params.kind === 'eob' || params.kind === 'policy' ? params.kind : 'bill';
+  const kind: DocumentKind = params.kind === 'bill' || params.kind === 'eob' || params.kind === 'policy' ? params.kind : 'auto';
   const [permission, requestPermission] = useCameraPermissions();
   const camera = useRef<CameraView>(null);
   const [ready, setReady] = useState(false);
@@ -51,14 +52,9 @@ export function CameraCapture() {
         attachments.push(await persistImportedAttachment({ uri: pages[index].uri, name: `bill-page-${index + 1}.jpg`, mimeType: 'image/jpeg' }, kind));
       }
       if (attachments.reduce((total, attachment) => total + (attachment.size ?? 0), 0) > 15 * 1024 * 1024) throw new Error('upload-too-large');
-      const store = useUnfoldStore.getState();
-      let caseId = params.caseId;
-      if (caseId) attachments.forEach(attachment => store.addAttachment(caseId!, attachment));
-      else {
-        caseId = store.addImportedCase(attachments[0]);
-        attachments.slice(1).forEach(attachment => store.addAttachment(caseId!, attachment));
-      }
-      router.replace({ pathname: '/processing', params: { caseId, extract: '1' } });
+      // The same commit and next step as the document import flow (components/document-import.tsx).
+      const caseId = useUnfoldStore.getState().addImportedBatch(attachments, params.caseId);
+      router.replace({ pathname: '/confirm-documents', params: { caseId } });
     } catch (failure) {
       await Promise.all(attachments.map(attachment => deleteAttachment(attachment).catch(() => {})));
       setError(failure instanceof Error && failure.message === 'upload-too-large'

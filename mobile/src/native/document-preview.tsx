@@ -6,7 +6,7 @@ import Pdf from 'react-native-pdf';
 import type { DocumentAttachment, Language } from '@/domain';
 import { Button, Field, Txt } from '@/components/ui';
 import { UnfoldLoader } from '@/components/loader';
-import { colors, radius, sizes, space } from '@/theme';
+import { type Palette, useTheme, radius, sizes, space } from '@/theme';
 import { nativeErrorMessage, nativeMessages, type NativeErrorCode } from './errors';
 import { shareDocument } from './exports';
 
@@ -28,7 +28,7 @@ export function DocumentPreview(props: Props) {
   return <DocumentPreviewContent key={props.attachment.uri} {...props} />;
 }
 
-function DocumentPreviewContent({ attachment, language, style, onError, onLoad }: Props) {
+function DocumentPreviewContent({ attachment, language, style, onError, onLoad }: Props) { const { colors } = useTheme(); const styles = createStyles(colors);
   const [state, setState] = useState<PreviewState>(() => canReadLocalDocument(attachment.uri) ? 'loading' : 'error');
   const [errorCode, setErrorCode] = useState<NativeErrorCode>('file-unavailable');
   const [passwordInput, setPasswordInput] = useState('');
@@ -109,11 +109,11 @@ function DocumentPreviewContent({ attachment, language, style, onError, onLoad }
       <Txt variant="caption" muted>{isPdf && state === 'ready' ? copy(`Page ${page} of ${pages} · Pinch to zoom`, `Página ${page} de ${pages} · Amplía con dos dedos`) : copy('Original document', 'Documento original')}</Txt>
       <Button variant="quiet" title={copy('Open in another app', 'Abrir en otra app')} loading={sharing} onPress={() => { void share(); }} />
     </View>
-    {shareError ? <Txt accessibilityRole="alert" selectable style={{ color: colors.error, paddingHorizontal: space.lg }}>{shareError}</Txt> : null}
+    {shareError ? <Txt accessibilityRole="alert" selectable style={{  paddingHorizontal: space.lg }}>{shareError}</Txt> : null}
   </View>;
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: Palette) => StyleSheet.create({
   container: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line, borderRadius: radius.control, borderCurve: 'continuous', overflow: 'hidden', gap: space.sm, paddingBottom: space.sm },
   heading: { paddingHorizontal: space.lg, paddingTop: space.lg, gap: space.sm, flexDirection: 'row', alignItems: 'flex-start' },
   document: { height: sizes.preview, backgroundColor: colors.background },

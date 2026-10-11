@@ -13,16 +13,17 @@ export interface AgentContext {
   term?: { id: string; title: string; definition: string; example: string };
 }
 export interface AgentSession { end(): Promise<void>; setMuted(muted: boolean): Promise<void>; }
+export interface AgentMessage { role: 'user' | 'agent'; text: string; id?: string; final?: boolean; }
 export interface AgentAdapter {
   /** Request a short-lived session from the backend. Never embed ElevenLabs API keys. */
-  connect(context: AgentContext, options: { signal: AbortSignal; onStatus: (status: AgentStatus) => void; onMessage: (message: { role: 'user' | 'agent'; text: string }) => void }): Promise<AgentSession>;
+  connect(context: AgentContext, options: { signal: AbortSignal; onStatus: (status: AgentStatus) => void; onMessage: (message: AgentMessage) => void }): Promise<AgentSession>;
 }
 export class AgentUnavailable extends Error {}
 let adapter: AgentAdapter = { async connect() { throw new AgentUnavailable('Live voice conversations aren’t connected in this build. Your voice and language choices are saved for the connection.'); } };
 export function configureAgentAdapter(next: AgentAdapter) { adapter = next; }
 export const voiceAgentService: AgentAdapter = { connect: (context, options) => adapter.connect(context, options) };
 export function agentLanguage(language: WorkingLanguage) { return languageOption(language).agentCode; }
-export type AgentSnapshot = { status: AgentStatus; muted: boolean; error?: string; messages: { role: 'user' | 'agent'; text: string }[] };
+export type AgentSnapshot = { status: AgentStatus; muted: boolean; error?: string; messages: AgentMessage[]; caption?: AgentMessage };
 export class AgentController {
   private snapshot: AgentSnapshot = { status: 'idle', muted: false, messages: [] };
   private listeners = new Set<() => void>();
@@ -35,9 +36,24 @@ export class AgentController {
   async start(context: AgentContext) {
     if (this.abort || this.session) return;
     const abort = new AbortController(); this.abort = abort;
-    this.update({ status: 'connecting', muted: false, error: undefined, messages: [] });
+    this.update({ status: 'connecting', muted: false, error: undefined, messages: [], caption: undefined });
     try {
-      const session = await this.service.connect(context, { signal: abort.signal, onStatus: status => { if (this.abort === abort && !abort.signal.aborted) this.update({ status }); }, onMessage: message => { if (this.abort === abort && !abort.signal.aborted) this.update({ messages: [...this.snapshot.messages, message].slice(-20) }); } });
+      const session = await this.service.connect(context, {
+        signal: abort.signal,
+        onStatus: status => {
+          if (this.abort === abort && !abort.signal.aborted) this.update({ status, ...(status === 'listening' || status === 'thinking' || status === 'idle' ? { caption: undefined } : {}) });
+        },
+        onMessage: message => {
+          if (this.abort !== abort || abort.signal.aborted || !message.text.trim()) return;
+          const messages = [...this.snapshot.messages];
+          const index = message.id ? messages.findIndex(m => m.id === message.id && m.role === message.role) : -1;
+          if (index >= 0) {
+            if (messages[index].final) return;
+            messages[index] = message;
+          } else messages.push(message);
+          this.update({ messages: messages.slice(-20), ...(message.role === 'agent' ? { caption: message } : {}) });
+        },
+      });
       if (this.abort !== abort || abort.signal.aborted) { await session.end(); return; }
       this.session = session;
       if (this.snapshot.status === 'connecting') this.update({ status: 'listening' });
@@ -53,7 +69,7 @@ export class AgentController {
   async end() {
     this.abort?.abort(); this.abort = undefined;
     const session = this.session; this.session = undefined;
-    this.update({ status: 'idle', muted: false });
+    this.update({ status: 'idle', muted: false, caption: undefined });
     try { await session?.end(); } catch { this.update({ error: 'The voice connection did not close cleanly. Please check your connection.' }); }
   }
 }

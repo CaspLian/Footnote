@@ -12,7 +12,8 @@ export interface UnderstandingRequest {
 export interface UnderstandingResult {
   /** An opaque backend context reference for a later evidence review and live agent. */
   contextId?: string;
-  details?: Partial<Pick<BillCase, 'provider' | 'serviceDate' | 'financials' | 'lineItems'>>;
+  /** extraction and findings come from the Gemini adapter (services/gemini-understanding.ts). */
+  details?: Partial<Pick<BillCase, 'provider' | 'serviceDate' | 'financials' | 'lineItems' | 'extraction' | 'findings'>>;
   mode: 'extracted' | 'manual' | 'synthetic';
 }
 export interface UnderstandingAdapter {

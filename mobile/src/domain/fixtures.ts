@@ -37,7 +37,7 @@ export function createManualCase(attachment?: DocumentAttachment, id = `case-${D
   return {
     id, provider: '', serviceDate: '', description: text('Imported document', 'Documento importado'),
     status: 'needs_details', source: 'manual', attachments: attachment ? [attachment] : [], lineItems: [], findings: [],
-    financials: { billedCents: 0, adjustmentCents: 0, postAdjustmentCents: 0, patientPaidCents: 0, remainingCents: 0 },
+    financials: {},
     createdAt: at, updatedAt: at,
   };
 }

@@ -1,0 +1,763 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-10T22:07:03.489858+00:00",
+  "title": "Design System: Unfold",
+  "extensions": {
+    "colorMeta": {
+      "background": {
+        "role": "neutral",
+        "displayName": "Warm Ivory",
+        "tonalRamp": [
+          "oklch(15% 0.0098 87.47)",
+          "oklch(25% 0.0098 87.47)",
+          "oklch(35% 0.0098 87.47)",
+          "oklch(45% 0.0098 87.47)",
+          "oklch(55% 0.0098 87.47)",
+          "oklch(65% 0.0098 87.47)",
+          "oklch(80% 0.0098 87.47)",
+          "oklch(95% 0.0098 87.47)"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Paper",
+        "tonalRamp": [
+          "oklch(15% 0.0054 95.10)",
+          "oklch(25% 0.0054 95.10)",
+          "oklch(35% 0.0054 95.10)",
+          "oklch(45% 0.0054 95.10)",
+          "oklch(55% 0.0054 95.10)",
+          "oklch(65% 0.0054 95.10)",
+          "oklch(80% 0.0054 95.10)",
+          "oklch(95% 0.0054 95.10)"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Green Ink",
+        "tonalRamp": [
+          "oklch(15% 0.0266 183.88)",
+          "oklch(25% 0.0266 183.88)",
+          "oklch(35% 0.0266 183.88)",
+          "oklch(45% 0.0266 183.88)",
+          "oklch(55% 0.0266 183.88)",
+          "oklch(65% 0.0266 183.88)",
+          "oklch(80% 0.0266 183.88)",
+          "oklch(95% 0.0266 183.88)"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Muted Green",
+        "tonalRamp": [
+          "oklch(15% 0.0184 166.17)",
+          "oklch(25% 0.0184 166.17)",
+          "oklch(35% 0.0184 166.17)",
+          "oklch(45% 0.0184 166.17)",
+          "oklch(55% 0.0184 166.17)",
+          "oklch(65% 0.0184 166.17)",
+          "oklch(80% 0.0184 166.17)",
+          "oklch(95% 0.0184 166.17)"
+        ]
+      },
+      "accent": {
+        "role": "primary",
+        "displayName": "Restrained Teal",
+        "tonalRamp": [
+          "oklch(15% 0.0811 176.54)",
+          "oklch(25% 0.0811 176.54)",
+          "oklch(35% 0.0811 176.54)",
+          "oklch(45% 0.0811 176.54)",
+          "oklch(55% 0.0811 176.54)",
+          "oklch(65% 0.0811 176.54)",
+          "oklch(80% 0.0811 176.54)",
+          "oklch(95% 0.0811 176.54)"
+        ]
+      },
+      "accent-soft": {
+        "role": "primary",
+        "displayName": "Soft Teal Ground",
+        "tonalRamp": [
+          "oklch(15% 0.0126 149.25)",
+          "oklch(25% 0.0126 149.25)",
+          "oklch(35% 0.0126 149.25)",
+          "oklch(45% 0.0126 149.25)",
+          "oklch(55% 0.0126 149.25)",
+          "oklch(65% 0.0126 149.25)",
+          "oklch(80% 0.0126 149.25)",
+          "oklch(95% 0.0126 149.25)"
+        ]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Paper Rule",
+        "tonalRamp": [
+          "oklch(15% 0.0108 100.84)",
+          "oklch(25% 0.0108 100.84)",
+          "oklch(35% 0.0108 100.84)",
+          "oklch(45% 0.0108 100.84)",
+          "oklch(55% 0.0108 100.84)",
+          "oklch(65% 0.0108 100.84)",
+          "oklch(80% 0.0108 100.84)",
+          "oklch(95% 0.0108 100.84)"
+        ]
+      },
+      "warning": {
+        "role": "secondary",
+        "displayName": "Notice Amber",
+        "tonalRamp": [
+          "oklch(15% 0.0944 67.65)",
+          "oklch(25% 0.0944 67.65)",
+          "oklch(35% 0.0944 67.65)",
+          "oklch(45% 0.0944 67.65)",
+          "oklch(55% 0.0944 67.65)",
+          "oklch(65% 0.0944 67.65)",
+          "oklch(80% 0.0944 67.65)",
+          "oklch(95% 0.0944 67.65)"
+        ]
+      },
+      "warning-soft": {
+        "role": "secondary",
+        "displayName": "Soft Notice Amber",
+        "tonalRamp": [
+          "oklch(15% 0.0188 83.06)",
+          "oklch(25% 0.0188 83.06)",
+          "oklch(35% 0.0188 83.06)",
+          "oklch(45% 0.0188 83.06)",
+          "oklch(55% 0.0188 83.06)",
+          "oklch(65% 0.0188 83.06)",
+          "oklch(80% 0.0188 83.06)",
+          "oklch(95% 0.0188 83.06)"
+        ]
+      },
+      "error": {
+        "role": "secondary",
+        "displayName": "Recovery Red",
+        "tonalRamp": [
+          "oklch(15% 0.1324 28.53)",
+          "oklch(25% 0.1324 28.53)",
+          "oklch(35% 0.1324 28.53)",
+          "oklch(45% 0.1324 28.53)",
+          "oklch(55% 0.1324 28.53)",
+          "oklch(65% 0.1324 28.53)",
+          "oklch(80% 0.1324 28.53)",
+          "oklch(95% 0.1324 28.53)"
+        ]
+      },
+      "error-soft": {
+        "role": "secondary",
+        "displayName": "Soft Recovery Red",
+        "tonalRamp": [
+          "oklch(15% 0.0126 35.73)",
+          "oklch(25% 0.0126 35.73)",
+          "oklch(35% 0.0126 35.73)",
+          "oklch(45% 0.0126 35.73)",
+          "oklch(55% 0.0126 35.73)",
+          "oklch(65% 0.0126 35.73)",
+          "oklch(80% 0.0126 35.73)",
+          "oklch(95% 0.0126 35.73)"
+        ]
+      },
+      "dark-background": {
+        "role": "neutral",
+        "displayName": "Deep Green Ground",
+        "tonalRamp": [
+          "oklch(15% 0.0163 182.22)",
+          "oklch(25% 0.0163 182.22)",
+          "oklch(35% 0.0163 182.22)",
+          "oklch(45% 0.0163 182.22)",
+          "oklch(55% 0.0163 182.22)",
+          "oklch(65% 0.0163 182.22)",
+          "oklch(80% 0.0163 182.22)",
+          "oklch(95% 0.0163 182.22)"
+        ]
+      },
+      "dark-surface": {
+        "role": "neutral",
+        "displayName": "Raised Green Paper",
+        "tonalRamp": [
+          "oklch(15% 0.0199 180.01)",
+          "oklch(25% 0.0199 180.01)",
+          "oklch(35% 0.0199 180.01)",
+          "oklch(45% 0.0199 180.01)",
+          "oklch(55% 0.0199 180.01)",
+          "oklch(65% 0.0199 180.01)",
+          "oklch(80% 0.0199 180.01)",
+          "oklch(95% 0.0199 180.01)"
+        ]
+      },
+      "dark-ink": {
+        "role": "neutral",
+        "displayName": "Warm Light Ink",
+        "tonalRamp": [
+          "oklch(15% 0.0120 101.48)",
+          "oklch(25% 0.0120 101.48)",
+          "oklch(35% 0.0120 101.48)",
+          "oklch(45% 0.0120 101.48)",
+          "oklch(55% 0.0120 101.48)",
+          "oklch(65% 0.0120 101.48)",
+          "oklch(80% 0.0120 101.48)",
+          "oklch(95% 0.0120 101.48)"
+        ]
+      },
+      "dark-muted": {
+        "role": "neutral",
+        "displayName": "Light Muted Green",
+        "tonalRamp": [
+          "oklch(15% 0.0227 167.29)",
+          "oklch(25% 0.0227 167.29)",
+          "oklch(35% 0.0227 167.29)",
+          "oklch(45% 0.0227 167.29)",
+          "oklch(55% 0.0227 167.29)",
+          "oklch(65% 0.0227 167.29)",
+          "oklch(80% 0.0227 167.29)",
+          "oklch(95% 0.0227 167.29)"
+        ]
+      },
+      "dark-accent": {
+        "role": "primary",
+        "displayName": "Pale Mint",
+        "tonalRamp": [
+          "oklch(15% 0.0784 170.83)",
+          "oklch(25% 0.0784 170.83)",
+          "oklch(35% 0.0784 170.83)",
+          "oklch(45% 0.0784 170.83)",
+          "oklch(55% 0.0784 170.83)",
+          "oklch(65% 0.0784 170.83)",
+          "oklch(80% 0.0784 170.83)",
+          "oklch(95% 0.0784 170.83)"
+        ]
+      },
+      "dark-accent-soft": {
+        "role": "primary",
+        "displayName": "Deep Teal Ground",
+        "tonalRamp": [
+          "oklch(15% 0.0377 168.57)",
+          "oklch(25% 0.0377 168.57)",
+          "oklch(35% 0.0377 168.57)",
+          "oklch(45% 0.0377 168.57)",
+          "oklch(55% 0.0377 168.57)",
+          "oklch(65% 0.0377 168.57)",
+          "oklch(80% 0.0377 168.57)",
+          "oklch(95% 0.0377 168.57)"
+        ]
+      },
+      "dark-line": {
+        "role": "neutral",
+        "displayName": "Deep Paper Rule",
+        "tonalRamp": [
+          "oklch(15% 0.0264 170.46)",
+          "oklch(25% 0.0264 170.46)",
+          "oklch(35% 0.0264 170.46)",
+          "oklch(45% 0.0264 170.46)",
+          "oklch(55% 0.0264 170.46)",
+          "oklch(65% 0.0264 170.46)",
+          "oklch(80% 0.0264 170.46)",
+          "oklch(95% 0.0264 170.46)"
+        ]
+      },
+      "dark-warning": {
+        "role": "secondary",
+        "displayName": "Light Notice Amber",
+        "tonalRamp": [
+          "oklch(15% 0.0832 76.44)",
+          "oklch(25% 0.0832 76.44)",
+          "oklch(35% 0.0832 76.44)",
+          "oklch(45% 0.0832 76.44)",
+          "oklch(55% 0.0832 76.44)",
+          "oklch(65% 0.0832 76.44)",
+          "oklch(80% 0.0832 76.44)",
+          "oklch(95% 0.0832 76.44)"
+        ]
+      },
+      "dark-warning-soft": {
+        "role": "secondary",
+        "displayName": "Deep Notice Amber",
+        "tonalRamp": [
+          "oklch(15% 0.0304 72.60)",
+          "oklch(25% 0.0304 72.60)",
+          "oklch(35% 0.0304 72.60)",
+          "oklch(45% 0.0304 72.60)",
+          "oklch(55% 0.0304 72.60)",
+          "oklch(65% 0.0304 72.60)",
+          "oklch(80% 0.0304 72.60)",
+          "oklch(95% 0.0304 72.60)"
+        ]
+      },
+      "dark-error": {
+        "role": "secondary",
+        "displayName": "Light Recovery Red",
+        "tonalRamp": [
+          "oklch(15% 0.0832 30.02)",
+          "oklch(25% 0.0832 30.02)",
+          "oklch(35% 0.0832 30.02)",
+          "oklch(45% 0.0832 30.02)",
+          "oklch(55% 0.0832 30.02)",
+          "oklch(65% 0.0832 30.02)",
+          "oklch(80% 0.0832 30.02)",
+          "oklch(95% 0.0832 30.02)"
+        ]
+      },
+      "dark-error-soft": {
+        "role": "secondary",
+        "displayName": "Deep Recovery Red",
+        "tonalRamp": [
+          "oklch(15% 0.0370 24.78)",
+          "oklch(25% 0.0370 24.78)",
+          "oklch(35% 0.0370 24.78)",
+          "oklch(45% 0.0370 24.78)",
+          "oklch(55% 0.0370 24.78)",
+          "oklch(65% 0.0370 24.78)",
+          "oklch(80% 0.0370 24.78)",
+          "oklch(95% 0.0370 24.78)"
+        ]
+      },
+      "dark-button-text": {
+        "role": "neutral",
+        "displayName": "Dark Action Ink",
+        "tonalRamp": [
+          "oklch(15% 0.0384 166.99)",
+          "oklch(25% 0.0384 166.99)",
+          "oklch(35% 0.0384 166.99)",
+          "oklch(45% 0.0384 166.99)",
+          "oklch(55% 0.0384 166.99)",
+          "oklch(65% 0.0384 166.99)",
+          "oklch(80% 0.0384 166.99)",
+          "oklch(95% 0.0384 166.99)"
+        ]
+      },
+      "paper-start": {
+        "role": "neutral",
+        "displayName": "Paper Gradient Teal",
+        "tonalRamp": [
+          "oklch(15% 0.0183 155.80)",
+          "oklch(25% 0.0183 155.80)",
+          "oklch(35% 0.0183 155.80)",
+          "oklch(45% 0.0183 155.80)",
+          "oklch(55% 0.0183 155.80)",
+          "oklch(65% 0.0183 155.80)",
+          "oklch(80% 0.0183 155.80)",
+          "oklch(95% 0.0183 155.80)"
+        ]
+      },
+      "paper-end": {
+        "role": "neutral",
+        "displayName": "Paper Gradient Cream",
+        "tonalRamp": [
+          "oklch(15% 0.0250 89.21)",
+          "oklch(25% 0.0250 89.21)",
+          "oklch(35% 0.0250 89.21)",
+          "oklch(45% 0.0250 89.21)",
+          "oklch(55% 0.0250 89.21)",
+          "oklch(65% 0.0250 89.21)",
+          "oklch(80% 0.0250 89.21)",
+          "oklch(95% 0.0250 89.21)"
+        ]
+      },
+      "dark-paper-start": {
+        "role": "neutral",
+        "displayName": "Deep Paper Gradient Teal",
+        "tonalRamp": [
+          "oklch(15% 0.0414 165.62)",
+          "oklch(25% 0.0414 165.62)",
+          "oklch(35% 0.0414 165.62)",
+          "oklch(45% 0.0414 165.62)",
+          "oklch(55% 0.0414 165.62)",
+          "oklch(65% 0.0414 165.62)",
+          "oklch(80% 0.0414 165.62)",
+          "oklch(95% 0.0414 165.62)"
+        ]
+      },
+      "dark-paper-end": {
+        "role": "neutral",
+        "displayName": "Deep Paper Gradient Olive",
+        "tonalRamp": [
+          "oklch(15% 0.0269 125.59)",
+          "oklch(25% 0.0269 125.59)",
+          "oklch(35% 0.0269 125.59)",
+          "oklch(45% 0.0269 125.59)",
+          "oklch(55% 0.0269 125.59)",
+          "oklch(65% 0.0269 125.59)",
+          "oklch(80% 0.0269 125.59)",
+          "oklch(95% 0.0269 125.59)"
+        ]
+      },
+      "info": {
+        "role": "secondary",
+        "displayName": "info",
+        "canonical": "#315C99",
+        "tonalRamp": [
+          "#315C99"
+        ]
+      },
+      "info-soft": {
+        "role": "secondary",
+        "displayName": "info-soft",
+        "canonical": "#EAF0FB",
+        "tonalRamp": [
+          "#EAF0FB"
+        ]
+      },
+      "success": {
+        "role": "secondary",
+        "displayName": "success",
+        "canonical": "#306849",
+        "tonalRamp": [
+          "#306849"
+        ]
+      },
+      "success-soft": {
+        "role": "secondary",
+        "displayName": "success-soft",
+        "canonical": "#E9F3EA",
+        "tonalRamp": [
+          "#E9F3EA"
+        ]
+      },
+      "draft": {
+        "role": "secondary",
+        "displayName": "draft",
+        "canonical": "#76528D",
+        "tonalRamp": [
+          "#76528D"
+        ]
+      },
+      "draft-soft": {
+        "role": "secondary",
+        "displayName": "draft-soft",
+        "canonical": "#F1EBF7",
+        "tonalRamp": [
+          "#F1EBF7"
+        ]
+      },
+      "dark-info": {
+        "role": "secondary",
+        "displayName": "dark-info",
+        "canonical": "#AAC8F8",
+        "tonalRamp": [
+          "#AAC8F8"
+        ]
+      },
+      "dark-info-soft": {
+        "role": "secondary",
+        "displayName": "dark-info-soft",
+        "canonical": "#24344D",
+        "tonalRamp": [
+          "#24344D"
+        ]
+      },
+      "dark-success": {
+        "role": "secondary",
+        "displayName": "dark-success",
+        "canonical": "#A2D3AE",
+        "tonalRamp": [
+          "#A2D3AE"
+        ]
+      },
+      "dark-success-soft": {
+        "role": "secondary",
+        "displayName": "dark-success-soft",
+        "canonical": "#243C2C",
+        "tonalRamp": [
+          "#243C2C"
+        ]
+      },
+      "dark-draft": {
+        "role": "secondary",
+        "displayName": "dark-draft",
+        "canonical": "#D3B8EC",
+        "tonalRamp": [
+          "#D3B8EC"
+        ]
+      },
+      "dark-draft-soft": {
+        "role": "secondary",
+        "displayName": "dark-draft-soft",
+        "canonical": "#382B45",
+        "tonalRamp": [
+          "#382B45"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Screen introductions and term titles."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Welcome actions, document introductions and compact loader titles."
+      },
+      "section": {
+        "displayName": "Section",
+        "purpose": "Grouped content and native header titles."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Definitions, examples, source excerpts and draft content."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Buttons, fields, settings and compact navigation."
+      },
+      "caption": {
+        "displayName": "Caption",
+        "purpose": "Supporting context, provenance and tab labels."
+      },
+      "heading": {
+        "displayName": "heading",
+        "purpose": "Section titles larger than rows."
+      },
+      "item": {
+        "displayName": "item",
+        "purpose": "Provider and question labels."
+      },
+      "brand": {
+        "displayName": "brand",
+        "purpose": "Main mobile Unfold brand."
+      },
+      "tab-title": {
+        "displayName": "tab-title",
+        "purpose": "Appended section name."
+      }
+    },
+    "shadows": [
+      {
+        "name": "paper",
+        "value": "0 8px 24px rgba(25,45,42,0.08)",
+        "purpose": "Opaque paper cards and selected choices."
+      },
+      {
+        "name": "control",
+        "value": "0 3px 8px rgba(23,107,91,0.14)",
+        "purpose": "Solid primary actions."
+      },
+      {
+        "name": "focus",
+        "value": "0 0 0 3px rgba(23,107,91,.24)",
+        "purpose": "Focused shared action; web also has an accent outline."
+      }
+    ],
+    "motion": [
+      {
+        "name": "press",
+        "value": "140ms",
+        "purpose": "Shared action feedback."
+      },
+      {
+        "name": "press-easing",
+        "value": "cubic-bezier(.23,1,.32,1)",
+        "purpose": "Shared action feedback."
+      },
+      {
+        "name": "transition",
+        "value": "240ms",
+        "purpose": "Onboarding entry cross-fade."
+      },
+      {
+        "name": "paper-loop",
+        "value": "1800ms",
+        "purpose": "Folded-paper loader; disabled for reduced motion or settled state."
+      },
+      {
+        "name": "paper-easing",
+        "value": "cubic-bezier(.77,0,.175,1)",
+        "purpose": "Folded-paper loader."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "desktop",
+        "value": "1080px"
+      }
+    ],
+    "languageSelection": {
+      "columns": 2,
+      "tileHeight": 76,
+      "cornerRadius": 16,
+      "truncate": true,
+      "flagSize": [
+        26,
+        19
+      ],
+      "languageCount": 31,
+      "portugueseLocale": "pt-PT",
+      "sheetTitleSize": 20,
+      "settingsLabelSize": 14,
+      "requiredFieldActions": "Visible and disabled until required values are entered",
+      "taiwanLocale": "zh-Hant-TW"
+    },
+    "contextualVoiceRefinement": {
+      "size": 132,
+      "minimizedSize": 120,
+      "minimizedShadow": true,
+      "voiceChooserOrbHitTesting": false,
+      "voiceSelectionGesture": "Native horizontal paging ScrollView across whole pages; native directional locking",
+      "captions": "3 expanded lines; 1 minimized line",
+      "defaultAdapter": "Unavailable",
+      "halo": "Current page background only; .98 at .68 radius, .65 at .86 radius, transparent edge",
+      "haloPersistsDuringDrag": true,
+      "sameOrbDuringMinimization": true,
+      "restore": "Tap or upward swipe; UI-thread reveal and translation"
+    },
+    "calendarHierarchy": {
+      "sheetTitleSize": 20,
+      "selectedDateSize": 18,
+      "selectedDatePlacement": "Footer above confirmation CTA"
+    },
+    "reviewTools": {
+      "placement": "After financial summary",
+      "actions": [
+        "Edit details: pencil",
+        "Add document: plus",
+        "Timeline: calendar and progress context"
+      ]
+    }
+  },
+  "components": [
+    {
+      "name": "Solid Primary Action",
+      "kind": "button",
+      "refersTo": "button-primary-solid",
+      "description": "The solid primary action in Light and Dark. These CSS specimens use the recorded minimum height and do not constrain wrapped text.",
+      "html": "<div style=\"display:flex;flex-wrap:wrap;gap:16px\"><button class=\"ds-btn-primary\">Continue</button><button class=\"ds-btn-primary ds-btn-primary-dark\">Continue</button></div>",
+      "css": ".ds-btn-primary{min-height:48px;padding:12px 16px;border-radius:16px;border:0;display:inline-flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;font-family:Geist_500Medium,Geist,sans-serif;font-size:14px;line-height:20px;font-weight:500;transition:transform 140ms cubic-bezier(.23,1,.32,1),opacity 140ms,background-color 140ms;min-height:56px;background:#176B5B;color:#FFFEFA;box-shadow:0 3px 8px rgba(23,107,91,.14);}.ds-btn-primary-dark{background:#91D7BF;color:#112C22;}.ds-btn-primary:hover{background:#176B5B;}.ds-btn-primary-dark:hover{background:#91D7BF;}.ds-btn-primary:focus-visible{outline:3px solid #176B5B;outline-offset:3px;}.ds-btn-primary:active{transform:scale(.98);opacity:.84;}.ds-btn-primary:disabled{opacity:.45;cursor:default;}@media(prefers-reduced-motion:reduce){.ds-btn-primary{transition:none;}.ds-btn-primary:active{transform:none;}}.ds-btn-primary{width:100%;}@media(min-width:1080px){.ds-btn-primary{width:auto;}}"
+    },
+    {
+      "name": "Glass Action — Solid Fallback",
+      "kind": "button",
+      "refersTo": "button-glass-fallback",
+      "description": "Selected main actions use native interactive Liquid Glass when available on iOS. This specimen represents the opaque fallback used on web, Android and with Reduce Transparency; CSS does not reproduce the native material.",
+      "html": "<button class=\"ds-btn-glass-fallback\">Prepare request</button>",
+      "css": ".ds-btn-glass-fallback{min-height:48px;padding:12px 16px;border-radius:16px;border:0;display:inline-flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;font-family:Geist_500Medium,Geist,sans-serif;font-size:14px;line-height:20px;font-weight:500;transition:transform 140ms cubic-bezier(.23,1,.32,1),opacity 140ms,background-color 140ms;min-height:56px;background:#E8F0E9;color:#176B5B;}.ds-btn-glass-fallback:hover{background:#E8F0E9;}.ds-btn-glass-fallback:focus-visible{outline:3px solid #176B5B;outline-offset:3px;}.ds-btn-glass-fallback:active{transform:scale(.98);opacity:.84;}.ds-btn-glass-fallback:disabled{opacity:.45;cursor:default;}@media(prefers-reduced-motion:reduce){.ds-btn-glass-fallback{transition:none;}.ds-btn-glass-fallback:active{transform:none;}}.ds-btn-glass-fallback{width:100%;}@media(min-width:1080px){.ds-btn-glass-fallback{width:auto;}}"
+    },
+    {
+      "name": "Secondary Action",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Compact supporting tasks use a paper fill and line border.",
+      "html": "<button class=\"ds-btn-secondary\">Copy question</button>",
+      "css": ".ds-btn-secondary{min-height:48px;padding:12px 16px;border-radius:16px;border:0;display:inline-flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;font-family:Geist_500Medium,Geist,sans-serif;font-size:14px;line-height:20px;font-weight:500;transition:transform 140ms cubic-bezier(.23,1,.32,1),opacity 140ms,background-color 140ms;background:#FFFEFA;color:#176B5B;border:1px solid #DDDCD4;}.ds-btn-secondary:hover{background:#E8F0E9;}.ds-btn-secondary:focus-visible{outline:3px solid #176B5B;outline-offset:3px;}.ds-btn-secondary:active{transform:scale(.98);opacity:.84;}.ds-btn-secondary:disabled{opacity:.45;cursor:default;}@media(prefers-reduced-motion:reduce){.ds-btn-secondary{transition:none;}.ds-btn-secondary:active{transform:none;}}.ds-btn-secondary{width:100%;}@media(min-width:1080px){.ds-btn-secondary{width:auto;}}"
+    },
+    {
+      "name": "Quiet Action",
+      "kind": "button",
+      "refersTo": "button-quiet",
+      "description": "Supporting actions use soft teal and the small radius.",
+      "html": "<button class=\"ds-btn-quiet\">Manage family profiles</button>",
+      "css": ".ds-btn-quiet{min-height:48px;padding:12px 16px;border-radius:16px;border:0;display:inline-flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;font-family:Geist_500Medium,Geist,sans-serif;font-size:14px;line-height:20px;font-weight:500;transition:transform 140ms cubic-bezier(.23,1,.32,1),opacity 140ms,background-color 140ms;border-radius:12px;background:#E8F0E9;color:#176B5B;}.ds-btn-quiet:hover{background:#E8F0E9;}.ds-btn-quiet:focus-visible{outline:3px solid #176B5B;outline-offset:3px;}.ds-btn-quiet:active{transform:scale(.98);opacity:.84;}.ds-btn-quiet:disabled{opacity:.45;cursor:default;}@media(prefers-reduced-motion:reduce){.ds-btn-quiet{transition:none;}.ds-btn-quiet:active{transform:none;}}.ds-btn-quiet{width:100%;}@media(min-width:1080px){.ds-btn-quiet{width:auto;}}"
+    },
+    {
+      "name": "Text Action",
+      "kind": "button",
+      "refersTo": "button-link",
+      "description": "Low-weight actions keep a full touch target and no resting fill.",
+      "html": "<button class=\"ds-btn-link\">Read the source</button>",
+      "css": ".ds-btn-link{min-height:48px;padding:12px 16px;border-radius:16px;border:0;display:inline-flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;font-family:Geist_500Medium,Geist,sans-serif;font-size:14px;line-height:20px;font-weight:500;transition:transform 140ms cubic-bezier(.23,1,.32,1),opacity 140ms,background-color 140ms;padding:12px 0;border-radius:12px;background:transparent;color:#176B5B;}.ds-btn-link:hover{background:#E8F0E9;}.ds-btn-link:focus-visible{outline:3px solid #176B5B;outline-offset:3px;}.ds-btn-link:active{transform:scale(.98);opacity:.84;}.ds-btn-link:disabled{opacity:.45;cursor:default;}@media(prefers-reduced-motion:reduce){.ds-btn-link{transition:none;}.ds-btn-link:active{transform:none;}}"
+    },
+    {
+      "name": "Labeled Field",
+      "kind": "input",
+      "refersTo": "field",
+      "description": "Tap anywhere on an editable field to focus it. Pencil cue, editable hint and a 2px accent focus border with 1px padding compensation reflect the implemented entry pattern.",
+      "html": "<label class=\"ds-field\"><span class=\"ds-field-heading\"><span>First name or nickname</span><svg aria-hidden=\"true\" viewBox=\"0 0 256 256\" width=\"16\" height=\"16\"><path fill=\"currentColor\" d=\"m227.31 73.37-44.68-44.69a16 16 0 0 0-22.63 0L36.69 152A15.86 15.86 0 0 0 32 163.31V208a16 16 0 0 0 16 16h44.69a15.86 15.86 0 0 0 11.31-4.69L227.31 96a16 16 0 0 0 0-22.63M92.69 208H48v-44.69l88-88L180.69 120ZM192 108.68 147.31 64l24-24L216 84.68Z\"/></svg></span><input class=\"ds-field-input\" aria-description=\"Editable field. Enter or change this value.\" placeholder=\"What should we call you?\" /></label>",
+      "css": ".ds-field{display:grid;gap:4px;padding:16px;border:1px solid #DDDCD4;border-radius:16px;background:#FFFEFA;color:#5E6B65;font-family:Geist_500Medium,Geist,sans-serif;font-size:14px;line-height:20px;font-weight:500;cursor:text;}.ds-field-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;}.ds-field-input{min-height:38px;padding:0;border:0;background:transparent;color:#192D2A;font-family:Geist_400Regular,Geist,sans-serif;font-size:16px;line-height:25px;font-weight:400;caret-color:#176B5B;}.ds-field-input::placeholder{color:#5E6B65;}.ds-field:hover{border-color:#DDDCD4;}.ds-field:focus-within{border-width:2px;padding:15px;border-color:#176B5B;}.ds-field-input:focus-visible{outline:3px solid #176B5B;outline-offset:3px;}.ds-field-input::selection{background:#E8F0E9;color:#192D2A;}"
+    },
+    {
+      "name": "Desktop Navigation Links",
+      "kind": "nav",
+      "refersTo": "navigation-item",
+      "description": "The desktop rail uses accent labels and a soft-teal selected row. Native tab navigation and toolbar materials remain platform-rendered.",
+      "html": "<nav class=\"ds-nav\" aria-label=\"Workspace\"><a class=\"ds-nav-item ds-nav-selected\" aria-current=\"page\" href=\"#home\">Home</a><a class=\"ds-nav-item\" href=\"#bills\">Bills</a><a class=\"ds-nav-item\" href=\"#timeline\">Timeline</a><a class=\"ds-nav-item\" href=\"#guide\">Guide</a></nav>",
+      "css": ".ds-nav{width:220px;padding:32px;background:#FFFEFA;display:grid;gap:8px;}.ds-nav-item{display:flex;align-items:center;min-height:48px;padding:12px;border-radius:12px;color:#176B5B;text-decoration:none;font-family:Geist_500Medium,Geist,sans-serif;font-size:14px;line-height:20px;font-weight:500;}.ds-nav-selected,.ds-nav-item:hover{background:#E8F0E9;}.ds-nav-item:focus-visible{outline:3px solid #176B5B;outline-offset:3px;}.ds-nav-item:active{opacity:.84;}"
+    },
+    {
+      "name": "Context Badge",
+      "kind": "chip",
+      "refersTo": "badge",
+      "description": "Noninteractive notice and sample context; filters use button variants.",
+      "html": "<span class=\"ds-badge\">Synthetic sample</span>",
+      "css": ".ds-badge{display:inline-block;padding:8px 12px;border-radius:12px;background:#F7F0E3;color:#8A5B22;font-family:Geist_400Regular,Geist,sans-serif;font-size:12px;line-height:18px;}"
+    },
+    {
+      "name": "Paper Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "An opaque, softly raised reading surface with generous internal spacing.",
+      "html": "<article class=\"ds-card\"><h3 class=\"ds-card-title\">For example</h3><p class=\"ds-card-body\">An explanation stays beside the original evidence.</p></article>",
+      "css": ".ds-card{padding:24px;border-radius:20px;background:#FFFEFA;color:#192D2A;box-shadow:0 8px 24px rgba(25,45,42,.08);display:grid;gap:16px;}.ds-card-title{margin:0;font-family:Geist_600SemiBold,Geist,sans-serif;font-size:20px;line-height:26px;font-weight:600;}.ds-card-body{margin:0;font-family:Geist_400Regular,Geist,sans-serif;font-size:16px;line-height:25px;font-weight:400;}"
+    },
+    {
+      "name": "Selected Choice",
+      "kind": "custom",
+      "refersTo": "choice-selected",
+      "description": "A selected preference uses a raised paper surface and accent label; native Settings pickers use their own platform controls.",
+      "html": "<button class=\"ds-choice\" role=\"radio\" aria-checked=\"true\"><span class=\"ds-choice-copy\"><span class=\"ds-choice-label\">Keep it simple</span><span class=\"ds-choice-detail\">Plain language and one useful next step.</span></span><svg class=\"ds-choice-icon\" aria-hidden=\"true\" viewBox=\"0 0 256 256\" width=\"20\" height=\"20\"><path fill=\"currentColor\" d=\"M173.66 98.34a8 8 0 0 1 0 11.32l-56 56a8 8 0 0 1-11.32 0l-24-24a8 8 0 0 1 11.32-11.32L112 148.69l50.34-50.35a8 8 0 0 1 11.32 0M232 128A104 104 0 1 1 128 24a104.11 104.11 0 0 1 104 104m-16 0a88 88 0 1 0-88 88 88.1 88.1 0 0 0 88-88\"/></svg></button>",
+      "css": ".ds-choice{min-height:48px;padding:16px;border:0;border-radius:16px;background:#FFFEFA;color:#176B5B;box-shadow:0 8px 24px rgba(25,45,42,.08);display:flex;align-items:center;gap:16px;cursor:pointer;text-align:left;}.ds-choice-copy{display:grid;gap:4px;flex:1;}.ds-choice-label{font-family:Geist_500Medium,Geist,sans-serif;font-size:14px;line-height:20px;font-weight:500;}.ds-choice-detail{color:#5E6B65;font-family:Geist_400Regular,Geist,sans-serif;font-size:16px;line-height:25px;font-weight:400;}.ds-choice:hover,.ds-choice:active{background:#FFFEFA;}.ds-choice:focus-visible{outline:3px solid #176B5B;outline-offset:3px;}.ds-choice-icon{flex-shrink:0;}"
+    },
+    {
+      "name": "Glass Sheet Close — Solid Fallback",
+      "kind": "button",
+      "refersTo": "sheet-close",
+      "description": "App-owned sheets use a circular native glass X. This browser specimen shows its opaque paper fallback; the document modal uses a native toolbar X on iOS.",
+      "html": "<button class=\"ds-sheet-close\" aria-label=\"Close sheet\"><svg aria-hidden=\"true\" width=\"22\" height=\"22\" viewBox=\"0 0 256 256\"><path fill=\"currentColor\" d=\"M205.66 194.34a8 8 0 0 1-11.32 11.32L128 139.31l-66.34 66.35a8 8 0 0 1-11.32-11.32L116.69 128 50.34 61.66a8 8 0 0 1 11.32-11.32L128 116.69l66.34-66.35a8 8 0 0 1 11.32 11.32L139.31 128Z\"/></svg></button>",
+      "css": ".ds-sheet-close{width:48px;height:48px;border:0;border-radius:24px;display:inline-flex;align-items:center;justify-content:center;background:#FFFEFA;color:#192D2A;cursor:pointer;}.ds-sheet-close:hover,.ds-sheet-close:active{background:#FFFEFA;}.ds-sheet-close:focus-visible{outline:3px solid #176B5B;outline-offset:3px;}"
+    },
+    {
+      "name": "Floating listening orb",
+      "kind": "custom",
+      "refersTo": "particle-orb",
+      "description": "132pt transparent contextual agent orb with a stronger circular halo using the current page background. Same mounted orb/halo throughout UI-thread expansion and minimization; upper-half minimized target. Tap or upward swipe restores. Captions below; 12pt clearance to CTA. Default live adapter unavailable.",
+      "html": "<button class=\"ds-orb\" aria-label=\"Open voice agent\"><svg viewBox=\"0 0 56 56\" width=\"132\" height=\"132\" aria-hidden=\"true\"><defs><radialGradient id=\"ds-orb-aura\"><stop offset=\"0\" stop-color=\"#F5F2EB\"/><stop offset=\".68\" stop-color=\"#F5F2EB\" stop-opacity=\".98\"/><stop offset=\".86\" stop-color=\"#F5F2EB\" stop-opacity=\".65\"/><stop offset=\"1\" stop-color=\"#F5F2EB\" stop-opacity=\"0\"/></radialGradient></defs><circle cx=\"28\" cy=\"28\" r=\"28\" fill=\"url(#ds-orb-aura)\"/><circle cx=\"37.11\" cy=\"24.03\" r=\"0.57\" fill=\"#192D2A\" opacity=\"0.95\"/><circle cx=\"33.04\" cy=\"21.39\" r=\"0.57\" fill=\"#192D2A\" opacity=\"0.95\"/><circle cx=\"35.32\" cy=\"28.00\" r=\"0.57\" fill=\"#192D2A\" opacity=\"0.95\"/><circle cx=\"38.14\" cy=\"20.30\" r=\"0.57\" fill=\"#192D2A\" opacity=\"0.95\"/><circle cx=\"29.90\" cy=\"24.27\" r=\"0.57\" fill=\"#192D2A\" opacity=\"0.95\"/><circle cx=\"39.77\" cy=\"28.09\" r=\"0.57\" fill=\"#192D2A\" opacity=\"0.95\"/><circle cx=\"33.28\" cy=\"17.34\" r=\"0.57\" fill=\"#192D2A\" opacity=\"0.95\"/><circle cx=\"31.47\" cy=\"29.78\" r=\"0.57\" fill=\"#192D2A\" opacity=\"0.95\"/><circle cx=\"41.89\" cy=\"22.44\" r=\"0.56\" fill=\"#192D2A\" opacity=\"0.95\"/><circle cx=\"27.74\" cy=\"20.42\" r=\"0.57\" fill=\"#192D2A\" opacity=\"0.95\"/><circle cx=\"37.47\" cy=\"32.32\" r=\"0.57\" fill=\"#192D2A\" opacity=\"0.95\"/><circle cx=\"37.19\" cy=\"15.85\" r=\"0.56\" fill=\"#192D2A\" opacity=\"0.95\"/><circle cx=\"27.04\" cy=\"27.75\" r=\"0.58\" fill=\"#192D2A\" opacity=\"0.95\"/><circle cx=\"43.33\" cy=\"27.96\" r=\"0.56\" fill=\"#192D2A\" opacity=\"0.95\"/><circle cx=\"28.82\" cy=\"15.80\" r=\"0.57\" fill=\"#192D2A\" opacity=\"0.95\"/><circle cx=\"32.41\" cy=\"33.97\" r=\"0.57\" fill=\"#192D2A\" opacity=\"0.95\"/><circle cx=\"42.29\" cy=\"18.46\" r=\"0.56\" fill=\"#192D2A\" opacity=\"0.6\"/><circle cx=\"24.17\" cy=\"23.01\" r=\"0.57\" fill=\"#192D2A\" opacity=\"0.95\"/><circle cx=\"40.87\" cy=\"33.78\" r=\"0.56\" fill=\"#192D2A\" opacity=\"0.95\"/><circle cx=\"33.23\" cy=\"12.90\" r=\"0.56\" fill=\"#192D2A\" opacity=\"0.95\"/><circle cx=\"26.71\" cy=\"32.12\" r=\"0.57\" fill=\"#192D2A\" opacity=\"0.95\"/><circle cx=\"45.48\" cy=\"25.00\" r=\"0.56\" fill=\"#192D2A\" opacity=\"0.6\"/><circle cx=\"24.23\" cy=\"17.11\" r=\"0.57\" fill=\"#192D2A\" opacity=\"0.95\"/><circle cx=\"35.19\" cy=\"37.02\" r=\"0.57\" fill=\"#192D2A\" opacity=\"0.95\"/><circle cx=\"39.74\" cy=\"14.05\" r=\"0.55\" fill=\"#192D2A\" opacity=\"0.6\"/><circle cx=\"22.30\" cy=\"27.24\" r=\"0.57\" fill=\"#192D2A\" opacity=\"0.95\"/><circle cx=\"44.39\" cy=\"32.81\" r=\"0.56\" fill=\"#192D2A\" opacity=\"0.6\"/><circle cx=\"27.92\" cy=\"12.16\" r=\"0.56\" fill=\"#192D2A\" opacity=\"0.95\"/><circle cx=\"28.29\" cy=\"36.40\" r=\"0.57\" fill=\"#192D2A\" opacity=\"0.95\"/><circle cx=\"45.41\" cy=\"20.21\" r=\"0.55\" fill=\"#192D2A\" opacity=\"0.6\"/><circle cx=\"20.60\" cy=\"20.56\" r=\"0.57\" fill=\"#192D2A\" opacity=\"0.95\"/><circle cx=\"39.01\" cy=\"38.43\" r=\"0.56\" fill=\"#192D2A\" opacity=\"0.95\"/><circle cx=\"34.80\" cy=\"10.73\" r=\"0.55\" fill=\"#192D2A\" opacity=\"0.6\"/><circle cx=\"22.21\" cy=\"32.17\" r=\"0.57\" fill=\"#192D2A\" opacity=\"0.95\"/><circle cx=\"46.92\" cy=\"29.44\" r=\"0.55\" fill=\"#192D2A\" opacity=\"0.6\"/><circle cx=\"22.60\" cy=\"13.85\" r=\"0.56\" fill=\"#192D2A\" opacity=\"0.95\"/><circle cx=\"31.37\" cy=\"39.87\" r=\"0.57\" fill=\"#192D2A\" opacity=\"0.95\"/><circle cx=\"42.58\" cy=\"14.88\" r=\"0.55\" fill=\"#192D2A\" opacity=\"0.6\"/><circle cx=\"18.50\" cy=\"25.40\" r=\"0.57\" fill=\"#192D2A\" opacity=\"0.95\"/><circle cx=\"43.07\" cy=\"37.73\" r=\"0.56\" fill=\"#192D2A\" opacity=\"0.6\"/><circle cx=\"28.55\" cy=\"9.59\" r=\"0.55\" fill=\"#192D2A\" opacity=\"0.6\"/><circle cx=\"23.81\" cy=\"37.03\" r=\"0.57\" fill=\"#192D2A\" opacity=\"0.95\"/><circle cx=\"47.38\" cy=\"24.12\" r=\"0.54\" fill=\"#192D2A\" opacity=\"0.6\"/><circle cx=\"18.29\" cy=\"17.63\" r=\"0.56\" fill=\"#192D2A\" opacity=\"0.95\"/><circle cx=\"35.48\" cy=\"41.93\" r=\"0.56\" fill=\"#192D2A\" opacity=\"0.95\"/><circle cx=\"37.18\" cy=\"10.52\" r=\"0.54\" fill=\"#192D2A\" opacity=\"0.6\"/><circle cx=\"18.12\" cy=\"30.88\" r=\"0.57\" fill=\"#192D2A\" opacity=\"0.95\"/><circle cx=\"46.35\" cy=\"34.65\" r=\"0.55\" fill=\"#192D2A\" opacity=\"0.6\"/><circle cx=\"22.29\" cy=\"11.01\" r=\"0.56\" fill=\"#192D2A\" opacity=\"0.6\"/><circle cx=\"26.85\" cy=\"41.21\" r=\"0.57\" fill=\"#192D2A\" opacity=\"0.95\"/><circle cx=\"44.98\" cy=\"17.92\" r=\"0.54\" fill=\"#192D2A\" opacity=\"0.3\"/><circle cx=\"15.57\" cy=\"22.84\" r=\"0.57\" fill=\"#192D2A\" opacity=\"0.95\"/><circle cx=\"39.94\" cy=\"42.01\" r=\"0.55\" fill=\"#192D2A\" opacity=\"0.6\"/><circle cx=\"30.21\" cy=\"8.40\" r=\"0.54\" fill=\"#192D2A\" opacity=\"0.6\"/><circle cx=\"19.40\" cy=\"36.36\" r=\"0.57\" fill=\"#192D2A\" opacity=\"0.95\"/><circle cx=\"47.72\" cy=\"29.37\" r=\"0.54\" fill=\"#192D2A\" opacity=\"0.3\"/><circle cx=\"17.07\" cy=\"14.72\" r=\"0.56\" fill=\"#192D2A\" opacity=\"0.6\"/><circle cx=\"30.94\" cy=\"44.10\" r=\"0.56\" fill=\"#192D2A\" opacity=\"0.6\"/><circle cx=\"39.69\" cy=\"12.39\" r=\"0.53\" fill=\"#192D2A\" opacity=\"0.3\"/><circle cx=\"14.62\" cy=\"28.76\" r=\"0.57\" fill=\"#192D2A\" opacity=\"0.95\"/><circle cx=\"43.87\" cy=\"39.73\" r=\"0.54\" fill=\"#192D2A\" opacity=\"0.6\"/><circle cx=\"23.04\" cy=\"9.09\" r=\"0.55\" fill=\"#192D2A\" opacity=\"0.6\"/><circle cx=\"22.13\" cy=\"41.22\" r=\"0.56\" fill=\"#192D2A\" opacity=\"0.95\"/><circle cx=\"46.20\" cy=\"22.75\" r=\"0.53\" fill=\"#192D2A\" opacity=\"0.3\"/><circle cx=\"13.52\" cy=\"20.04\" r=\"0.56\" fill=\"#192D2A\" opacity=\"0.6\"/><circle cx=\"35.52\" cy=\"45.17\" r=\"0.55\" fill=\"#192D2A\" opacity=\"0.6\"/><circle cx=\"32.38\" cy=\"9.03\" r=\"0.53\" fill=\"#192D2A\" opacity=\"0.3\"/><circle cx=\"15.37\" cy=\"34.73\" r=\"0.56\" fill=\"#192D2A\" opacity=\"0.95\"/><circle cx=\"46.12\" cy=\"35.07\" r=\"0.53\" fill=\"#192D2A\" opacity=\"0.3\"/><circle cx=\"16.86\" cy=\"12.36\" r=\"0.55\" fill=\"#192D2A\" opacity=\"0.6\"/><circle cx=\"25.94\" cy=\"44.93\" r=\"0.56\" fill=\"#192D2A\" opacity=\"0.6\"/><circle cx=\"41.51\" cy=\"16.33\" r=\"0.52\" fill=\"#192D2A\" opacity=\"0.3\"/><circle cx=\"11.85\" cy=\"26.21\" r=\"0.56\" fill=\"#192D2A\" opacity=\"0.95\"/><circle cx=\"39.76\" cy=\"43.95\" r=\"0.54\" fill=\"#192D2A\" opacity=\"0.6\"/><circle cx=\"24.51\" cy=\"8.66\" r=\"0.54\" fill=\"#192D2A\" opacity=\"0.3\"/><circle cx=\"17.60\" cy=\"40.16\" r=\"0.56\" fill=\"#192D2A\" opacity=\"0.95\"/><circle cx=\"45.61\" cy=\"28.66\" r=\"0.52\" fill=\"#192D2A\" opacity=\"0.3\"/><circle cx=\"12.42\" cy=\"17.53\" r=\"0.55\" fill=\"#192D2A\" opacity=\"0.6\"/><circle cx=\"30.31\" cy=\"46.93\" r=\"0.55\" fill=\"#192D2A\" opacity=\"0.6\"/><circle cx=\"34.33\" cy=\"11.80\" r=\"0.52\" fill=\"#192D2A\" opacity=\"0.3\"/><circle cx=\"11.97\" cy=\"32.51\" r=\"0.56\" fill=\"#192D2A\" opacity=\"0.6\"/><circle cx=\"42.56\" cy=\"40.28\" r=\"0.53\" fill=\"#192D2A\" opacity=\"0.3\"/><circle cx=\"17.49\" cy=\"11.21\" r=\"0.54\" fill=\"#192D2A\" opacity=\"0.6\"/><circle cx=\"20.94\" cy=\"44.50\" r=\"0.55\" fill=\"#192D2A\" opacity=\"0.6\"/><circle cx=\"41.78\" cy=\"21.94\" r=\"0.52\" fill=\"#192D2A\" opacity=\"0.3\"/><circle cx=\"9.98\" cy=\"23.73\" r=\"0.55\" fill=\"#192D2A\" opacity=\"0.6\"/><circle cx=\"34.46\" cy=\"46.74\" r=\"0.54\" fill=\"#192D2A\" opacity=\"0.6\"/><circle cx=\"26.16\" cy=\"10.32\" r=\"0.52\" fill=\"#192D2A\" opacity=\"0.3\"/><circle cx=\"13.61\" cy=\"38.30\" r=\"0.56\" fill=\"#192D2A\" opacity=\"0.6\"/><circle cx=\"42.78\" cy=\"34.64\" r=\"0.52\" fill=\"#192D2A\" opacity=\"0.3\"/><circle cx=\"12.25\" cy=\"15.99\" r=\"0.54\" fill=\"#192D2A\" opacity=\"0.6\"/><circle cx=\"24.84\" cy=\"47.19\" r=\"0.55\" fill=\"#192D2A\" opacity=\"0.6\"/><circle cx=\"35.12\" cy=\"16.74\" r=\"0.51\" fill=\"#192D2A\" opacity=\"0.3\"/><circle cx=\"9.45\" cy=\"30.16\" r=\"0.55\" fill=\"#192D2A\" opacity=\"0.6\"/><circle cx=\"37.29\" cy=\"44.15\" r=\"0.53\" fill=\"#192D2A\" opacity=\"0.3\"/><circle cx=\"18.62\" cy=\"12.06\" r=\"0.53\" fill=\"#192D2A\" opacity=\"0.3\"/><circle cx=\"16.37\" cy=\"42.99\" r=\"0.55\" fill=\"#192D2A\" opacity=\"0.6\"/><circle cx=\"39.69\" cy=\"28.34\" r=\"0.51\" fill=\"#192D2A\" opacity=\"0.3\"/><circle cx=\"9.16\" cy=\"22.04\" r=\"0.54\" fill=\"#192D2A\" opacity=\"0.6\"/><circle cx=\"28.48\" cy=\"47.73\" r=\"0.54\" fill=\"#192D2A\" opacity=\"0.3\"/><circle cx=\"27.10\" cy=\"14.54\" r=\"0.51\" fill=\"#192D2A\" opacity=\"0.3\"/><circle cx=\"10.55\" cy=\"36.05\" r=\"0.55\" fill=\"#192D2A\" opacity=\"0.6\"/><circle cx=\"37.61\" cy=\"39.52\" r=\"0.52\" fill=\"#192D2A\" opacity=\"0.3\"/><circle cx=\"12.91\" cy=\"16.40\" r=\"0.53\" fill=\"#192D2A\" opacity=\"0.3\"/><circle cx=\"19.62\" cy=\"45.93\" r=\"0.54\" fill=\"#192D2A\" opacity=\"0.6\"/><circle cx=\"33.59\" cy=\"23.31\" r=\"0.51\" fill=\"#192D2A\" opacity=\"0.3\"/><circle cx=\"8.21\" cy=\"28.39\" r=\"0.54\" fill=\"#192D2A\" opacity=\"0.6\"/><circle cx=\"30.68\" cy=\"45.83\" r=\"0.52\" fill=\"#192D2A\" opacity=\"0.3\"/><circle cx=\"19.56\" cy=\"15.89\" r=\"0.52\" fill=\"#192D2A\" opacity=\"0.3\"/><circle cx=\"12.80\" cy=\"40.64\" r=\"0.54\" fill=\"#192D2A\" opacity=\"0.6\"/><circle cx=\"34.53\" cy=\"34.16\" r=\"0.51\" fill=\"#192D2A\" opacity=\"0.3\"/><circle cx=\"9.66\" cy=\"22.33\" r=\"0.53\" fill=\"#192D2A\" opacity=\"0.3\"/><circle cx=\"22.37\" cy=\"46.44\" r=\"0.53\" fill=\"#192D2A\" opacity=\"0.3\"/><circle cx=\"25.92\" cy=\"21.47\" r=\"0.51\" fill=\"#192D2A\" opacity=\"0.3\"/><circle cx=\"9.15\" cy=\"34.06\" r=\"0.54\" fill=\"#192D2A\" opacity=\"0.6\"/><circle cx=\"29.99\" cy=\"41.80\" r=\"0.51\" fill=\"#192D2A\" opacity=\"0.3\"/><circle cx=\"14.12\" cy=\"20.44\" r=\"0.52\" fill=\"#192D2A\" opacity=\"0.3\"/><circle cx=\"15.42\" cy=\"42.90\" r=\"0.53\" fill=\"#192D2A\" opacity=\"0.3\"/><circle cx=\"28.15\" cy=\"30.36\" r=\"0.50\" fill=\"#192D2A\" opacity=\"0.3\"/><circle cx=\"9.19\" cy=\"28.73\" r=\"0.53\" fill=\"#192D2A\" opacity=\"0.3\"/><circle cx=\"22.95\" cy=\"43.84\" r=\"0.52\" fill=\"#192D2A\" opacity=\"0.3\"/><circle cx=\"18.87\" cy=\"24.20\" r=\"0.51\" fill=\"#192D2A\" opacity=\"0.3\"/><circle cx=\"11.70\" cy=\"37.62\" r=\"0.53\" fill=\"#192D2A\" opacity=\"0.3\"/><circle cx=\"24.78\" cy=\"37.09\" r=\"0.51\" fill=\"#192D2A\" opacity=\"0.3\"/><circle cx=\"12.40\" cy=\"27.88\" r=\"0.52\" fill=\"#192D2A\" opacity=\"0.3\"/><circle cx=\"16.86\" cy=\"40.56\" r=\"0.52\" fill=\"#192D2A\" opacity=\"0.3\"/><circle cx=\"19.28\" cy=\"31.76\" r=\"0.51\" fill=\"#192D2A\" opacity=\"0.3\"/><circle cx=\"13.76\" cy=\"34.38\" r=\"0.52\" fill=\"#192D2A\" opacity=\"0.3\"/></svg></button>",
+      "css": ".ds-orb{border:0;background:transparent;padding:0;width:132px;height:132px;border-radius:66px;cursor:pointer;transition:transform 140ms cubic-bezier(.23,1,.32,1);}.ds-orb:hover{background:transparent;}.ds-orb:focus-visible{outline:3px solid #176B5B;outline-offset:2px;}.ds-orb:active{transform:scale(.96);}@media(prefers-reduced-motion:reduce){.ds-orb{transition:none;}.ds-orb:active{transform:none;}}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Editorial Document Workspace",
+    "overview": "**Creative North Star: \"The Editorial Document Workspace\"**\n\nUnfold keeps the spacious editorial document workspace established in the approved design. Proportional Geist, generous page edges, grouped rows and softly raised paper make the original document and its explanation easy to scan. Warm ivory grounds Light; deep green neutrals carry the same hierarchy in Dark. Teal marks actions, selected states and source context.\n\nNative iOS materials now join this world at the main-tab navigation controls, sheet close controls, primary actions and the contextual voice orb. Liquid Glass belongs to controls, while reading surfaces remain paper. The app follows the system appearance by default and provides explicit Light and Dark choices. Android, web and devices without the glass API use the corresponding solid surfaces. System Reduce Transparency replaces custom glass controls with opaque fills.\n\n**Key Characteristics:**\n\n- Proportional Geist throughout.\n- Spacious paper surfaces and grouped rows.\n- Teal actions with explicit selected and focused states.\n- Equivalent content hierarchy in Light and Dark.\n- Native controls for navigation, search, preferences and dates.\n- A folded-paper loader with a still reduced-motion state.\n- A persistent listening action with a state-driven particle sphere.\n- Deliberate scroll-edge fades around content, separate from native toolbar material.",
+    "keyCharacteristics": [
+      "Proportional Geist throughout.",
+      "Spacious paper surfaces and grouped rows.",
+      "Teal actions with explicit selected and focused states.",
+      "Equivalent content hierarchy in Light and Dark.",
+      "Native controls for navigation, search, preferences and dates.",
+      "A folded-paper loader with a still reduced-motion state."
+    ],
+    "rules": [
+      {
+        "name": "The Appearance Pair Rule",
+        "body": "Resolve every shared surface, text and state color from the active palette; preserve semantic roles across Light and Dark.",
+        "section": "colors"
+      },
+      {
+        "name": "The Proportional Type Rule",
+        "body": "Use the Geist hierarchy for app content and labels; keep native platform typography inside native search, picker and calendar controls.",
+        "section": "typography"
+      },
+      {
+        "name": "The Control Material Rule",
+        "body": "Keep glass on native navigation controls and selected actions; preserve opaque paper behind explanations and original evidence.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do resolve shared colors through the active appearance palette.",
+      "Do preserve proportional Geist and the established type hierarchy.",
+      "Do keep reading content on opaque paper with generous spacing.",
+      "Do use native iOS search, main-tab toolbar, settings and calendar controls where implemented.",
+      "Do give app-owned sheets a glass X close control with an opaque fallback.",
+      "Do retain solid action fallbacks and system accessibility preferences.",
+      "Do show clear selected, focused, loading and recovery states.",
+      "Do use full-width actions on compact layouts, with explicit compact filters and content-sized links.",
+      "Do make the full editable-field surface focusable by tap and keep its focus border from shifting layout."
+    ],
+    "donts": [
+      "Don't add top scroll-edge blur to these navigation stacks.",
+      "Don't place Profile or Settings shortcuts outside the main Home, Bills, Timeline and Guide tabs.",
+      "Don't use typed text fields for bill, line-item, reminder or notice calendar dates.",
+      "Don't spread glass or gradients across reading surfaces.",
+      "Don't use monospace for app content or decorative gauges."
+    ],
+    "components": "### Buttons\n\nSingle standalone primary, secondary and quiet actions span the available width on native and compact web. ButtonRow gives related Buttons equal flexible widths and can wrap; it can explicitly stack on desktop where the flow calls for it. Link actions and explicitly compact filters retain their content width; Guide's All terms and Saved controls are compact. Desktop web keeps supporting secondary and quiet actions content-sized. The frontmatter's button widths describe standalone compact/native actions; the sidecar carries the row and responsive rules.\n\nPrimary actions default to glass. The primary frontmatter colors describe the opaque fallback, since a native material cannot be encoded as a flat color token. Explicit solid primary actions use accent fills and a control shadow. The secondary Enter or verify details workflow action also requests glass. Other secondary actions use a paper fill and line border; quiet actions use soft teal; link actions use no resting fill.\n\nHover adjusts supporting-action fills. Focus adds a ring. Presses lower opacity on solid/fallback controls and scale to 0.98 when motion is allowed, using the shared press duration and easing. Loading and disabled states prevent activation and expose accessibility state.\n\n### Chips\n\nBadges are compact, noninteractive semantic labels. Needs details uses amber, Ready to review teal, Draft prepared purple, Marked submitted teal and Resolved green. Text always names the status. Filters in Bills and Guide use button variants rather than a separate chip system.\n\n### Cards / Containers\n\nPaper cards use card radius, screen padding and lg internal gaps. Evidence is an inset soft-teal note with control radius and lg padding. Settings groups are shadow-free paper containers with inset dividers between rows.\n\n### Inputs / Fields\n\nShared fields pair a label with body text inside a paper surface and line border. A pencil cue marks editable fields, and tapping anywhere on their surface focuses the input. Focus uses a 2px accent border and reduces padding by 1px to hold the field's size steady; validation uses the error color and adds a recovery message. Read-only fields omit the pencil, lower opacity to 0.65 and provide a distinct accessibility hint. Selection and caret colors follow the active palette. iOS search uses the native stacked navigation search bar; Android and web use the shared search field and explicit clear action.\n\nDate fields open a calendar control instead of accepting typed text. iOS hosts its inline calendar inside a native page sheet; Android opens its date dialog; the browser places its date input inside an app dialog. Reminder and notice-date confirmations persist from the calendar control; service-date confirmations update the pending verification form. Settings use platform pickers through @expo/ui and React Native switches. The iOS SwiftUI picker host has a fixed 152×48 frame, trailing alignment and theme tint from its first render. The web picker uses a semantic select.\n\n### Navigation\n\nThe initial native tabs retain quiet labeled navigation, accent for the active tab and muted ink for inactive tabs. iOS uses native toolbar buttons with tintable Phosphor artwork for profile and Settings access only on Home, Bills, Timeline and Guide. The 30pt bold Unfold title sits left, followed by a 22pt regular section name where applicable. Detail screens and sheets omit those shortcuts; sheet navigation uses an X. Settings and profile navigation reuses those routes.\n\nDesktop navigation uses grouped links on paper, a soft-teal selected background and accent labels. Keyboard focus stays visible.\n\n### Contextual voice orb\n\nReview and Guide term detail keep Prepare request and Copy question as full-width footer actions. A 132×132 transparent orb overlays the full scrolling viewport, 4pt above its bottom. The footer adds 8pt top padding, making 12pt of visual clearance to the CTA. It has a stronger page-colored circular radial fade; no idle helper text, rectangular reserve band or button fill. A separate 20pt fade softens the immediate CTA edge. Only trailing content padding reserves the measured overlay height, so the scroll viewport stays full height.\n\nThe deterministic Fibonacci sphere has 128 dots at medium weight: radius is (0.36 + front × 0.38) × perspective in a 56-unit viewBox. Three depth-grouped native SVG paths share one projection pass. Idle animation updates at 30fps on the UI thread and pauses offscreen, in the background and under Reduce Motion. Idle rotation is 0.22 radians/second, speaking 0.92; state color and activity transition over 240ms. The halo uses the current page background in both themes, never black or white shadow stops.\n\nHorizontal dragging rotates the sphere. Downward and upward dragging move and reveal the same circular halo continuously; distance or velocity commits minimization. Release carries decaying angular momentum and returns tilt with a spring. Tapping scales to 0.96 and gives a light haptic when enabled. Entrance waits 180ms, then rises and zooms over 420ms; Reduce Motion applies the visible state directly. Minimized controls show the upper half of a same orb at 0.91 scale in a 64pt target. A tap or upward swipe restores it without replacing its halo.\n\nLive captions sit immediately below the orb, with up to three centered 15pt/22pt lines expanded and one 13pt/19pt line minimized. They fade and move with the drag using shared values, and the content reserve follows their measured height. Partial transcript updates replace the same turn; final messages remain in the transcript. Captions clear between agent turns and after ending. Final text is announced politely; partial chunks do not repeatedly interrupt a screen reader. The minimized conversation continues until explicitly ended or interrupted by navigation, context changes or backgrounding.\n\nThe orb opens Talk it through with start/mute/end, voice selection and a transcript. It represents a conversational agent, with confirmed case context or a Guide term at the service boundary. The default adapter reports unavailable and never substitutes device speech or opens a microphone. Speaking UI follows provider status and text, without fabricated audio activity.\n\n### Document import actions\n\nTake a photo is a full-width, 96px-minimum glass action with a purpose caption. Choose photos and Choose a PDF share a row with 140px-minimum source cards. All use Phosphor artwork, proportional 18px action labels and 12px purpose captions. Native glass falls back to raised paper, with soft teal on the camera action. Document type follows these actions and opens a focused sheet; Auto (Recommended) is the default. Current Auto metadata awaits a connected classifier rather than inventing a type.\n\nHome’s 64px glass camera shortcut, raised 22pt above the tabs, goes directly to capture. A selected photo/PDF triggers the folding-paper preparation screen during actual validation and private copying, then opens confirmation. Users can add more captures and preview/remove documents before starting understanding, followed by verification. Picker cancellation or a cancelled preparation creates no new case; permission and import failures retain recovery controls.\n\n### Case trail and cards\n\nTimeline is the third main tab. It shows Gather documents, Confirm details, Review & prepare, Send request and Follow through as a connected trail, with named completed/current/upcoming states and the next workflow action. Recorded actions stay separately readable. A resolved card opens this history with Update case; marking a case resolved returns Home. A card’s follow-up control opens its own calendar sheet without navigation.\n\nBill cards use 18px provider labels beneath 24px section headings, paper shadows and semantic status borders/backgrounds. Status badges sit at the upper right, above the amount and document facts. Ready uses teal; resolved uses green. Mobile cards have press feedback and no hover effect. Home’s profile selector appears only when a family profile exists. Other relationships accept a locally saved label of 1–40 letters, numbers and spaces.\n\n### Scroll-edge fades\n\nScreen and AppSheet share SoftScrollView. Top and bottom fade heights are recorded in the frontmatter. Opacity ramps from 0 to 1 over the corresponding edge distance. The top clears at the start, the bottom clears at the end, and both clear when adjusted content travel is at most 1 or the viewport is not measured. The calculation includes native adjusted insets and clamps bounce/overscroll. Content and layout updates recalculate the edge state. Search uses a 16px bottom fade and compact 12px top/8px bottom padding. iOS keyboard clearance uses react-native-keyboard-controller automaticOffset to measure the visible screen frame; UIKit owns navigation-bar search transitions, while result/filter layout changes use a 220ms eased transition. Search hides the toolbar, page introduction and workflow CTA.\n\nThe overlays ignore pointer events and accessibility and stay inside the scrolling region. Native toolbar scroll-edge effects remain hidden. The sidecar shows static edge states; the app computes their live opacity with Reanimated.\n\n### Calendar sheets\n\nThe app-owned sheet presents a section title, a 48-wide circular glass X, scrollable content and a confirmation footer. iOS uses the native page-sheet presentation. Web uses a centered dialog with a maximum width of 560 and maximum height of 90% of the viewport, paper content and a dimmed backdrop. The browser fallback keeps the close control opaque. Reduced motion removes the sheet's entrance animation.\n\nThe selected date uses 18/24 type in the footer above Save reminder, beneath the native calendar; the sheet title uses 20/26 type. Closing leaves the pending calendar choice unapplied; the next open starts from the existing value. Bill-level and line-level service dates reuse this pattern.\n\n### Folded-paper loader\n\nTwo offset paper leaves and a folded corner indicate actual local work. The loop lasts 1800ms; reduced motion or a settled state removes looping. Onboarding cross-fades use the shared transition duration. Reduced motion disables press scale, disables onboarding entry/exit effects and asks the native stack for a fade.\n\n"
+  }
+}

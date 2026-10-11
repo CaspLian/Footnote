@@ -1,11 +1,11 @@
 import { View } from 'react-native';
-import Animated, { useReducedMotion, cubicBezier } from 'react-native-reanimated';
-import { colors, radius, shadows, space } from '@/theme';
+import Animated, { cubicBezier } from 'react-native-reanimated';
+import { useMotionPreference, useTheme, radius, shadows, space } from '@/theme';
 import { Txt } from './ui';
 
 /** Folded paper is the brand's state indicator; no artificial percentage is shown. */
-export function UnfoldLoader({ title = 'Opening your workspace', detail = 'A little clarity is on its way.', compact = false, settled = false }: { title?: string; detail?: string; compact?: boolean; settled?: boolean }) {
-  const reduced = useReducedMotion() || settled;
+export function UnfoldLoader({ title = 'Opening your workspace', detail = 'A little clarity is on its way.', compact = false, settled = false }: { title?: string; detail?: string; compact?: boolean; settled?: boolean }) { const { colors } = useTheme();
+  const reduced = useMotionPreference() || settled;
   return <View accessibilityRole={settled ? 'text' : 'progressbar'} accessibilityLabel={title} accessibilityLiveRegion="polite" style={{ alignItems: 'center', gap: space.screen, paddingVertical: compact ? space.screen : space.xxl }}>
     <View accessible={false} style={{ width: 96, height: 104, alignItems: 'center', justifyContent: 'center' }}>
       <Animated.View style={{ position: 'absolute', width: 64, height: 84, borderRadius: radius.small, backgroundColor: colors.accentSoft, transform: [{ rotate: '-12deg' }], ...(reduced ? {} : { animationName: { '0%, 100%': { transform: [{ translateX: -5 }, { rotate: '-12deg' }] }, '50%': { transform: [{ translateX: 4 }, { rotate: '-4deg' }] } }, animationDuration: '1800ms', animationIterationCount: 'infinite', animationTimingFunction: cubicBezier(.77,0,.175,1) }) }} />

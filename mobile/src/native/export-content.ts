@@ -1,5 +1,5 @@
 import type { Language } from '@/domain';
-import { colors } from '@/theme';
+import { colors } from '@/theme/palette';
 
 export type DraftExport = { title: string; body: string; language: Language };
 

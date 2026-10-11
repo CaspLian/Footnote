@@ -32,7 +32,7 @@ Use a development build, not Expo Go: PDF preview uses `react-native-pdf` and `r
 - Local self, child, partner, and dependent profiles; bills are associated with the selected profile.
 - Camera/photo/PDF selection, document classification, original preview, and editable verification.
 - A synthetic paired bill/EOB supports the complete review demonstration; arbitrary imports require manual entry and receive no invented extraction or findings.
-- Simple/detailed explanations, source-linked questions, device narration, editable billing-correction and insurer-review drafts, clipboard copy, PDF export, and explicit submission records.
+- Simple/detailed explanations, source-linked questions, contextual live-agent controls with captions, editable billing-correction and insurer-review drafts, clipboard copy, PDF export, and explicit submission records.
 - Follow-up reminders, separately confirmed notice dates, recorded actions, glossary, and resettable sample.
 - Native biometric app-lock options with device-passcode fallback and setup/cancellation recovery.
 - Proportional Geist typography, Phosphor icons, restrained gradients, paper shadows, progressive detail, and a folding-paper loader with reduced-motion support.
@@ -110,7 +110,9 @@ npm run bundle:android
 npm run bundle:web
 ```
 
-TypeScript, lint, 39 focused tests, and web/Android/iOS bundle exports pass. The development client built and ran on an iPhone 18 Pro simulator with onboarding, source PDF preview, review, narration, draft copy, restart recovery, and unenrolled Face ID recovery exercised. Android runtime, physical-device camera capture, enrolled biometric authentication, and a full large-text/screen-reader device audit remain to be validated.
+TypeScript, lint, 66 focused tests, Expo Doctor (21/21), and iOS/Android/web exports pass for the restored version. The native development client was rebuilt, installed and launched on an iPhone 18 Pro / iOS 27 simulator. The available simulator tooling captures UI but does not expose tap/swipe automation, so a fresh native keyboard/gesture, camera-permission, biometric and screen-reader walkthrough remains a runtime validation gap. Android runtime and a real ElevenLabs conversation are also pending.
+
+The recovered code lives on `frontend-aarush`. Start Metro with `npm start`, then open the installed Unfold development client. Use `npm run ios` when native dependencies need rebuilding.
 
 ## Tiger Data deadline prototype (from `Tiger-data`, 2026-10-10)
 

@@ -24,7 +24,7 @@ export const claimTracker: ClaimTracker = {
       service_date: billCase.serviceDate || undefined,
       // The due date Gemini read from the bill. Tiger Data estimates the deadlines from the bill's dates.
       payment_due_date: billCase.extraction?.dueDate && isISODate(billCase.extraction.dueDate) ? billCase.extraction.dueDate : undefined,
-      total_billed: billCase.financials.billedCents / 100,
+      total_billed: billCase.financials.billedCents === undefined ? undefined : billCase.financials.billedCents / 100,
       analysis_audit_id: billCase.extraction?.auditId,
     });
     return claim.audit_id;
