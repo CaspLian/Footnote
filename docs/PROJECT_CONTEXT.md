@@ -1,6 +1,6 @@
 # Footnote: project context
 
-Last checked: 2026-10-10, branch `merged-v1` (the backend and the connected frontend). Re-check
+Last checked: 2026-10-10, branch `Backend-Frontend-Connection-V1` (resumed from the published `merged-v1` snapshot). Re-check
 anything here against the code after merges: the code wins over this document.
 
 ## Product
@@ -78,6 +78,7 @@ Between checkpoints, record status changes in your handoff.
 | Spoken replies in languages other than English | VERIFIED live (2026-10-10): spoken and heard back in 12 languages and both Chinese scripts, full replies in 12 locales. Hebrew and Thai are spoken by v4 Turbo (Flash v2.5 does not speak them), more slowly. In Arabic, speech-to-text heard the formal "two hundred" as "one hundred" | `text_to_speech/config.py`, `voice_routes.py` |
 | Developer console (every route in a browser) | VERIFIED mocked (headless Chrome, a stand-in for ElevenLabs, 58 checks). Its API also answered live requests (curl, 2026-10-10) | `backend/dev_console.py` |
 | Mobile app connected to the backend | VERIFIED in Expo web: onboarding, import, extraction, confirmation, review, saved reading and persistent reopening; 166 tests, typecheck and lint pass. Android APK built/installed; updated screens loaded with preserved data. Native fresh upload/live voice remain unverified while Nimesh uses the emulator | `mobile/src/services/backend.ts`, `connected-services.ts` |
+| Footnote identity and earlier standalone web source-data screens | VERIFIED locally: published identity retained; 26 web tests and production build pass; upload/review/script browser journey checked with a stand-in response at desktop/phone widths. No preloaded cases, fixed charge tables or inferred savings. Older web storage is session-only and narration uses device voice | `docs/handoffs/footnote-rebrand.md`; `web/src/services/analysis-mapping.ts` |
 | Follow-up questions about a saved bill | VERIFIED live web conversation: synthetic microphone question, saved amounts, captions, CT card highlight, mute and End. Agent uses Gemini 3.5 Flash; standalone recorded questions remain separate | `voice_agent/`, `mobile/src/components/agent-orb-control.tsx` |
 | Authentication, rate limits | PARTIAL: agent session origin checks, issuance limits and provider limits implemented. No application authentication; other routes remain unprotected | `voice_agent/limits.py`; app-key proposal remains open |
 | Tiger Data audit / regional benchmark tables | Claim audit/lifecycle tables VERIFIED live over HTTP with isolated schema; regional benchmark table not used by app lookups | `claim_routes.py`, `tigerdata_service.py` |

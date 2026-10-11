@@ -1,6 +1,6 @@
 /**
  * The Footnote backend for the web app. Set VITE_API_URL (for example http://127.0.0.1:8000; see web/.env.example)
- * to use it. Unset, `backend.configured` is false, nothing is sent anywhere, and the app keeps its sample cases.
+ * to use it. Unset, `backend.configured` is false, nothing is sent anywhere, and document analysis is unavailable.
  * Every route and field is in docs/API_CONTRACTS.md; these are the calls the mobile app makes too
  * (mobile/src/services/backend.ts).
  */

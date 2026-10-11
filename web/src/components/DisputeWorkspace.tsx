@@ -51,7 +51,7 @@ export const DisputeWorkspace: React.FC<DisputeWorkspaceProps> = ({
     onUpdateCase({
       ...caseData,
       status: 'in_dispute',
-      notes: `Formal dispute notice sent on ${new Date().toLocaleDateString()}. Account on 30-day administrative hold.`
+      notes: `Formal dispute notice sent on ${new Date().toLocaleDateString()}.`
     });
 
     // Celebratory milestone confetti
@@ -76,8 +76,8 @@ export const DisputeWorkspace: React.FC<DisputeWorkspaceProps> = ({
           </h1>
           <p className="text-sm text-ink-secondary mt-0.5">
             {language === 'en'
-              ? 'Legally grounded under the federal No Surprises Act (45 CFR § 149) and CMS coding rules.'
-              : 'Fundamentada en la ley federal No Surprises Act (45 CFR § 149) y normativas CMS.'}
+              ? 'Ask the billing office for an itemized statement and an explanation of charges.'
+              : 'Pida a facturación una factura detallada y una explicación de los cargos.'}
           </p>
         </div>
 
@@ -112,7 +112,7 @@ export const DisputeWorkspace: React.FC<DisputeWorkspaceProps> = ({
             <span>
               {isSubmitted
                 ? (language === 'en' ? 'Marked as Sent ✓' : 'Marcado como Enviado ✓')
-                : (language === 'en' ? 'Mark Submitted & Start 30-Day Hold' : 'Marcar como Enviado')}
+                : (language === 'en' ? 'Mark as sent' : 'Marcar como Enviado')}
             </span>
           </button>
         </div>
@@ -126,7 +126,7 @@ export const DisputeWorkspace: React.FC<DisputeWorkspaceProps> = ({
 
         <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 w-full sm:w-auto">
           <button
-            onClick={() => setRecipient('billing')}
+            onClick={() => { setRecipient('billing'); onUpdateCase({ ...caseData, dispute_letter_recipient: 'billing' }); }}
             className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all ${
               recipient === 'billing'
                 ? 'bg-white text-brand-800 shadow-sm font-bold'
@@ -138,7 +138,7 @@ export const DisputeWorkspace: React.FC<DisputeWorkspaceProps> = ({
           </button>
 
           <button
-            onClick={() => setRecipient('insurer')}
+            onClick={() => { setRecipient('insurer'); onUpdateCase({ ...caseData, dispute_letter_recipient: 'insurer' }); }}
             className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all ${
               recipient === 'insurer'
                 ? 'bg-white text-brand-800 shadow-sm font-bold'
@@ -157,10 +157,10 @@ export const DisputeWorkspace: React.FC<DisputeWorkspaceProps> = ({
         <div className="border-b-2 border-slate-900 pb-4 flex justify-between items-start">
           <div>
             <h2 className="text-xl font-extrabold uppercase tracking-tight text-slate-900">
-              Notice of Billing Dispute & Audit Adjustment Request
+              {language === 'en' ? 'Request for billing clarification' : 'Solicitud de aclaración de facturación'}
             </h2>
             <p className="text-xs text-slate-600 font-mono mt-0.5">
-              Pursuant to 45 CFR § 149 (No Surprises Act) & Patient Financial Rights
+              {caseData.provider_name}
             </p>
           </div>
           <span className="text-xs font-mono font-bold px-2.5 py-1 rounded bg-slate-100 border border-slate-300">
@@ -172,7 +172,11 @@ export const DisputeWorkspace: React.FC<DisputeWorkspaceProps> = ({
         <div className="relative">
           <textarea
             value={letterDraft}
-            onChange={(e) => setLetterDraft(e.target.value)}
+            onChange={(e) => {
+              const draft = e.target.value;
+              setLetterDraft(draft);
+              onUpdateCase({ ...caseData, ...(language === 'en' ? { dispute_letter_draft: draft } : { dispute_letter_draft_es: draft }) });
+            }}
             rows={20}
             className="w-full font-mono text-xs sm:text-sm text-ink-primary bg-parchment-50/50 p-4 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white transition-all leading-relaxed"
             placeholder="Type or customize your dispute letter..."

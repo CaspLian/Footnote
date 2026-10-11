@@ -18,8 +18,8 @@ export interface LineItem {
   description: string;
   description_es: string;
   quantity: number;
-  hospital_amount: number;
-  benchmark_allowed: number;
+  hospital_amount: number | null;
+  benchmark_allowed: number | null;
   status: 'clean' | 'flagged' | 'duplicate' | 'unbundled';
   flag_reason?: string;
   flag_reason_es?: string;
@@ -43,7 +43,7 @@ export interface Finding {
   question_for_billing_es: string;
   statutory_rule?: string;
   statutory_rule_es?: string;
-  potential_savings: number;
+  potential_savings: number | null;
 }
 
 export interface UploadedDocument {
@@ -67,14 +67,16 @@ export interface MedicalCase {
   documents: UploadedDocument[];
   
   // Financial Reconciliation
-  total_billed: number;
-  insurer_adjustments: number;
-  insurer_paid: number;
-  patient_paid: number;
-  statement_balance: number;
-  eob_responsibility: number;
-  derived_remaining: number;
-  discrepancy_amount: number;
+  total_billed: number | null;
+  insurer_adjustments: number | null;
+  insurer_paid: number | null;
+  patient_paid: number | null;
+  statement_balance: number | null;
+  eob_responsibility: number | null;
+  derived_remaining: number | null;
+  discrepancy_amount: number | null;
+  plain_summary?: string;
+  audit_id?: string | null;
   
   // Follow-up
   follow_up_date?: string;

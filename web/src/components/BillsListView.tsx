@@ -1,3 +1,4 @@
+import { formatMoney } from '../services/format';
 import React, { useState } from 'react';
 import { MedicalCase, Language, ActiveTab, CaseStatus } from '../types';
 import { 
@@ -159,16 +160,16 @@ export const BillsListView: React.FC<BillsListViewProps> = ({
                     {language === 'en' ? 'Statement Billed' : 'Monto Facturado'}
                   </span>
                   <span className="text-sm font-bold text-ink-primary tabular-nums">
-                    ${c.statement_balance.toFixed(2)}
+                    {formatMoney(c.statement_balance, language)}
                   </span>
                 </div>
 
                 <div>
                   <span className="text-xs text-rose-600 font-semibold block">
-                    {language === 'en' ? 'Discrepancy' : 'Discrepancia'}
+                    {language === 'en' ? 'Questions' : 'Preguntas'}
                   </span>
                   <span className="text-base font-extrabold text-rose-600 tabular-nums">
-                    +${c.discrepancy_amount.toFixed(2)}
+                    {c.findings.length}
                   </span>
                 </div>
 

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { displayDate, toConnectedCase } from './analysis-mapping';
 import { analysisFixture } from './test-fixtures';
+import { claimFromCase } from './cases';
 
 const FILES = [{ name: 'statement.jpg', size: 1_468_006 }, { name: 'page-2.jpg', size: 900_000 }];
 const TODAY = new Date(2026, 9, 10);
@@ -24,27 +25,28 @@ describe('toConnectedCase', () => {
   });
 
   it('never makes up savings, discrepancies, statutes or insurer payments', () => {
-    expect(connected.discrepancy_amount).toBe(0);
-    expect([connected.insurer_paid, connected.insurer_adjustments, connected.patient_paid, connected.eob_responsibility]).toEqual([0, 0, 0, 0]);
+    expect(connected.discrepancy_amount).toBeNull();
+    expect([connected.insurer_paid, connected.insurer_adjustments, connected.patient_paid, connected.eob_responsibility]).toEqual([null, null, null, null]);
     for (const finding of connected.findings) {
-      expect(finding.potential_savings).toBe(0);
+      expect(finding.potential_savings).toBeNull();
       expect(finding.statutory_rule).toBeUndefined();
     }
     const everything = JSON.stringify(connected).toLowerCase();
     for (const claim of ['overcharg', 'you do not owe', 'illegal', 'fraud', 'no surprises act']) expect(everything).not.toContain(claim);
   });
 
-  it('turns lines above the Medicare range into findings, the furthest first', () => {
+  it('keeps doctor-only references as clarification questions after comparable price findings', () => {
     expect(connected.findings.map(f => [f.cpt_code, f.severity, f.category])).toEqual([
-      ['70450', 'high', 'benchmark_outlier'],
       ['99284', 'high', 'benchmark_outlier'],
+      ['70450', 'info', 'benchmark_outlier'],
     ]);
-    const [first] = connected.findings;
-    expect(first.title).toBe("A scan of your head: billed about 30.2× Medicare's national rate");
-    expect(first.title_es).toBe('A scan of your head: facturado a cerca de 30.2 veces la tarifa nacional de Medicare');
-    expect(first.summary).toContain('not proof of an error');
+    const first = connected.findings.find(f => f.cpt_code === '70450')!;
+    expect(first.title).toBe("A scan of your head: clarify the doctor's fee");
+    expect(first.title_es).toBe('A scan of your head: aclarar el honorario médico');
+    expect(first.summary).toContain("not the hospital's full charge");
     expect(first.evidence_quote).toBe('CT HEAD W/O CONTRAST: $3,200.00 billed | Medicare national rate: $106.03 (code 70450)');
-    expect(first.explanation).toContain("Medicare's rate here covers only the doctor's fee.");
+    expect(first.explanation).toContain("covers only the doctor's fee");
+    expect(first.explanation).not.toContain("times");
   });
 
   it('flags lines by price or by what Gemini noticed, with the reason', () => {
@@ -59,13 +61,13 @@ describe('toConnectedCase', () => {
   it('writes the letter and the call script from the findings and Gemini\'s questions', () => {
     expect(connected.dispute_letter_recipient).toBe('billing');
     expect(connected.dispute_letter_draft).toContain('To: Metropolitan Medical Center — Billing Department');
-    expect(connected.dispute_letter_draft).toContain("- A scan of your head: billed about 30.2× Medicare's national rate");
+    expect(connected.dispute_letter_draft).toContain("- A scan of your head: clarify the doctor's fee");
     expect(connected.dispute_letter_draft_es).toContain('ASUNTO: Solicitud de factura detallada');
     expect(connected.call_script.split('\n')).toEqual([
       "Hi, I'm calling about my bill from Metropolitan Medical Center for services on Sep 18, 2026. I have a few questions:",
       '',
-      '1. Can you explain the charge for A scan of your head (code 70450) and send me an itemized statement?',
-      '2. Can you explain the charge for Emergency room visit (code 99284) and send me an itemized statement?',
+      '1. Can you explain the charge for Emergency room visit (code 99284) and send me an itemized statement?',
+      '2. Can you explain the charge for A scan of your head (code 70450) and send me an itemized statement?',
       '3. Can you send me an itemized bill?',
       '4. Was my insurance billed?',
     ]);
@@ -79,17 +81,38 @@ describe('toConnectedCase', () => {
     expect(eob.provider_name).toBe('Proveedor desconocido');
     expect(eob.facility_type).toBe('Explicación de beneficios');
     expect(eob.service_date).toBe('');
-    expect(eob.total_billed).toBe(4490); // the lines add up to it
+    expect(eob.total_billed).toBeNull(); // not explicitly stated in the document
     expect(eob.eob_responsibility).toBe(120);
     expect(eob.dispute_letter_recipient).toBe('insurer');
     expect(eob.audit_id).toBeNull();
     expect(eob.findings).toEqual([]);
     expect(eob.id).toBe(`case-${TODAY.getTime()}`);
   });
+
+  it('does not infer a patient balance from a billed total or unknown payments', () => {
+    const response = analysisFixture();
+    response.result.amount_patient_owes = null;
+    const bill = toConnectedCase(response, [], 'en');
+    expect(bill.total_billed).toBe(4490);
+    expect(bill.statement_balance).toBeNull();
+    expect(bill.derived_remaining).toBeNull();
+    expect(bill.discrepancy_amount).toBeNull();
+  });
+
+  it('preserves missing charges and excludes them from confirmed claim amounts', () => {
+    const response = analysisFixture({ price_checks: [] });
+    response.result = { ...response.result, total_billed: null, amount_patient_owes: null,
+      line_items: response.result.line_items.map((item, index) => ({ ...item, billed_amount: index === 0 ? null : 0 })) };
+    const bill = toConnectedCase(response, [], 'en');
+    expect(bill.line_items.map(item => item.hospital_amount)).toEqual([null, 0, 0]);
+    expect(bill.line_items.every(item => item.benchmark_allowed === null)).toBe(true);
+    expect(claimFromCase(bill).items.map(item => [item.code, item.amount])).toEqual([['99284', 0], ['80053', 0]]);
+    expect(claimFromCase(bill)).not.toHaveProperty('total_billed');
+  });
 });
 
 describe('displayDate', () => {
-  it('writes dates as the sample cases do', () => {
+  it('formats extracted service dates', () => {
     expect(displayDate('2026-09-02')).toBe('Sep 02, 2026');
     expect(displayDate(null)).toBe('');
     expect(displayDate('next week')).toBe('');

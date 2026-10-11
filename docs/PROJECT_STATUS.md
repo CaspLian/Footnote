@@ -3,8 +3,8 @@
 | | |
 |---|---|
 | Checked on | 2026-10-10, America/New_York |
-| Branch | `merged-v1` |
-| Integrated code | `38e2f7a`: Footnote identity and Android cancellation/playback checkpoint, published on `merged-v1` |
+| Branch | `Backend-Frontend-Connection-V1` |
+| Integrated code | `bb76fbb`: published Footnote checkpoint carried back by fast-forward; local source-data cleanup follows |
 | Last updated by | Nimesh with Codex, completing identity and Android preview verification |
 
 ## Integrated behavior
@@ -40,7 +40,8 @@
   the emulator, so native upload/live voice checks remained unverified and control stayed with him.
 
 - Android Settings → Preview voice: **audible playback confirmed by Nimesh after the fix**. The app had called an AbortSignal method absent from React Native's runtime. Cancellation is now compatible, and previews download before playback, wait for native confirmation and expose playback errors.
-- The earlier web app builds successfully: **19 tests passed, 3 live tests skipped**. It starts without preset cases and uses the existing upload-analysis service; some older review/call-script views still contain hardcoded charges and need cleanup. Use the shared `mobile/` app for iOS testing.
+- Continuation Android x86_64 debug APK build passed (637 tasks). The package is generated locally with Footnote resources; no reinstall interrupted the user's current emulator activity.
+- The earlier web app builds successfully: **26 tests passed, 3 live tests skipped** after the local continuation. It starts without preset cases, uses uploaded document details throughout review/call-script views, preserves unknown money values, and treats physician-only references as questions. Its upload/review/script journey passed a browser check with a stand-in analysis response at desktop and phone widths, with no provider calls, console errors or page overflow. It still uses device narration and session-only case storage. Use the shared `mobile/` app for iOS testing.
 - Footnote Welcome, Intake and Settings passed browser review with no console errors or old branding/data-demo controls. Existing document assets were regenerated with Footnote branding and checked page by page.
 - The configured private ElevenLabs agent was renamed in place and verified by provider read-back. No paid conversation was needed for the rename.
 
@@ -61,6 +62,6 @@ Earlier evidence remains in `BACKEND_VERIFICATION_REPORT.md` and the relevant fe
   in the shared price service. The app's confirmed-line comparisons use units and explain reference scope.
 - LiveKit logged a signal-stream error on web teardown; both call records report normal termination, the
   player/microphone closed, and a fresh conversation connected successfully. This provider SDK log remains.
-- This checkpoint was pushed to `origin/merged-v1` at Nimesh’s explicit request. No deployment, outbound call or message was performed. Physical iOS testing remains open; see `docs/IOS_TESTING.md`.
+- The published snapshot remains on `origin/merged-v1` at `bb76fbb`. Nimesh then requested resuming the previous integration branch; this continuation has not been pushed. No deployment, outbound call or message was performed. Physical iOS testing remains open; see `docs/IOS_TESTING.md`.
 
 Local review: app `http://127.0.0.1:8083`, isolated API `http://127.0.0.1:8012` while the development servers run.

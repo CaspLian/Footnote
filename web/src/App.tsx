@@ -76,6 +76,7 @@ export const App: React.FC = () => {
 
         {currentTab === 'verification' && activeCase && (
           <VerificationView
+            key={activeCase.id}
             caseData={activeCase}
             language={language}
             onNavigateTab={(tab) => setCurrentTab(tab)}
@@ -94,6 +95,7 @@ export const App: React.FC = () => {
 
         {currentTab === 'dispute' && activeCase && (
           <DisputeWorkspace
+            key={`${activeCase.id}:${language}`}
             caseData={activeCase}
             language={language}
             onNavigateTab={(tab) => setCurrentTab(tab)}
@@ -103,6 +105,7 @@ export const App: React.FC = () => {
 
         {currentTab === 'call-script' && activeCase && (
           <CallScriptView
+            key={activeCase.id}
             caseData={activeCase}
             language={language}
             onNavigateTab={(tab) => setCurrentTab(tab)}

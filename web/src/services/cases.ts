@@ -30,11 +30,11 @@ export async function analyzeDocuments(
 export function claimFromCase(confirmed: ConnectedCase, serviceDateIso?: string): ClaimIn {
   return {
     items: confirmed.line_items
-      .filter(item => item.cpt_code && item.hospital_amount >= 0)
-      .map(item => ({ code: item.cpt_code, description: item.description, amount: item.hospital_amount })),
+      .filter(item => item.cpt_code && item.hospital_amount != null && item.hospital_amount >= 0)
+      .map(item => ({ code: item.cpt_code, description: item.description, amount: item.hospital_amount! })),
     provider_name: confirmed.provider_name,
     ...(serviceDateIso ? { service_date: serviceDateIso } : {}),
-    total_billed: confirmed.total_billed,
+    ...(confirmed.total_billed != null ? { total_billed: confirmed.total_billed } : {}),
     ...(confirmed.audit_id ? { analysis_audit_id: confirmed.audit_id } : {}),
   };
 }

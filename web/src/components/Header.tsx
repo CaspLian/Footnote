@@ -1,3 +1,4 @@
+import { formatMoney } from '../services/format';
 import React from 'react';
 import { ActiveTab, Language, MedicalCase } from '../types';
 import { 
@@ -56,7 +57,7 @@ export const Header: React.FC<HeaderProps> = ({
       id: 'review' as ActiveTab,
       label: language === 'en' ? 'Audit & Review' : 'Auditoría',
       icon: FileText,
-      badge: activeCase ? `$${activeCase.discrepancy_amount.toFixed(0)}` : undefined,
+      badge: activeCase?.findings.length ? String(activeCase.findings.length) : undefined,
     },
     {
       id: 'dispute' as ActiveTab,
@@ -113,7 +114,7 @@ export const Header: React.FC<HeaderProps> = ({
               >
                 {cases.map((c) => (
                   <option key={c.id} value={c.id}>
-                    {c.provider_name} (${c.statement_balance.toFixed(0)})
+                    {c.provider_name} ({formatMoney(c.statement_balance, language)})
                   </option>
                 ))}
               </select>

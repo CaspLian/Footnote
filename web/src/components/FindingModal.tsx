@@ -34,7 +34,7 @@ export const FindingModal: React.FC<FindingModalProps> = ({
             <span className="px-2.5 py-0.5 rounded text-[11px] font-bold uppercase tracking-wider bg-rose-100 text-rose-800">
               {finding.cpt_code ? `CPT ${finding.cpt_code}` : 'Billing Discrepancy'}
             </span>
-            <span className="text-xs font-semibold text-rose-600">High Priority</span>
+            <span className="text-xs font-semibold text-rose-600">{language === 'en' ? 'Supporting details' : 'Detalles de respaldo'}</span>
           </div>
 
           <button
@@ -56,7 +56,7 @@ export const FindingModal: React.FC<FindingModalProps> = ({
             </p>
           </div>
 
-          {/* Forensic Evidence Specimen Box */}
+          {/* Supporting details */}
           <div className="bg-parchment-100 border border-slate-300 rounded-2xl p-4 font-mono text-xs text-ink-primary space-y-2">
             <span className="text-[10px] font-bold uppercase tracking-wider text-ink-muted block">
               ORIGINAL EXTRACTED EVIDENCE
@@ -67,28 +67,6 @@ export const FindingModal: React.FC<FindingModalProps> = ({
             <span className="text-[10px] text-ink-muted block">
               Comparison Basis: {language === 'en' ? finding.comparison_basis : finding.comparison_basis_es}
             </span>
-          </div>
-
-          {/* Snowflake Benchmark Table Box */}
-          <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 space-y-2">
-            <div className="flex items-center gap-2 text-brand-700 text-xs font-bold uppercase tracking-wider">
-              <Database size={16} />
-              <span>Snowflake Enterprise Healthcare Cost Benchmark</span>
-            </div>
-            <div className="grid grid-cols-3 gap-2 text-xs pt-1">
-              <div className="bg-white p-2.5 rounded-xl border border-slate-200">
-                <span className="text-[10px] text-ink-muted block">Hospital Charge</span>
-                <span className="font-bold text-rose-600 text-sm">$250.00</span>
-              </div>
-              <div className="bg-white p-2.5 rounded-xl border border-slate-200">
-                <span className="text-[10px] text-ink-muted block">Medicare Baseline</span>
-                <span className="font-bold text-ink-primary text-sm">$68.00</span>
-              </div>
-              <div className="bg-white p-2.5 rounded-xl border border-slate-200">
-                <span className="text-[10px] text-ink-muted block">Regional Markup</span>
-                <span className="font-bold text-brand-700 text-sm">367%</span>
-              </div>
-            </div>
           </div>
 
           {/* Statutory Protection Citation */}
@@ -129,7 +107,7 @@ export const FindingModal: React.FC<FindingModalProps> = ({
             }}
             className="flex items-center gap-1.5 bg-brand-600 hover:bg-brand-700 text-white font-semibold text-xs px-4 py-2.5 rounded-xl shadow-subtle transition-all"
           >
-            <span>{language === 'en' ? 'Add to Legal Dispute Letter' : 'Agregar a Carta de Disputa'}</span>
+            <span>{language === 'en' ? 'Add to billing request' : 'Agregar a la solicitud'}</span>
             <ArrowRight size={14} />
           </button>
         </div>

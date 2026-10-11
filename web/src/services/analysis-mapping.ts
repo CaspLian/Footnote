@@ -1,10 +1,11 @@
 import type { Finding, Language, LineItem, MedicalCase, UploadedDocument } from '../types';
 import type { AnalyzeResponse, BackendLineItem, PriceCheck } from './backend';
+import { formatMoney } from './format';
 
 /**
  * A case made from a real analysis: the app's MedicalCase, plus what the backend calls need.
  *
- * What the backend does not produce stays empty or zero instead of being made up: potential savings, a
+ * What the backend does not produce stays empty or null instead of being made up: potential savings, a
  * "discrepancy" (that needs a bill and its EOB compared), statutes, insurer payments. Findings come only from the
  * Medicare price check, and they are a reason to ask questions, never proof that a charge is wrong.
  */
@@ -32,8 +33,18 @@ const DOCUMENT_LABEL: Record<string, [string, string]> = {
   pharmacy_receipt: ['Pharmacy receipt', 'Recibo de farmacia'],
 };
 
-function money(value: number): string {
-  return `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+function money(value: number | null): string {
+  return formatMoney(value, 'en');
+}
+
+/** PriceCheck has no setting field: preserve the physician-only scope explicitly supplied in its note. */
+function doctorOnly(check: PriceCheck): boolean {
+  return /(?:only[^.]*doctor|doctor[^.]*only|physician.only|professional (?:fee|component)|excludes?[^.]*hospital)/i.test(check.note);
+}
+
+function needsQuestion(check: PriceCheck): boolean {
+  return check.billed_amount != null && check.medicare_rate != null
+    && (doctorOnly(check) || (ABOVE.includes(check.flag) && check.times_medicare != null));
 }
 
 function times(value: number): string {
@@ -44,7 +55,7 @@ function shortDate(date: Date): string {
   return date.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
 }
 
-/** "2026-09-18" -> "Sep 18, 2026", the format of the app's sample cases; "" when missing or not a date. */
+/** ISO service dates become readable dates; missing values stay blank. */
 export function displayDate(iso: string | null | undefined): string {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso ?? '');
   return match ? shortDate(new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]))) : '';
@@ -60,49 +71,58 @@ function lineName(item: BackendLineItem | undefined, index: number): string {
 }
 
 function findingFor(check: PriceCheck, item: BackendLineItem | undefined, index: number): Finding {
-  const far = check.flag === 'far_above_typical';
+  const scoped = doctorOnly(check);
+  const far = !scoped && check.flag === 'far_above_typical';
   const name = lineName(item, check.line_index);
   const ratio = times(check.times_medicare ?? 0);
   const code = check.cpt_code ?? '';
-  const billed = check.billed_amount ?? 0;
-  const rate = check.medicare_rate ?? 0;
+  const billed = check.billed_amount;
+  const rate = check.medicare_rate;
   return {
     id: `finding-${index + 1}`,
-    title: `${name}: billed about ${ratio}× Medicare's national rate`,
-    title_es: `${name}: facturado a cerca de ${ratio} veces la tarifa nacional de Medicare`,
-    severity: far ? 'high' : 'medium',
+    title: scoped ? `${name}: clarify the doctor's fee` : `${name}: billed about ${ratio}× Medicare's national rate`,
+    title_es: scoped ? `${name}: aclarar el honorario médico` : `${name}: facturado a cerca de ${ratio} veces la tarifa nacional de Medicare`,
+    severity: scoped ? 'info' : far ? 'high' : 'medium',
     category: 'benchmark_outlier',
     cpt_code: code || undefined,
-    summary: `${far ? 'Far above' : 'Higher than'} the usual range for this service. A reason to ask questions, not proof of an error.`,
-    summary_es: `${far ? 'Muy por encima' : 'Por encima'} del rango habitual para este servicio. Es un motivo para preguntar, no una prueba de un error.`,
-    explanation: `The bill lists ${name} at ${money(billed)}. Medicare's national rate for code ${code} is ${money(rate)}, so the `
+    summary: scoped ? "This reference covers the doctor's fee, not the hospital's full charge." : 'A difference from the Medicare reference is a reason to ask questions, not proof of an error.',
+    summary_es: scoped ? 'Esta referencia cubre el honorario médico, no el cargo completo del hospital.' : 'Una diferencia con la referencia de Medicare es un motivo para preguntar, no una prueba de un error.',
+    explanation: scoped ? `The bill lists ${name} at ${money(billed)}. The ${money(rate)} Medicare reference covers only the doctor's fee. Ask what the hospital charge includes.` : `The bill lists ${name} at ${money(billed)}. Medicare's national rate for code ${code} is ${money(rate)}, so the `
       + `charge is about ${ratio} times that rate. ${check.note}`.trim(),
-    explanation_es: `La factura incluye ${name} por ${money(billed)}. La tarifa nacional de Medicare para el código ${code} es `
+    explanation_es: scoped ? `La factura incluye ${name} por ${money(billed)}. La referencia de Medicare de ${money(rate)} cubre solo el honorario médico. Pregunte qué incluye el cargo del hospital.` : `La factura incluye ${name} por ${money(billed)}. La tarifa nacional de Medicare para el código ${code} es `
       + `${money(rate)}, así que el cargo es cerca de ${ratio} veces esa tarifa. Las tarifas de Medicare son una referencia: `
       + 'su seguro puede pagar otras.',
     evidence_quote: `${item?.original_description.trim() || name}: ${money(billed)} billed | Medicare national rate: ${money(rate)} (code ${code})`,
-    comparison_basis: "Medicare's national rate (CMS fee schedule), not your insurer's price",
-    comparison_basis_es: 'Tarifa nacional de Medicare (CMS), no el precio de su seguro',
+    comparison_basis: scoped ? "National Medicare physician fee; excludes the hospital's fee" : "Medicare's national rate (CMS fee schedule), not your insurer's price",
+    comparison_basis_es: scoped ? 'Honorario médico nacional de Medicare; excluye el cargo del hospital' : 'Tarifa nacional de Medicare (CMS), no el precio de su seguro',
     question_for_billing: `Can you explain the charge for ${name} (code ${code}) and send me an itemized statement?`,
     question_for_billing_es: `¿Pueden explicarme el cargo de ${name} (código ${code}) y enviarme una factura detallada?`,
-    potential_savings: 0,
+    potential_savings: null,
   };
 }
 
 function lineItemFor(item: BackendLineItem, index: number, check: PriceCheck | undefined): LineItem {
-  const priced = check && ABOVE.includes(check.flag) && check.times_medicare != null;
-  const priceNote = priced ? `Billed about ${times(check.times_medicare!)}× Medicare's national rate.` : '';
-  const priceNoteEs = priced ? `Facturado a cerca de ${times(check.times_medicare!)} veces la tarifa nacional de Medicare.` : '';
+  let priceNote = '';
+  let priceNoteEs = '';
+  if (check && needsQuestion(check)) {
+    if (doctorOnly(check)) {
+      priceNote = "This Medicare reference covers only the doctor's fee; ask what the hospital charge includes.";
+      priceNoteEs = 'Esta referencia de Medicare cubre solo el honorario médico; pregunte qué incluye el cargo del hospital.';
+    } else {
+      priceNote = `Billed about ${times(check.times_medicare!)}× Medicare's national rate.`;
+      priceNoteEs = `Facturado a cerca de ${times(check.times_medicare!)} veces la tarifa nacional de Medicare.`;
+    }
+  }
   const issues = item.possible_issues.filter(issue => issue.trim());
-  const flagged = priced || issues.length > 0;
+  const flagged = !!priceNote || issues.length > 0;
   return {
     id: `line-${index + 1}`,
     cpt_code: item.cpt_code ?? '',
     description: lineName(item, index),
     description_es: lineName(item, index),
     quantity: 1, // the analysis does not read units yet
-    hospital_amount: item.billed_amount ?? 0,
-    benchmark_allowed: check?.medicare_rate ?? 0,
+    hospital_amount: item.billed_amount,
+    benchmark_allowed: check?.medicare_rate ?? null,
     status: flagged ? 'flagged' : 'clean',
     ...(flagged
       ? { flag_reason: [...issues, priceNote].filter(Boolean).join(' '), flag_reason_es: [...issues, priceNoteEs].filter(Boolean).join(' ') }
@@ -151,14 +171,14 @@ export function toConnectedCase(response: AnalyzeResponse, files: { name: string
   const checks = new Map(response.price_checks.map(check => [check.line_index, check]));
   const items = result.line_items.map((item, index) => lineItemFor(item, index, checks.get(index)));
   const findings = response.price_checks
-    .filter(check => ABOVE.includes(check.flag) && check.times_medicare != null)
-    .sort((a, b) => Number(b.flag === 'far_above_typical') - Number(a.flag === 'far_above_typical') || (b.times_medicare ?? 0) - (a.times_medicare ?? 0))
+    .filter(needsQuestion)
+    .sort((a, b) => Number(doctorOnly(a)) - Number(doctorOnly(b)) || (b.times_medicare ?? 0) - (a.times_medicare ?? 0))
     .map((check, index) => findingFor(check, result.line_items[check.line_index], index));
   const unknownProvider = language === 'es' ? 'Proveedor desconocido' : 'Unknown provider';
   const provider = result.provider_name?.trim() || unknownProvider;
   const serviceDate = displayDate(result.line_items.find(item => item.date_of_service)?.date_of_service);
-  const totalBilled = result.total_billed ?? items.reduce((sum, item) => sum + item.hospital_amount, 0);
-  const owed = result.amount_patient_owes ?? totalBilled;
+  const totalBilled = result.total_billed;
+  const owed = result.amount_patient_owes;
   const isEob = result.document_type === 'eob';
   const label = DOCUMENT_LABEL[result.document_type] ?? ['Document', 'Documento'];
   const documentType: UploadedDocument['type'] = isEob ? 'eob' : result.document_type === 'insurance_policy' ? 'policy' : 'bill';
@@ -180,13 +200,13 @@ export function toConnectedCase(response: AnalyzeResponse, files: { name: string
       size: fileSize(file.size),
     })),
     total_billed: totalBilled,
-    insurer_adjustments: 0,
-    insurer_paid: 0,
-    patient_paid: 0,
-    statement_balance: owed,
-    eob_responsibility: isEob ? owed : 0,
-    derived_remaining: owed,
-    discrepancy_amount: 0,
+    insurer_adjustments: null,
+    insurer_paid: null,
+    patient_paid: null,
+    statement_balance: isEob ? null : owed,
+    eob_responsibility: isEob ? owed : null,
+    derived_remaining: null,
+    discrepancy_amount: null,
     line_items: items,
     findings,
     dispute_letter_recipient: isEob ? 'insurer' : 'billing',

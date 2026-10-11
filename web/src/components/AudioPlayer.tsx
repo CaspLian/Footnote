@@ -19,42 +19,42 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ text, language, title 
       return;
     }
 
-    // Stop ongoing speech on unmount or text change
+    setIsPlaying(false);
+    // Stop ongoing speech on unmount or text/language change.
     return () => {
+      utteranceRef.current = null;
       window.speechSynthesis.cancel();
     };
-  }, []);
+  }, [text, language]);
+
+  const startReading = () => {
+    utteranceRef.current = null;
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = language === 'es' ? 'es-ES' : 'en-US';
+    utterance.rate = 0.95;
+    utterance.onstart = () => { if (utteranceRef.current === utterance) setIsPlaying(true); };
+    utterance.onend = () => { if (utteranceRef.current === utterance) setIsPlaying(false); };
+    utterance.onerror = () => { if (utteranceRef.current === utterance) setIsPlaying(false); };
+    utteranceRef.current = utterance;
+    window.speechSynthesis.speak(utterance);
+  };
 
   const handleTogglePlay = () => {
     if (!hasSupport) return;
 
     if (isPlaying) {
+      utteranceRef.current = null;
       window.speechSynthesis.cancel();
       setIsPlaying(false);
     } else {
-      window.speechSynthesis.cancel();
-
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = language === 'es' ? 'es-ES' : 'en-US';
-      utterance.rate = 0.95; // Slightly slower, calm clinical tone
-      utterance.pitch = 1.0;
-
-      utterance.onstart = () => setIsPlaying(true);
-      utterance.onend = () => setIsPlaying(false);
-      utterance.onerror = () => setIsPlaying(false);
-
-      utteranceRef.current = utterance;
-      window.speechSynthesis.speak(utterance);
+      startReading();
     }
   };
 
   const handleRestart = () => {
     if (!hasSupport) return;
-    window.speechSynthesis.cancel();
-    setIsPlaying(false);
-    setTimeout(() => {
-      handleTogglePlay();
-    }, 100);
+    startReading();
   };
 
   return (
@@ -66,10 +66,10 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ text, language, title 
         <div>
           <div className="flex items-center gap-2">
             <span className="text-xs font-bold uppercase tracking-wider text-brand-800">
-              {title || (language === 'en' ? 'ElevenLabs Audio Advocate' : 'Audio Guía ElevenLabs')}
+              {title || (language === 'en' ? 'Read aloud' : 'Leer en voz alta')}
             </span>
             <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-white/80 text-brand-700 border border-brand-200">
-              {language === 'en' ? 'Natural Speech' : 'Voz Natural'}
+              {language === 'en' ? 'Device voice' : 'Voz del dispositivo'}
             </span>
           </div>
           <p className="text-xs text-ink-secondary mt-0.5 line-clamp-1 max-w-xl">
@@ -91,6 +91,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ text, language, title 
 
         <button
           onClick={handleRestart}
+          disabled={!hasSupport || !text.trim()}
           title={language === 'en' ? 'Restart' : 'Reiniciar'}
           className="p-2 rounded-lg text-ink-secondary hover:text-brand-700 hover:bg-white/80 border border-transparent hover:border-slate-200 transition-colors"
         >
@@ -99,12 +100,13 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ text, language, title 
 
         <button
           onClick={handleTogglePlay}
+          disabled={!hasSupport || !text.trim()}
           className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold shadow-subtle hover:shadow-card transition-all"
         >
           {isPlaying ? (
             <>
               <Pause size={14} weight="bold" />
-              <span>{language === 'en' ? 'Pause' : 'Pausar'}</span>
+              <span>{language === 'en' ? 'Stop' : 'Detener'}</span>
             </>
           ) : (
             <>
