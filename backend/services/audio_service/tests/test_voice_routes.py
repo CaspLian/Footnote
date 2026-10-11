@@ -836,3 +836,81 @@ def test_the_reply_audio_is_made_while_the_analysis_is_saved(voice, monkeypatch)
     body = ask(voice).json()
     assert seen == {"speaking_during_save": True}
     assert body["speech"]["ok"] is True and body["analysis"]["audit"]["saved"] is True
+
+
+@pytest.fixture
+def agent_voice(voice, monkeypatch):
+    session = importlib.import_module("services.audio_service.voice_agent.session")
+    definition = importlib.import_module("services.audio_service.voice_agent.definition")
+    config = importlib.import_module("services.audio_service.voice_agent.config")
+    provider = types.SimpleNamespace(checks=0, mints=[])
+
+    def get_agent(*args, **kwargs):
+        provider.checks += 1
+        return definition.agent_body(["tool-a", "tool-b"])
+
+    def credential(agent_id, kind, **kwargs):
+        provider.mints.append(kind)
+        return {"token": "test-token", "conversation_id": "test-call"} if kind == "webrtc" else {"signed_url": "wss://example.test/test"}
+
+    provider.get_agent, provider.credential = get_agent, credential
+    service = session.SessionService(config.AgentConfig("fake-key", "agent-test"), provider)
+    monkeypatch.setattr(session, "get_service", lambda: service)
+    monkeypatch.setattr(voice.routes, "get_agent_service", lambda: service)
+    saved = ask(voice, speak_reply="false").json()["analysis"]
+    voice.agent_audit_id = saved["audit"]["audit_id"]
+    voice.agent_provider = provider
+    return voice
+
+
+def test_agent_session_uses_saved_analysis_and_returns_uncached_grant(agent_voice):
+    voice = agent_voice
+    response = voice.client.post("/api/v1/voice/agent/session", data={"audit_id": voice.agent_audit_id, "target_language": "es"})
+    assert response.status_code == 200 and response.headers["cache-control"] == "no-store"
+    body = response.json()
+    assert body["locale"] == "es-MX" and body["language"] == "es" and body["voice"] == "elio"
+    assert body["conversation_token"] == "test-token" and body["bill_loaded"] is True
+    assert "Brain MRI" in body["dynamic_variables"]["bill_lines"]
+    assert body["lines"][0]["number"] == 1 and body["lines"][0]["in_context"]
+    assert "fake-key" not in response.text and "agent-test" not in response.text
+    assert voice.agent_provider.mints == ["webrtc"] and len(voice.gemini.calls) == 1  # no second analysis
+
+
+@pytest.mark.parametrize("form,status,stage", [({}, 400, "audit"), ({"audit_id": "bad"}, 400, "audit"),
+    ({"audit_id": str(uuid.uuid4()), "target_language": "yue"}, 400, "language"),
+    ({"audit_id": str(uuid.uuid4())}, 404, "audit"),
+    ({"audit_id": str(uuid.uuid4()), "connection_type": "other"}, 400, "agent")])
+def test_agent_refuses_invalid_request_before_mint(agent_voice, form, status, stage):
+    response = agent_voice.client.post("/api/v1/voice/agent/session", data=form)
+    assert response.status_code == status and response.json()["detail"]["stage"] == stage
+    assert not agent_voice.agent_provider.mints
+
+
+def test_agent_origin_rate_limit_and_websocket(agent_voice):
+    voice = agent_voice
+    form = {"audit_id": voice.agent_audit_id, "connection_type": "websocket"}
+    response = voice.client.post("/api/v1/voice/agent/session", data=form, headers={"Origin": "https://example.com"})
+    assert response.status_code == 403 and not voice.agent_provider.mints
+    response = voice.client.post("/api/v1/voice/agent/session", data=form)
+    assert response.status_code == 200 and response.json()["signed_url"] and response.json()["conversation_token"] is None
+    response = voice.client.post("/api/v1/voice/agent/session", data=form)
+    assert response.status_code == 429 and int(response.headers["retry-after"]) <= 10
+
+
+def test_agent_old_saved_language_requires_explicit_call_language(agent_voice):
+    voice = agent_voice
+    voice.store.saved[voice.agent_audit_id]["analysis"]["target_language"] = "yue"
+    form = {"audit_id": voice.agent_audit_id}
+    assert voice.client.post("/api/v1/voice/agent/session", data=form).status_code == 400
+    response = voice.client.post("/api/v1/voice/agent/session", data={**form, "target_language": "en-US"})
+    assert response.status_code == 200 and "written in yue" in response.json()["dynamic_variables"]["bill_facts"]
+
+
+def test_agent_old_format_and_unavailable_store_never_mint(agent_voice):
+    voice = agent_voice
+    voice.store.saved[voice.agent_audit_id]["analysis"] = {"target_language": "en-US"}
+    form = {"audit_id": voice.agent_audit_id}
+    assert voice.client.post("/api/v1/voice/agent/session", data=form).status_code == 409
+    voice.store.configured = False
+    assert voice.client.post("/api/v1/voice/agent/session", data=form).status_code == 503
+    assert not voice.agent_provider.mints
