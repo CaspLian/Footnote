@@ -4,7 +4,7 @@
 |---|---|
 | Checked on | 2026-10-10, America/New_York |
 | Branch | `merged-v1` |
-| Integrated code | `736dcf9`, plus the Footnote identity and Android cancellation/playback checkpoint |
+| Integrated code | `38e2f7a`: Footnote identity and Android cancellation/playback checkpoint, published on `merged-v1` |
 | Last updated by | Nimesh with Codex, completing identity and Android preview verification |
 
 ## Integrated behavior
@@ -61,6 +61,6 @@ Earlier evidence remains in `BACKEND_VERIFICATION_REPORT.md` and the relevant fe
   in the shared price service. The app's confirmed-line comparisons use units and explain reference scope.
 - LiveKit logged a signal-stream error on web teardown; both call records report normal termination, the
   player/microphone closed, and a fresh conversation connected successfully. This provider SDK log remains.
-- This checkpoint is being published to `merged-v1` at Nimesh’s explicit request. No deployment, outbound call or message was performed. Physical iOS testing remains open; see `docs/IOS_TESTING.md`.
+- This checkpoint was pushed to `origin/merged-v1` at Nimesh’s explicit request. No deployment, outbound call or message was performed. Physical iOS testing remains open; see `docs/IOS_TESTING.md`.
 
 Local review: app `http://127.0.0.1:8083`, isolated API `http://127.0.0.1:8012` while the development servers run.

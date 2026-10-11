@@ -1,6 +1,6 @@
 # Footnote identity and Android audio integration
 
-- Status: checkpoint prepared for the requested `merged-v1` push; broader cleanup remains open as listed below
+- Status: checkpoint published to `origin/merged-v1` at `38e2f7a`; broader cleanup remains open as listed below
 - Owner: Nimesh with Codex
 - Branch: `merged-v1`
 - Last updated: 2026-10-10, America/New_York
