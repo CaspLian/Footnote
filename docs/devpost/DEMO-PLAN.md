@@ -408,7 +408,7 @@ Measured speeds to show (small samples on our machines, not load tests):
 | Speech-to-text of 63 s of audio | 4.6 s | 2026-10-09 | `backend/services/audio_service/README.md` |
 | Live web calls | 40 s and 20 s calls, both ended normally | 2026-10-10 | `docs/handoffs/backend-voice-agent.md` |
 | Guide-term live answers | 1.3-1.8 s, in 6 languages | 2026-10-11 | `docs/decisions/2026-10-11-native-voices-and-guide-conversations.md` |
-| Gemini reading with "low" thinking | bill + EOB 5.3 s instead of 16.7 s; a receipt photo 4.4 s instead of 13.9 s (30-call benchmark) | 2026-10-11 | commit message of `d1aa47a`; `gemini_service.py` |
+| Gemini reading with "low" thinking | Set A as 6 phone photos: 16.1 s instead of 80.8 s; Northline bill + EOB: 5.3 s instead of 16.7 s; a receipt photo 4.4 s instead of 13.9 s; all lines and financial fields exact | 2026-10-11 | `docs/decisions/2026-10-11-gemini-low-thinking.md` |
 | First bill after a backend restart | about 21 s before the price-table warm-up, 7.7 s after it | 2026-10-11 | commit message of `802f2a1` |
 | Example call | 15-21 s to make the first time, 0.3 s on a repeat; 17 s from opening the screen in the web app | 2026-10-11 | commit message of `802f2a1` |
 | Tests at `14e0c71` | 197 app, 198 backend (2 skipped), 675 voice; 26 web (3 skipped) at the merge `3ad973c` | 2026-10-11 | commit messages (not rerun by the fact-check) |

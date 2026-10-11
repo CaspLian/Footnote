@@ -102,8 +102,9 @@ Also:
   language never reads another.
 - Live conversations about Guide glossary terms, not only about saved bills. Tap the orb on a term: the agent
   explains it in your language with an example, then answers questions. Checked live in six languages.
-- Faster document reading. With Gemini's "low" thinking level, a bill and EOB took 5.3 s instead of 16.7 s in a
-  30-call benchmark, with the same lines, amounts and financial fields. The backend now loads the Medicare
+- Faster document reading. With Gemini's "low" thinking level, six phone photos of the demo bill and EOB took 16.1 s
+  instead of 80.8 s, and a bill and EOB as PDFs 5.3 s instead of 16.7 s. All 16 lines and 12 financial fields were
+  exactly right either way. The backend now loads the Medicare
   reference table at startup, so the first bill after a restart took 7.7 s instead of about 21 s.
 - Hear an example call. On the call-script screen, Gemini writes a short call to the billing office from the saved
   bill, and ElevenLabs Text to Dialogue (Eleven v4) performs it with two voices verified for your language. The
